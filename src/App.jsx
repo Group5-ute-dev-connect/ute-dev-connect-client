@@ -1,12 +1,18 @@
 import React from 'react'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import ForgotPassword from './pages/auth/ForgotPassword'
+import Home from './Home'
 
 function App() {
   return (
-    <div className="min-h-screen bg-gray-200 flex items-center justify-center">
-      <h1 className="text-4xl font-bold text-red-600">
-        Khởi tạo Frontend thành công!
-      </h1>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+        {/* Route mặc định: Điều hướng về trang chủ */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
   )
 }
 
