@@ -1,16 +1,32 @@
-# React + Vite
+# 🌿 Git Branch Naming Convention
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+---
 
-Currently, two official plugins are available:
+## 🌱 Các loại nhánh chính
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **main** hoặc **master** → Nhánh chính (production)
+- **develop** → Nhánh phát triển chính
+- **feature/tên-tính-năng** → Nhánh phát triển tính năng mới
+- **hotfix/tên-lỗi** → Nhánh sửa lỗi khẩn cấp (sau khi đẩy lên `main`)
+- **fix/tên-lỗi** → Nhánh sửa lỗi
+- **release/version-x.y.z** → Nhánh chuẩn bị release
 
-## React Compiler
+---
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 📌 Ví dụ
 
-## Expanding the ESLint configuration
+- `fix/login-bug` → Nhánh sửa lỗi đăng nhập  
+- `fix/ui-overlap` → Nhánh sửa lỗi UI bị chồng chéo
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+---
+
+## ⚠️ Lưu ý quan trọng
+
+- Dùng dấu **“-”** thay vì **“_”** hoặc **space** để tránh lỗi  
+- Đặt tên **ngắn gọn**, **dễ hiểu**, mô tả rõ nội dung  
+- **Không nên dùng tiếng Việt có dấu** trong tên nhánh  
+- Mỗi chức năng nên tạo **nhánh riêng**  
+- Code chỉnh sửa nên thực hiện trên nhánh `develop`  
+  - Sau khi hoàn thành → tạo `release` → merge vào `main`
+
+---
