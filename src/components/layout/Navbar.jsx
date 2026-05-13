@@ -19,13 +19,12 @@ const Navbar = () => {
           </div>
           
           <div className="flex items-center space-x-2 sm:space-x-4">
-            <button 
-              type="button" 
+            <Link 
+              to="/login" 
               className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-              onClick={() => alert("Chức năng đăng nhập đang được xây dựng")}
             >
               Đăng nhập
-            </button>
+            </Link>
             <Link 
               to="/register" 
               className="bg-blue-50 text-blue-700 hover:bg-blue-100 px-3 py-2 rounded-md text-sm font-medium transition-colors hidden sm:block"

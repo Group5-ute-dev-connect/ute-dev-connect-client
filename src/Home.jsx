@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import Navbar from './components/layout/Navbar';
 
 const Home = () => {
@@ -16,12 +17,12 @@ const Home = () => {
             Mạng xã hội dành riêng cho sinh viên trường Đại học Sư phạm Kỹ thuật TP.HCM. Nơi kết nối, chia sẻ kiến thức và cùng nhau phát triển.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button 
-              onClick={() => alert("Chức năng đăng nhập đang được xây dựng")}
+            <Link 
+              to="/login"
               className="px-8 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 md:py-4 md:text-lg md:px-10 shadow-lg shadow-blue-600/30 transition-all hover:scale-105"
             >
               Khám phá ngay
-            </button>
+            </Link>
           </div>
         </div>
       </main>

@@ -13,6 +13,13 @@ const initialState = {
   verifyOtpMessage: "",
   verifyOtpError: "",
 
+  loginLoading: false,
+  loginSuccess: false,
+  loginMessage: "",
+  loginError: "",
+  token: localStorage.getItem("token") || null,
+  role: localStorage.getItem("role") || null,
+
   email: "",
   step: 1,
 };
@@ -51,6 +58,30 @@ export const verifyOtp = createAsyncThunk(
   }
 );
 
+export const loginUser = createAsyncThunk(
+  "auth/loginUser",
+  async (formData, { rejectWithValue }) => {
+    try {
+      const response = await axiosClient.post("/auth/login", {
+        email: formData.email,
+        password: formData.password,
+      });
+
+      // Lưu token và role vào localStorage
+      if (response.token) {
+        localStorage.setItem("token", response.token);
+      }
+      if (response.role) {
+        localStorage.setItem("role", response.role);
+      }
+
+      return response;
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
 const authSlice = createSlice({
   name: "auth",
   initialState,
@@ -78,6 +109,23 @@ const authSlice = createSlice({
     resetAuth: (state) => {
       state.email = '';
       state.step = 1;
+    },
+
+    clearLoginState: (state) => {
+      state.loginLoading = false;
+      state.loginSuccess = false;
+      state.loginMessage = "";
+      state.loginError = "";
+    },
+
+    logout: (state) => {
+      state.token = null;
+      state.role = null;
+      state.loginSuccess = false;
+      state.loginMessage = "";
+      state.loginError = "";
+      localStorage.removeItem("token");
+      localStorage.removeItem("role");
     },
   },
   extraReducers: (builder) => {
@@ -121,9 +169,30 @@ const authSlice = createSlice({
         state.verifyOtpSuccess = false;
         state.verifyOtpError =
           action.payload || "Xác thực OTP thất bại, vui lòng thử lại.";
+      })
+
+      .addCase(loginUser.pending, (state) => {
+        state.loginLoading = true;
+        state.loginSuccess = false;
+        state.loginMessage = "";
+        state.loginError = "";
+      })
+      .addCase(loginUser.fulfilled, (state, action) => {
+        state.loginLoading = false;
+        state.loginSuccess = true;
+        state.loginMessage =
+          action.payload?.message || "Đăng nhập thành công!";
+        state.token = action.payload?.token || null;
+        state.role = action.payload?.role || null;
+      })
+      .addCase(loginUser.rejected, (state, action) => {
+        state.loginLoading = false;
+        state.loginSuccess = false;
+        state.loginError =
+          action.payload || "Đăng nhập thất bại, vui lòng thử lại.";
       });
   },
 });
 
-export const { clearRegisterState, clearVerifyOtpState, setEmail, setStep, resetAuth } = authSlice.actions;
+export const { clearRegisterState, clearVerifyOtpState, setEmail, setStep, resetAuth, clearLoginState, logout } = authSlice.actions;
 export default authSlice.reducer;
