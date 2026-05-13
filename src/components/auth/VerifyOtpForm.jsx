@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { verifyOtp } from "../../store/authSlice";
-import InputField from "../common/InputField";
+import Input from "../common/Input";
 import Button from "../common/Button";
 import Alert from "../common/Alert";
-import Spinner from "../common/Spinner";
+import { Mail, KeyRound } from "lucide-react";
 
 function VerifyOtpForm() {
   const dispatch = useDispatch();
@@ -42,10 +42,12 @@ function VerifyOtpForm() {
       [name]: value,
     });
 
-    setFormErrors({
-      ...formErrors,
-      [name]: "",
-    });
+    if (formErrors[name]) {
+      setFormErrors({
+        ...formErrors,
+        [name]: "",
+      });
+    }
   };
 
   const validateForm = () => {
@@ -72,7 +74,6 @@ function VerifyOtpForm() {
     event.preventDefault();
 
     const isValid = validateForm();
-
     if (!isValid) return;
 
     await dispatch(
@@ -84,58 +85,43 @@ function VerifyOtpForm() {
   };
 
   return (
-    <div className="w-full max-w-md rounded-3xl bg-white p-8 shadow-xl shadow-slate-200">
-      <div className="mb-6 text-center">
-        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-100 text-2xl font-bold text-blue-700">
-          OTP
-        </div>
-
-        <h1 className="text-2xl font-bold text-slate-900">
-          Xác thực tài khoản
-        </h1>
-
-        <p className="mt-2 text-sm text-slate-500">
-          Nhập mã OTP đã được gửi đến email của bạn.
-        </p>
-      </div>
-
-      <div className="mb-5 space-y-3">
-        <Alert type="success" message={verifyOtpSuccess ? verifyOtpMessage : ""} />
-        <Alert type="error" message={verifyOtpError} />
+    <div>
+      <div className="mb-6 space-y-3">
+        {verifyOtpSuccess && <Alert type="success" message={verifyOtpMessage} />}
+        {verifyOtpError && <Alert type="error" message={verifyOtpError} />}
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <InputField
+        <Input
           label="Email"
           name="email"
           type="email"
+          icon={Mail}
           value={formData.email}
           onChange={handleChange}
-          placeholder="Ví dụ: tai@student.hcmute.edu.vn"
+          placeholder="tai@student.hcmute.edu.vn"
           error={formErrors.email}
           autoComplete="email"
         />
 
-        <InputField
+        <Input
           label="Mã OTP"
           name="otp"
+          icon={KeyRound}
           value={formData.otp}
           onChange={handleChange}
           placeholder="Nhập mã OTP"
           error={formErrors.otp}
         />
 
-        <Button type="submit" disabled={verifyOtpLoading}>
-          <span className="flex items-center justify-center gap-2">
-            {verifyOtpLoading && <Spinner />}
-            {verifyOtpLoading ? "Đang xác thực..." : "Xác thực OTP"}
-          </span>
+        <Button type="submit" isLoading={verifyOtpLoading} className="mt-6">
+          Xác thực OTP
         </Button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-slate-500">
+      <p className="mt-6 text-center text-sm text-gray-500">
         Chưa nhận được mã?{" "}
-        <Link to="/register" className="font-semibold text-blue-600 hover:underline">
+        <Link to="/register" className="font-semibold text-blue-600 hover:text-blue-500 hover:underline transition-colors">
           Đăng ký lại
         </Link>
       </p>

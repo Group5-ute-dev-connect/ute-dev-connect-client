@@ -26,13 +26,12 @@ const Navbar = () => {
             >
               Đăng nhập
             </button>
-            <button 
-              type="button" 
+            <Link 
+              to="/register" 
               className="bg-blue-50 text-blue-700 hover:bg-blue-100 px-3 py-2 rounded-md text-sm font-medium transition-colors hidden sm:block"
-              onClick={() => alert("Chức năng đăng ký đang được xây dựng")}
             >
               Đăng ký
-            </button>
+            </Link>
             <Link 
               to="/auth/forgot-password" 
               className="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded-md text-sm font-medium shadow-sm shadow-blue-500/30 transition-all hover:shadow-md hover:shadow-blue-500/40"

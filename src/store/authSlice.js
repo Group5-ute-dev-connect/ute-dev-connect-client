@@ -12,6 +12,9 @@ const initialState = {
   verifyOtpSuccess: false,
   verifyOtpMessage: "",
   verifyOtpError: "",
+
+  email: "",
+  step: 1,
 };
 
 export const registerUser = createAsyncThunk(
@@ -65,6 +68,17 @@ const authSlice = createSlice({
       state.verifyOtpMessage = "";
       state.verifyOtpError = "";
     },
+
+    setEmail: (state, action) => {
+      state.email = action.payload;
+    },
+    setStep: (state, action) => {
+      state.step = action.payload;
+    },
+    resetAuth: (state) => {
+      state.email = '';
+      state.step = 1;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -111,5 +125,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { clearRegisterState, clearVerifyOtpState } = authSlice.actions;
+export const { clearRegisterState, clearVerifyOtpState, setEmail, setStep, resetAuth } = authSlice.actions;
 export default authSlice.reducer;

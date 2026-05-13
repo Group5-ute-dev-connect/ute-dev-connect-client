@@ -1,11 +1,11 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
 import { registerUser } from "../../store/authSlice";
-import InputField from "../common/InputField";
+import Input from "../common/Input";
 import Button from "../common/Button";
 import Alert from "../common/Alert";
-import Spinner from "../common/Spinner";
+import { User, Mail, IdCard, Lock, Eye, EyeOff } from 'lucide-react';
 
 const initialFormData = {
   name: "",
@@ -24,19 +24,20 @@ function RegisterForm() {
 
   const [formData, setFormData] = useState(initialFormData);
   const [formErrors, setFormErrors] = useState({});
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
-
     setFormData({
       ...formData,
       [name]: value,
     });
-
-    setFormErrors({
-      ...formErrors,
-      [name]: "",
-    });
+    if (formErrors[name]) {
+      setFormErrors({
+        ...formErrors,
+        [name]: "",
+      });
+    }
   };
 
   const validateForm = () => {
@@ -77,48 +78,34 @@ function RegisterForm() {
     event.preventDefault();
 
     const isValid = validateForm();
-
     if (!isValid) return;
 
     const resultAction = await dispatch(registerUser(formData));
 
     if (registerUser.fulfilled.match(resultAction)) {
-      navigate("/verify-otp", {
-        state: {
-          email: formData.email,
-        },
-      });
+      // Đợi 1 chút để user thấy Alert success rồi mới chuyển trang
+      setTimeout(() => {
+        navigate("/verify-otp", {
+          state: {
+            email: formData.email,
+          },
+        });
+      }, 1500);
     }
   };
 
   return (
-    <div className="w-full max-w-md rounded-3xl bg-white p-8 shadow-xl shadow-slate-200">
-      <div className="mb-6 text-center">
-        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-100 text-2xl font-bold text-blue-700">
-          U
-        </div>
-
-        <h1 className="text-2xl font-bold text-slate-900">
-          Tạo tài khoản UTE Dev Connect
-        </h1>
-
-        <p className="mt-2 text-sm text-slate-500">
-          Kết nối sinh viên HCMUTE đam mê lập trình.
-        </p>
-      </div>
-
-      <div className="mb-5 space-y-3">
-        <Alert
-          type="success"
-          message={registerSuccess ? registerMessage : ""}
-        />
-        <Alert type="error" message={registerError} />
+    <div>
+      <div className="mb-6 space-y-3">
+        {registerSuccess && <Alert type="success" message={registerMessage} />}
+        {registerError && <Alert type="error" message={registerError} />}
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <InputField
+        <Input
           label="Họ và tên"
           name="name"
+          icon={User}
           value={formData.name}
           onChange={handleChange}
           placeholder="Ví dụ: Huỳnh Ngọc Tài"
@@ -126,41 +113,54 @@ function RegisterForm() {
           autoComplete="name"
         />
 
-        <InputField
+        <Input
           label="Email"
           name="email"
           type="email"
+          icon={Mail}
           value={formData.email}
           onChange={handleChange}
-          placeholder="Ví dụ: tai@student.hcmute.edu.vn"
+          placeholder="tai@student.hcmute.edu.vn"
           error={formErrors.email}
           autoComplete="email"
         />
 
-        <InputField
+        <Input
           label="Mã số sinh viên"
           name="studentId"
+          icon={IdCard}
           value={formData.studentId}
           onChange={handleChange}
           placeholder="Ví dụ: 22110333"
           error={formErrors.studentId}
         />
 
-        <InputField
-          label="Mật khẩu"
-          name="password"
-          type="password"
-          value={formData.password}
-          onChange={handleChange}
-          placeholder="Nhập mật khẩu"
-          error={formErrors.password}
-          autoComplete="new-password"
-        />
+        <div className="relative">
+          <Input
+            label="Mật khẩu"
+            name="password"
+            type={showPassword ? 'text' : 'password'}
+            icon={Lock}
+            value={formData.password}
+            onChange={handleChange}
+            placeholder="Nhập mật khẩu"
+            error={formErrors.password}
+            autoComplete="new-password"
+          />
+          <button
+            type="button"
+            className="absolute right-3 top-9 text-gray-400 hover:text-gray-600"
+            onClick={() => setShowPassword(!showPassword)}
+          >
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        </div>
 
-        <InputField
+        <Input
           label="Xác nhận mật khẩu"
           name="confirmPassword"
-          type="password"
+          type={showPassword ? 'text' : 'password'}
+          icon={Lock}
           value={formData.confirmPassword}
           onChange={handleChange}
           placeholder="Nhập lại mật khẩu"
@@ -168,17 +168,14 @@ function RegisterForm() {
           autoComplete="new-password"
         />
 
-        <Button type="submit" disabled={registerLoading}>
-          <span className="flex items-center justify-center gap-2">
-            {registerLoading && <Spinner />}
-            {registerLoading ? "Đang đăng ký..." : "Đăng ký"}
-          </span>
+        <Button type="submit" isLoading={registerLoading} className="mt-6">
+          Đăng ký
         </Button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-slate-500">
+      <p className="mt-6 text-center text-sm text-gray-500">
         Đã có tài khoản?{" "}
-        <Link to="/login" className="font-semibold text-blue-600 hover:underline">
+        <Link to="/login" className="font-semibold text-blue-600 hover:text-blue-500 hover:underline transition-colors">
           Đăng nhập
         </Link>
       </p>
