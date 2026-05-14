@@ -109,7 +109,7 @@ const EditProfile = () => {
     try {
       await profileApi.editProfile(formData);
       setSuccessMsg('Cập nhật hồ sơ thành công!');
-      setTimeout(() => navigate('/profile'), 2000);
+      setTimeout(() => navigate('/'), 2000);
     } catch (err) {
       if (err.response?.status === 401) {
         localStorage.removeItem('token');
