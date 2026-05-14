@@ -6,12 +6,16 @@ import Register from './pages/auth/Register'
 import VerifyOtp from './pages/auth/VerifyOtp'
 import Home from './Home'
 import EditProfile from './pages/profile/EditProfile'
+import Profiles from './pages/profile/Profiles'
+import Profile from './pages/profile/Profile'
 import ProtectedRoute from './routes/ProtectedRoute'
 
 function App() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
+      <Route path="/profiles" element={<Profiles />} />
+      <Route path="/profile/:id" element={<Profile />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/verify-otp" element={<VerifyOtp />} />
