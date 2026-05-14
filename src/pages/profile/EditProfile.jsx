@@ -41,11 +41,12 @@ const EditProfile = () => {
       try {
         // Mặc định gọi role là 'user', nếu là admin thì đổi thành 'admin'
         // Bạn có thể lưu role vào localStorage: localStorage.setItem('role', 'admin')
-        const role = localStorage.getItem('role') || 'user'; 
-        const res = await profileApi.getProfile(role);
+        const res = await profileApi.getProfile();
+        console.log("Response từ getProfile:", res);
         
         // Nếu API trả về dữ liệu profile (tuỳ cấu trúc BE của bạn, có thể nằm trong res.data hoặc res.data.profile)
         if (res.data) {
+           console.log("Data profile nhận được:", res.data);
            const profile = res.data.profile || res.data;
            setFormData(prev => ({
              ...prev,
@@ -66,12 +67,12 @@ const EditProfile = () => {
            }));
         }
       } catch (err) {
+        console.log("Lỗi tải profile hoặc profile chưa được tạo:", err);
         if (err.response?.status === 401) {
           localStorage.removeItem('token');
           navigate('/register');
           return;
         }
-        console.log("Lỗi tải profile hoặc profile chưa được tạo:", err);
       }
     };
     
