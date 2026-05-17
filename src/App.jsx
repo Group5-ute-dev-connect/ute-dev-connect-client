@@ -7,6 +7,7 @@ import VerifyOtp from './pages/auth/VerifyOtp'
 import Home from './Home'
 import EditProfile from './pages/profile/EditProfile'
 import ProtectedRoute from './routes/ProtectedRoute'
+import PostDetail from './pages/posts/PostDetail'
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
       <Route path="/register" element={<Register />} />
       <Route path="/verify-otp" element={<VerifyOtp />} />
       <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+      <Route path="/post/:id" element={<PostDetail />} />
       
       {/* Các route yêu cầu đăng nhập */}
       <Route element={<ProtectedRoute />}>
