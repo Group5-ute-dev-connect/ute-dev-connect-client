@@ -4,6 +4,7 @@ import { postApi } from '../../services/api/postApi';
 import Spinner from '../../components/common/Spinner';
 import Alert from '../../components/common/Alert';
 import { ArrowLeft, User, Calendar, MessageSquare } from 'lucide-react';
+import PostInteractions from '../../components/interactions/PostInteractions';
 
 const PostDetail = () => {
   const { id } = useParams();
@@ -46,7 +47,7 @@ const PostDetail = () => {
     return (
       <div className="max-w-3xl mx-auto mt-10 px-4">
         <Alert type="error" message={error} />
-        <Link to="/" className="inline-flex items-center mt-4 text-blue-600 hover:underline">
+        <Link to="/dashboard" className="inline-flex items-center mt-4 text-blue-600 hover:underline">
           <ArrowLeft className="w-4 h-4 mr-1" /> Quay lại trang chủ
         </Link>
       </div>
@@ -67,7 +68,7 @@ const PostDetail = () => {
 
   return (
     <div className="max-w-3xl mx-auto mt-8 px-4 pb-12">
-      <Link to="/" className="inline-flex items-center mb-6 text-gray-500 hover:text-blue-600 transition-colors">
+     <Link to="/dashboard" className="inline-flex items-center mb-6 text-gray-500 hover:text-blue-600 transition-colors">
         <ArrowLeft className="w-4 h-4 mr-1" /> Quay lại
       </Link>
       
@@ -108,6 +109,7 @@ const PostDetail = () => {
           </div>
         </div>
       </article>
+      <PostInteractions post={post} setPost={setPost} />
     </div>
   );
 };
