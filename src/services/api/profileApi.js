@@ -6,5 +6,11 @@ export const profileApi = {
   },
   editProfile: (data) => {
     return axiosClient.put('/profile', data);
+  },
+  getProfiles: () => {
+    return axiosClient.get('/profile');
+  },
+  getProfileById: (userId) => {
+    return axiosClient.get(`/profile/user/${userId}`);
   }
 };
