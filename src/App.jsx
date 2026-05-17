@@ -10,6 +10,7 @@ import Profiles from './pages/profile/Profiles'
 import Profile from './pages/profile/Profile'
 import ProtectedRoute from './routes/ProtectedRoute'
 import PostDetail from './pages/posts/PostDetail'
+import Dashboard from './pages/dashboard/Dashboard'
 
 function App() {
   return (
@@ -22,7 +23,10 @@ function App() {
       <Route path="/verify-otp" element={<VerifyOtp />} />
       <Route path="/auth/forgot-password" element={<ForgotPassword />} />
       <Route path="/post/:id" element={<PostDetail />} />
-      
+
+      {/* Trang Dashboard - Bảng tin Newsfeed */}
+      <Route path="/dashboard" element={<Dashboard />} />
+
       {/* Các route yêu cầu đăng nhập */}
       <Route element={<ProtectedRoute />}>
         <Route path="/edit-profile" element={<EditProfile />} />
