@@ -31,6 +31,12 @@ const Navbar = () => {
           
           <div className="flex items-center space-x-2 sm:space-x-4">
             <Link 
+              to="/dashboard" 
+              className="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+            >
+              Bảng tin
+            </Link>
+            <Link 
               to="/profiles" 
               className="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
             >
