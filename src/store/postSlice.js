@@ -1,24 +1,23 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axiosClient from "../services/api/axiosClient";
 
-// State khởi tạo (tham khảo devconnector: posts, post, loading, error)
 const initialState = {
   posts: [],
   post: null,
   loading: true,
+  loadingMore: false,
   error: null,
+  page: 1,
+  hasMore: true,
 };
 
 // Async thunk: Lấy tất cả bài viết (GET /api/posts)
 export const getPosts = createAsyncThunk(
   "post/getPosts",
-  async (_, { rejectWithValue }) => {
+  async ({ page = 1, limit = 5 } = {}, { rejectWithValue }) => {
     try {
-      const response = await axiosClient.get("/posts");
-      // response đã qua interceptor => response.data (nếu interceptor trả response.data)
-      // hoặc response trực tiếp
-      const postsData = response.data?.data || response.data || response;
-      return postsData;
+      const response = await axiosClient.get(`/posts?page=${page}&limit=${limit}`);
+      return response.data;
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || error.message || "Lỗi khi tải bài viết"
@@ -70,15 +69,37 @@ const postSlice = createSlice({
   extraReducers: (builder) => {
     builder
       // GET ALL POSTS
-      .addCase(getPosts.pending, (state) => {
-        state.loading = true;
+      .addCase(getPosts.pending, (state, action) => {
+        const isLoadMore = action.meta.arg?.page > 1;
+        if (isLoadMore) {
+          state.loadingMore = true;
+        } else {
+          state.loading = true;
+        }
       })
       .addCase(getPosts.fulfilled, (state, action) => {
         state.loading = false;
-        state.posts = action.payload;
+        state.loadingMore = false;
+        
+        const payloadData = action.payload;
+        // Kiểm tra xem backend đã trả đúng format phân trang chưa
+        const newPosts = payloadData.data ? payloadData.data : (Array.isArray(payloadData) ? payloadData : []);
+        
+        const isLoadMore = action.meta.arg?.page > 1;
+        
+        if (isLoadMore) {
+          state.posts = [...state.posts, ...newPosts]; // Append
+        } else {
+          state.posts = newPosts; // Overwrite
+        }
+        
+        // Cập nhật page và hasMore
+        state.page = payloadData.page !== undefined ? payloadData.page : (action.meta.arg?.page || 1);
+        state.hasMore = payloadData.hasMore !== undefined ? payloadData.hasMore : (newPosts.length === (action.meta.arg?.limit || 5));
       })
       .addCase(getPosts.rejected, (state, action) => {
         state.loading = false;
+        state.loadingMore = false;
         state.error = action.payload;
       })
 
