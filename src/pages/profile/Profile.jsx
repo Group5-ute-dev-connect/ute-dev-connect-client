@@ -1,29 +1,66 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { profileApi } from '../../services/api/profileApi';
-import { MapPin, Briefcase, GraduationCap, Globe, Code, Video, MessageCircle, Users, Camera, Link as LinkIcon, MessageSquare } from 'lucide-react';
+import { postApi } from '../../services/api/postApi';
+import PostItem from '../../components/posts/PostItem';
+import { MapPin, Briefcase, GraduationCap, Globe, Code, Video, MessageCircle, Users, Camera, Link as LinkIcon, MessageSquare, User } from 'lucide-react';
+
+// Helper to decode token
+const parseJwt = (token) => {
+  try {
+    return JSON.parse(atob(token.split('.')[1]));
+  } catch (e) {
+    return null;
+  }
+};
 
 const Profile = () => {
   const { id } = useParams();
+  const { token } = useSelector((state) => state.auth);
+  const userPayload = token ? parseJwt(token) : null;
+  const loggedInUserId = userPayload ? userPayload.id : null;
+
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [posts, setPosts] = useState([]);
+  const [postsLoading, setPostsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchProfile = async () => {
+    const fetchProfileAndPosts = async () => {
       try {
         setLoading(true);
+        setPostsLoading(true);
         const res = await profileApi.getProfileById(id);
         setProfile(res.data);
+
+        // Fetch posts and filter for this user
+        try {
+          const postsRes = await postApi.getAllPosts();
+          
+          // postRes.data is the body which looks like { success: true, data: [...] }
+          const postsArray = postsRes?.data?.data || postsRes?.data;
+          
+          if (Array.isArray(postsArray)) {
+            const userPosts = postsArray.filter(
+              (post) => post.user === res.data.user?._id
+            );
+            setPosts(userPosts);
+          }
+        } catch (postErr) {
+          console.error('Lỗi tải bài viết của người dùng:', postErr);
+        }
       } catch (err) {
         console.error('Lỗi tải profile:', err);
         setError('Không tìm thấy hồ sơ người dùng này.');
       } finally {
         setLoading(false);
+        setPostsLoading(false);
       }
     };
 
-    fetchProfile();
+    fetchProfileAndPosts();
   }, [id]);
 
   if (loading) {
@@ -63,10 +100,17 @@ const Profile = () => {
               className="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-white shadow-lg bg-white object-cover"
             />
             <div className="mt-4 md:mt-0 space-x-3">
-              <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-medium shadow-sm transition-colors flex items-center gap-2">
-                <MessageSquare size={18} />
-                Nhắn tin
-              </button>
+              {loggedInUserId === user?._id ? (
+                <Link to="/edit-profile" className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-6 py-2.5 rounded-xl font-medium shadow-sm transition-colors flex items-center gap-2">
+                  <User size={18} />
+                  Chỉnh sửa hồ sơ
+                </Link>
+              ) : (
+                <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-medium shadow-sm transition-colors flex items-center gap-2">
+                  <MessageSquare size={18} />
+                  Nhắn tin
+                </button>
+              )}
             </div>
           </div>
           
@@ -143,12 +187,24 @@ const Profile = () => {
             <p className="text-gray-500 text-sm">Hoạt động và chia sẻ gần đây</p>
           </div>
 
-          {/* Placeholder for Posts */}
-          <div className="bg-gray-50 border border-dashed border-gray-300 rounded-2xl p-12 text-center">
-            <MessageSquare size={48} className="mx-auto text-gray-300 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Chưa có bài viết nào</h3>
-            <p className="text-gray-500">{user?.name} chưa đăng bài viết nào trên tường nhà.</p>
-          </div>
+          {/* Real user posts or loader or placeholder */}
+          {postsLoading ? (
+            <div className="flex justify-center items-center py-10">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+          ) : posts.length > 0 ? (
+            <div className="space-y-4">
+              {posts.map((post) => (
+                <PostItem key={post._id} post={post} />
+              ))}
+            </div>
+          ) : (
+            <div className="bg-gray-50 border border-dashed border-gray-300 rounded-2xl p-12 text-center">
+              <MessageSquare size={48} className="mx-auto text-gray-300 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Chưa có bài viết nào</h3>
+              <p className="text-gray-500">{user?.name} chưa đăng bài viết nào trên tường nhà.</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -3,10 +3,22 @@ import { useDispatch, useSelector } from 'react-redux';
 import { User, LogOut } from 'lucide-react';
 import { logout } from '../../store/authSlice';
 
+// Helper to decode token
+const parseJwt = (token) => {
+  try {
+    return JSON.parse(atob(token.split('.')[1]));
+  } catch (e) {
+    return null;
+  }
+};
+
 const Navbar = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { token } = useSelector((state) => state.auth);
+
+  const userPayload = token ? parseJwt(token) : null;
+  const userId = userPayload ? userPayload.id : null;
 
   const handleLogout = () => {
     dispatch(logout());
@@ -45,7 +57,7 @@ const Navbar = () => {
             {token ? (
               <>
                 <Link 
-                  to="/edit-profile" 
+                  to={userId ? `/profile/${userId}` : `/edit-profile`} 
                   className="flex items-center gap-2 text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-all"
                 >
                   <User size={18} />

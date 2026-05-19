@@ -7,12 +7,11 @@ import Alert from '../../components/common/Alert';
 import Select from '../../components/common/Select';
 import Textarea from '../../components/common/Textarea';
 import { profileApi } from '../../services/api/profileApi';
+import { toast } from 'react-toastify';
 
 const EditProfile = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [successMsg, setSuccessMsg] = useState('');
-  const [errorMsg, setErrorMsg] = useState('');
 
   const [formData, setFormData] = useState({
     status: '',
@@ -98,18 +97,17 @@ const EditProfile = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setErrorMsg('');
-    setSuccessMsg('');
 
     if (!validateForm()) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      toast.error('Vui lòng điền đầy đủ các trường bắt buộc.');
       return;
     }
 
     setLoading(true);
     try {
       await profileApi.editProfile(formData);
-      setSuccessMsg('Cập nhật hồ sơ thành công!');
+      toast.success('Cập nhật hồ sơ thành công!');
       setTimeout(() => navigate('/'), 2000);
     } catch (err) {
       if (err.response?.status === 401) {
@@ -117,8 +115,7 @@ const EditProfile = () => {
         navigate('/register');
         return;
       }
-      setErrorMsg(err.response?.data?.msg || err.response?.data?.errors?.[0]?.msg || 'Có lỗi xảy ra, vui lòng thử lại.');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      toast.error(err.response?.data?.msg || err.response?.data?.errors?.[0]?.msg || 'Có lỗi xảy ra, vui lòng thử lại.');
     } finally {
       setLoading(false);
     }
@@ -146,12 +143,12 @@ const EditProfile = () => {
   return (
     <div className="min-h-screen bg-slate-50 relative overflow-hidden pb-12 font-sans">
       {/* Background Decorations */}
-      <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-br from-blue-600 via-indigo-700 to-purple-800 transform -skew-y-3 origin-top-left -z-10 shadow-2xl"></div>
+      <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-br from-blue-600 via-indigo-700 to-purple-800 transform -skew-y-3 origin-top-left z-0 shadow-2xl"></div>
       
-      <div className="max-w-4xl mx-auto pt-20 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto pt-20 px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="flex items-center justify-between mb-8 text-white">
           <div className="animate-fade-in-down">
-            <h1 className="text-4xl font-extrabold tracking-tight drop-shadow-md">Tạo / Cập nhật Hồ sơ</h1>
+            <h1 className="text-4xl font-extrabold tracking-tight drop-shadow-md">Cập nhật Hồ sơ</h1>
             <p className="mt-2 text-blue-100 text-lg font-medium">Hãy chia sẻ thông tin để kết nối với cộng đồng UTE Dev Connect</p>
           </div>
           <button onClick={() => navigate(-1)} className="hidden sm:flex items-center space-x-2 text-white hover:text-blue-200 transition-colors bg-white/10 px-4 py-2 rounded-full backdrop-blur-md border border-white/20 hover:bg-white/20">
@@ -159,9 +156,6 @@ const EditProfile = () => {
             <span className="font-medium">Quay lại</span>
           </button>
         </div>
-
-        {errorMsg && <div className="mb-6 animate-fade-in"><Alert type="error" message={errorMsg} /></div>}
-        {successMsg && <div className="mb-6 animate-fade-in"><Alert type="success" message={successMsg} /></div>}
 
         <form onSubmit={handleSubmit} className="space-y-8 relative z-10">
           
