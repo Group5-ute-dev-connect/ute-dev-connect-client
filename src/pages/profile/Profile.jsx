@@ -38,8 +38,12 @@ const Profile = () => {
         // Fetch posts and filter for this user
         try {
           const postsRes = await postApi.getAllPosts();
-          if (postsRes && postsRes.data) {
-            const userPosts = postsRes.data.filter(
+          
+          // postRes.data is the body which looks like { success: true, data: [...] }
+          const postsArray = postsRes?.data?.data || postsRes?.data;
+          
+          if (Array.isArray(postsArray)) {
+            const userPosts = postsArray.filter(
               (post) => post.user === res.data.user?._id
             );
             setPosts(userPosts);
