@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { getPosts } from '../../store/postSlice';
 import PostItem from '../../components/posts/PostItem';
@@ -17,16 +17,41 @@ import { Search, Loader2, Newspaper, AlertCircle, RefreshCw } from 'lucide-react
  */
 const Dashboard = () => {
   const dispatch = useDispatch();
-  const { posts, loading, error } = useSelector((state) => state.post);
+  const { posts, loading, loadingMore, error, page, hasMore } = useSelector((state) => state.post);
   const { token } = useSelector((state) => state.auth);
 
   // State cho ô lọc bài viết
   const [filterText, setFilterText] = useState('');
 
-  // Mục 2: useEffect gọi API GET /api/posts khi component mount
+  // Mục 2: useEffect gọi API GET /api/posts khi component mount (trang 1)
   useEffect(() => {
-    dispatch(getPosts());
+    dispatch(getPosts({ page: 1, limit: 5 }));
   }, [dispatch]);
+
+  // Intersection Observer cho Infinite Scroll (Lazy Loading)
+  const observerTarget = useRef(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        // Chỉ tải thêm khi user cuộn xuống cuối, còn dữ liệu, không đang tải, và không đang dùng bộ lọc
+        if (entries[0].isIntersecting && hasMore && !loading && !loadingMore && !filterText.trim()) {
+          dispatch(getPosts({ page: page + 1, limit: 5 }));
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (observerTarget.current) {
+      observer.observe(observerTarget.current);
+    }
+
+    return () => {
+      if (observerTarget.current) {
+        observer.unobserve(observerTarget.current);
+      }
+    };
+  }, [observerTarget, hasMore, loading, loadingMore, page, dispatch, filterText]);
 
   // Mục 3: Lọc bài viết theo từ khóa (lọc theo text, name, tags)
   const filteredPosts = posts.filter((post) => {
@@ -48,7 +73,7 @@ const Dashboard = () => {
 
   // Handler refresh
   const handleRefresh = () => {
-    dispatch(getPosts());
+    dispatch(getPosts({ page: 1, limit: 5 }));
   };
 
   return (
@@ -176,6 +201,26 @@ const Dashboard = () => {
               {filteredPosts.map((post) => (
                 <PostItem key={post._id} post={post} />
               ))}
+              
+              {/* Vùng theo dõi scroll (Intersection Observer Target) */}
+              <div ref={observerTarget} className="h-4 w-full"></div>
+              
+              {/* Spinner khi đang tải thêm bài viết (loadingMore) */}
+              {loadingMore && (
+                <div className="flex justify-center py-6">
+                  <div className="flex flex-col items-center">
+                    <Loader2 className="h-8 w-8 text-blue-500 animate-spin" />
+                    <span className="text-sm text-gray-500 mt-2">Đang tải thêm...</span>
+                  </div>
+                </div>
+              )}
+              
+              {/* Thông báo hết bài viết */}
+              {!hasMore && posts.length > 0 && !filterText.trim() && (
+                <div className="text-center text-gray-400 text-sm py-6">
+                  — Đã tải hết bài viết —
+                </div>
+              )}
             </div>
           )}
         </div>
