@@ -1,17 +1,18 @@
-import React from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
-import ForgotPassword from './pages/auth/ForgotPassword'
-import Login from './pages/auth/Login'
-import Register from './pages/auth/Register'
-import VerifyOtp from './pages/auth/VerifyOtp'
-import Home from './Home'
-import EditProfile from './pages/profile/EditProfile'
-import Profiles from './pages/profile/Profiles'
-import Profile from './pages/profile/Profile'
-import ProtectedRoute from './routes/ProtectedRoute'
-import PostDetail from './pages/posts/PostDetail'
-import Dashboard from './pages/dashboard/Dashboard'
-import Chat from './pages/chat/Chat'
+import React from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
+import ForgotPassword from "./pages/auth/ForgotPassword";
+import Login from "./pages/auth/Login";
+import Register from "./pages/auth/Register";
+import VerifyOtp from "./pages/auth/VerifyOtp";
+import Home from "./Home";
+import EditProfile from "./pages/profile/EditProfile";
+import Profiles from "./pages/profile/Profiles";
+import Profile from "./pages/profile/Profile";
+import ProtectedRoute from "./routes/ProtectedRoute";
+import PostDetail from "./pages/posts/PostDetail";
+import Dashboard from "./pages/dashboard/Dashboard";
+import Chat from "./pages/chat/Chat";
+import SavedPosts from "./pages/posts/SavedPosts";
 
 function App() {
   return (
@@ -32,12 +33,13 @@ function App() {
       <Route element={<ProtectedRoute />}>
         <Route path="/edit-profile" element={<EditProfile />} />
         <Route path="/chat" element={<Chat />} />
+        <Route path="/saved-posts" element={<SavedPosts />} />
       </Route>
 
       {/* Route mặc định: Điều hướng về trang chủ */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
-  )
+  );
 }
 
 export default App;

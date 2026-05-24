@@ -1,6 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { User, Calendar, MessageSquare, ThumbsUp, Tag } from 'lucide-react';
+import { useDispatch } from 'react-redux';
+import { User, Calendar, MessageSquare, ThumbsUp, Tag, Bookmark } from 'lucide-react';
+import { savePost } from '../../store/postSlice';
 
 /**
  * PostItem - Component thẻ bài viết thu gọn
@@ -8,8 +10,14 @@ import { User, Calendar, MessageSquare, ThumbsUp, Tag } from 'lucide-react';
  * Tham khảo từ devconnector_2.0/client/src/components/posts/PostItem.js
  */
 const PostItem = ({ post }) => {
-  const { _id, text, name, avatar, user, likes, comments, tags, date } = post;
+  const dispatch = useDispatch();
 
+  const { _id, text, name, avatar, user, likes, comments, tags, date, isSaved } = post;
+  const handleSavePost = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dispatch(savePost(_id));
+  }
   // Format ngày tháng theo tiếng Việt
   const formattedDate = new Date(date).toLocaleDateString('vi-VN', {
     year: 'numeric',
@@ -81,34 +89,50 @@ const PostItem = ({ post }) => {
           </div>
         )}
 
-        {/* Footer: Likes + Comments */}
-        <div className="flex items-center justify-between pt-3 border-t border-gray-50">
-          <div className="flex items-center space-x-4">
-            {/* Số lượt thích */}
-            <div className="flex items-center text-gray-400 text-xs">
-              <ThumbsUp className="w-3.5 h-3.5 mr-1" />
-              <span className="font-medium text-gray-600">
-                {likes?.length || 0}
-              </span>
-            </div>
-            
-            {/* Số bình luận */}
-            <div className="flex items-center text-gray-400 text-xs">
-              <MessageSquare className="w-3.5 h-3.5 mr-1" />
-              <span className="font-medium text-gray-600">
-                {comments?.length || 0}
-              </span>
-            </div>
+       {/* Footer: Likes + Comments + Bookmark */}
+      <div className="flex items-center justify-between pt-3 border-t border-gray-50">
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center text-gray-400 text-xs">
+            <ThumbsUp className="w-3.5 h-3.5 mr-1" />
+            <span className="font-medium text-gray-600">
+              {likes?.length || 0}
+            </span>
           </div>
 
-          {/* Nút xem chi tiết */}
-          <Link 
-            to={`/post/${_id}`} 
+          <div className="flex items-center text-gray-400 text-xs">
+            <MessageSquare className="w-3.5 h-3.5 mr-1" />
+            <span className="font-medium text-gray-600">
+              {comments?.length || 0}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleSavePost}
+            className={`inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg transition-all duration-200 ${
+              isSaved
+                ? 'text-yellow-700 bg-yellow-50 hover:bg-yellow-100'
+                : 'text-gray-500 hover:text-yellow-700 hover:bg-yellow-50'
+            }`}
+          >
+            <Bookmark
+              className={`w-3.5 h-3.5 ${
+                isSaved ? 'fill-yellow-500 text-yellow-500' : ''
+              }`}
+            />
+            {isSaved ? 'Đã lưu' : 'Lưu'}
+          </button>
+
+          <Link
+            to={`/post/${_id}`}
             className="text-xs font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-all duration-200"
           >
             Xem thêm →
           </Link>
         </div>
+      </div>
       </div>
     </div>
   );

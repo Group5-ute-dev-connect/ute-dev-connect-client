@@ -98,6 +98,12 @@ const Navbar = () => {
                 >
                   Quên mật khẩu
                 </Link>
+                <Link
+                  to="/saved-posts"
+                  className="text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors"
+                >
+                  Bài viết đã lưu
+                </Link>
               </>
             )}
           </div>
