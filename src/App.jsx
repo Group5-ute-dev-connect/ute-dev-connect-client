@@ -11,6 +11,7 @@ import Profile from './pages/profile/Profile'
 import ProtectedRoute from './routes/ProtectedRoute'
 import PostDetail from './pages/posts/PostDetail'
 import Dashboard from './pages/dashboard/Dashboard'
+import SavedPosts from './pages/posts/SavedPosts'
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
       {/* Các route yêu cầu đăng nhập */}
       <Route element={<ProtectedRoute />}>
         <Route path="/edit-profile" element={<EditProfile />} />
+        <Route path="/saved-posts" element={<SavedPosts />} />
       </Route>
 
       {/* Route mặc định: Điều hướng về trang chủ */}
@@ -38,4 +40,4 @@ function App() {
   )
 }
 
-export default App;
+export default App
