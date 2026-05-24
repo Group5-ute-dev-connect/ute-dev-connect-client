@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
 import { profileApi } from '../../services/api/profileApi';
 import { postApi } from '../../services/api/postApi';
+import { createOrGetConversation } from '../../store/chatSlice';
 import PostItem from '../../components/posts/PostItem';
 import { MapPin, Briefcase, GraduationCap, Globe, Code, Video, MessageCircle, Users, Camera, Link as LinkIcon, MessageSquare, User } from 'lucide-react';
 
@@ -17,6 +18,8 @@ const parseJwt = (token) => {
 
 const Profile = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { token } = useSelector((state) => state.auth);
   const userPayload = token ? parseJwt(token) : null;
   const loggedInUserId = userPayload ? userPayload.id : null;
@@ -26,6 +29,17 @@ const Profile = () => {
   const [error, setError] = useState('');
   const [posts, setPosts] = useState([]);
   const [postsLoading, setPostsLoading] = useState(true);
+
+  const handleMessage = async () => {
+    if (!profile?.user?._id) return;
+    try {
+      await dispatch(createOrGetConversation(profile.user._id)).unwrap();
+      navigate('/chat');
+    } catch (err) {
+      console.error('Lỗi khi mở phòng chat:', err);
+      navigate('/chat');
+    }
+  };
 
   useEffect(() => {
     const fetchProfileAndPosts = async () => {
@@ -106,7 +120,10 @@ const Profile = () => {
                   Chỉnh sửa hồ sơ
                 </Link>
               ) : (
-                <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-medium shadow-sm transition-colors flex items-center gap-2">
+                <button 
+                  onClick={handleMessage}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-medium shadow-sm transition-colors flex items-center gap-2"
+                >
                   <MessageSquare size={18} />
                   Nhắn tin
                 </button>
