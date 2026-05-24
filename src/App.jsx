@@ -11,6 +11,7 @@ import Profile from './pages/profile/Profile'
 import ProtectedRoute from './routes/ProtectedRoute'
 import PostDetail from './pages/posts/PostDetail'
 import Dashboard from './pages/dashboard/Dashboard'
+import Chat from './pages/chat/Chat'
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
       {/* Các route yêu cầu đăng nhập */}
       <Route element={<ProtectedRoute />}>
         <Route path="/edit-profile" element={<EditProfile />} />
+        <Route path="/chat" element={<Chat />} />
       </Route>
 
       {/* Route mặc định: Điều hướng về trang chủ */}
