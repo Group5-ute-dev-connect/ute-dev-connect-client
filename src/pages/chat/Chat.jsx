@@ -1,65 +1,100 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { io } from 'socket.io-client';
 import './Chat.css';
 import { Send, MoreVertical, Phone, Video } from 'lucide-react';
+import { getConversations, getMessages, setActiveConversation, addMessage } from '../../store/chatSlice';
 
 const SOCKET_URL = 'http://localhost:5000';
 
-const MOCK_CONVERSATIONS = [
-  { id: 1, name: 'Quốc Khánh', lastMessage: 'Tính năng web socket ok chưa?', time: '10:30', avatar: 'https://i.pravatar.cc/150?img=11', active: true },
-  { id: 2, name: 'Nguyễn Văn A', lastMessage: 'Bản báo cáo này ổn chưa?', time: 'Hôm qua', avatar: 'https://i.pravatar.cc/150?img=5' },
-  { id: 3, name: 'Lê Hoàng C', lastMessage: 'Ok chốt nhé.', time: 'T2', avatar: 'https://i.pravatar.cc/150?img=33' },
-];
-
-const MOCK_MESSAGES = [
-  { id: 1, text: 'Chào bạn, dạo này khỏe không?', sender: 'them', time: '10:00' },
-  { id: 2, text: 'Mình khỏe, cảm ơn bạn. Đồ án đến đâu rồi?', sender: 'me', time: '10:05' },
-  { id: 3, text: 'Vẫn ổn bạn ạ. Đang test thử cái giao diện Chat realtime xem lên hình đẹp chưa.', sender: 'them', time: '10:10' },
-  { id: 4, text: 'Ok, để mình bật console xem socket có log "User connected" chưa.', sender: 'me', time: '10:15' },
-];
-
 const Chat = () => {
-  const [messages, setMessages] = useState(MOCK_MESSAGES);
+  const dispatch = useDispatch();
+  const socketRef = useRef(null);
   const [inputValue, setInputValue] = useState('');
+  
+  const chatState = useSelector(state => state.chat) || {};
+  const conversations = Array.isArray(chatState.conversations) ? chatState.conversations : [];
+  const messages = Array.isArray(chatState.messages) ? chatState.messages : [];
+  const activeConversationId = chatState.activeConversationId || null;
+  
+  const token = useSelector(state => state.auth?.token);
+  
+  // Lấy ID user hiện tại từ token JWT
+  let currentUserId = null;
+  if (token) {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      currentUserId = payload.user?.id || payload.id;
+    } catch (e) {
+      console.error("Lỗi parse token:", e);
+    }
+  }
 
+  console.log("ChatState:", chatState);
+  console.log("currentUserId:", currentUserId);
+
+  // 1. Khởi tạo Socket và Fetch danh sách Conversations ban đầu
   useEffect(() => {
-    // Khởi tạo kết nối Socket tới backend
-    const socket = io(SOCKET_URL);
+    dispatch(getConversations());
 
-    socket.on('connect', () => {
-      console.log('✅ Đã kết nối Socket.IO tới server thành công! Socket ID:', socket.id);
+    socketRef.current = io(SOCKET_URL);
+
+    socketRef.current.on('connect', () => {
+      console.log('✅ Đã kết nối Socket.IO tới server!');
     });
 
-    socket.on('disconnect', () => {
-      console.log('❌ Đã ngắt kết nối khỏi server');
+    socketRef.current.on('receive_message', (newMessage) => {
+      // Bắn action vào Redux để cập nhật UI
+      dispatch(addMessage(newMessage));
     });
 
-    // Cleanup khi rời khỏi component (để tránh rò rỉ bộ nhớ hoặc kết nối ảo)
     return () => {
-      socket.disconnect();
+      if (socketRef.current) socketRef.current.disconnect();
     };
-  }, []);
+  }, [dispatch]);
+
+  // 2. Lắng nghe thay đổi phòng chat -> Fetch Messages & Join Socket Room
+  useEffect(() => {
+    if (activeConversationId) {
+      dispatch(getMessages(activeConversationId));
+      if (socketRef.current) {
+        socketRef.current.emit('join_room', activeConversationId);
+      }
+    }
+  }, [activeConversationId, dispatch]);
+
+  const handleSelectConversation = (convId) => {
+    dispatch(setActiveConversation(convId));
+  };
 
   const handleSendMessage = (e) => {
     e.preventDefault();
-    if (!inputValue.trim()) return;
+    if (!inputValue.trim() || !activeConversationId) return;
     
-    // Thêm tin nhắn vào giao diện tĩnh (chưa lưu db)
-    const newMessage = {
-      id: Date.now(),
-      text: inputValue,
-      sender: 'me',
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    const messageData = {
+      conversationId: activeConversationId,
+      senderId: currentUserId,
+      text: inputValue
     };
-    
-    setMessages([...messages, newMessage]);
+
+    // Gửi lên server qua socket
+    socketRef.current.emit('send_message', messageData);
     setInputValue('');
   };
+
+  // Helper tìm thông tin người chat cùng
+  const getOtherParticipant = (participants) => {
+    if (!Array.isArray(participants)) return null;
+    return participants.find(p => p && p._id !== currentUserId) || participants[0];
+  };
+
+  const activeConversation = conversations.find(c => c && c._id === activeConversationId);
+  const otherUser = activeConversation ? getOtherParticipant(activeConversation.participants) : null;
 
   return (
     <div className="chat-container">
       <div className="chat-wrapper">
-        {/* Sidebar hiển thị danh sách cuộc trò chuyện */}
+        {/* Sidebar */}
         <div className="chat-sidebar">
           <div className="chat-sidebar-header">
             <span>Tin nhắn</span>
@@ -69,57 +104,79 @@ const Chat = () => {
             <input type="text" placeholder="Tìm kiếm trên Messenger..." />
           </div>
           <div className="chat-conversation-list">
-            {MOCK_CONVERSATIONS.map(conv => (
-              <div className={`conversation-item ${conv.active ? 'active' : ''}`} key={conv.id}>
-                <img src={conv.avatar} alt={conv.name} className="avatar" />
-                <div className="conversation-info">
-                  <div className="conversation-header">
-                    <span className="conversation-name">{conv.name}</span>
-                    <span className="conversation-time">{conv.time}</span>
+            {conversations.map((conv, idx) => {
+              if (!conv) return null;
+              const participant = getOtherParticipant(conv.participants);
+              const isActive = conv._id === activeConversationId;
+              
+              return (
+                <div 
+                  className={`conversation-item ${isActive ? 'active' : ''}`} 
+                  key={conv._id || idx}
+                  onClick={() => handleSelectConversation(conv._id)}
+                >
+                  <img src={participant?.avatar || 'https://via.placeholder.com/50'} alt="Avatar" className="avatar" />
+                  <div className="conversation-info">
+                    <div className="conversation-header">
+                      <span className="conversation-name">{participant?.name || 'Người dùng ẩn danh'}</span>
+                    </div>
+                    <div className="conversation-last-message">
+                      {conv.lastMessage ? (conv.lastMessage.text || 'Tin nhắn đính kèm') : 'Chưa có tin nhắn...'}
+                    </div>
                   </div>
-                  <div className="conversation-last-message">{conv.lastMessage}</div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
-        {/* Khu vực hiển thị tin nhắn chính */}
+        {/* Main Chat Area */}
         <div className="chat-main">
-          <div className="chat-main-header">
-            <img src={MOCK_CONVERSATIONS[0].avatar} alt="Avatar" className="avatar" />
-            <div className="chat-main-info" style={{ flex: 1 }}>
-              <div className="name">{MOCK_CONVERSATIONS[0].name}</div>
-              <div className="status">Đang hoạt động</div>
-            </div>
-            <div style={{ display: 'flex', gap: '20px', color: '#0084ff' }}>
-              <Phone size={24} style={{cursor: 'pointer'}} />
-              <Video size={24} style={{cursor: 'pointer'}} />
-              <MoreVertical size={24} style={{cursor: 'pointer'}} color="#666" />
-            </div>
-          </div>
-
-          <div className="chat-messages">
-            {messages.map(msg => (
-              <div key={msg.id} className={`message-bubble ${msg.sender === 'me' ? 'message-sent' : 'message-received'}`}>
-                {msg.text}
+          {activeConversationId && otherUser ? (
+            <>
+              <div className="chat-main-header">
+                <img src={otherUser.avatar || 'https://via.placeholder.com/50'} alt="Avatar" className="avatar" />
+                <div className="chat-main-info" style={{ flex: 1 }}>
+                  <div className="name">{otherUser.name || 'Người dùng'}</div>
+                  <div className="status">Đang hoạt động</div>
+                </div>
+                <div style={{ display: 'flex', gap: '20px', color: '#0084ff' }}>
+                  <Phone size={24} style={{cursor: 'pointer'}} />
+                  <Video size={24} style={{cursor: 'pointer'}} />
+                  <MoreVertical size={24} style={{cursor: 'pointer'}} color="#666" />
+                </div>
               </div>
-            ))}
-          </div>
 
-          {/* Ô nhập tin nhắn */}
-          <form className="chat-input-area" onSubmit={handleSendMessage}>
-            <input 
-              type="text" 
-              className="chat-input" 
-              placeholder="Nhập tin nhắn..." 
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-            />
-            <button type="submit" className="send-button" title="Gửi tin nhắn">
-              <Send />
-            </button>
-          </form>
+              <div className="chat-messages">
+                {messages.map((msg, idx) => {
+                  if (!msg) return null;
+                  const isMe = msg.sender?._id === currentUserId || msg.sender === currentUserId;
+                  return (
+                    <div key={msg._id || idx} className={`message-bubble ${isMe ? 'message-sent' : 'message-received'}`}>
+                      {msg.text}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <form className="chat-input-area" onSubmit={handleSendMessage}>
+                <input 
+                  type="text" 
+                  className="chat-input" 
+                  placeholder="Nhập tin nhắn..." 
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                />
+                <button type="submit" className="send-button" title="Gửi tin nhắn">
+                  <Send />
+                </button>
+              </form>
+            </>
+          ) : (
+            <div style={{flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888'}}>
+              Chọn một cuộc trò chuyện để bắt đầu nhắn tin
+            </div>
+          )}
         </div>
       </div>
     </div>
