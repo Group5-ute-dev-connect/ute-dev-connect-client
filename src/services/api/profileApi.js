@@ -12,5 +12,17 @@ export const profileApi = {
   },
   getProfileById: (userId) => {
     return axiosClient.get(`/profile/user/${userId}`);
+  },
+  followUser: (userId) => {
+    return axiosClient.put(`/profile/follow/${userId}`);
+  },
+  unfollowUser: (userId) => {
+    return axiosClient.put(`/profile/unfollow/${userId}`);
+  },
+  getFollowers: (userId) => {
+    return axiosClient.get(`/profile/followers/${userId}`);
+  },
+  getFollowing: (userId) => {
+    return axiosClient.get(`/profile/following/${userId}`);
   }
 };

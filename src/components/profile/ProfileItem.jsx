@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { CheckCircle, MapPin, Briefcase } from 'lucide-react';
+import { CheckCircle, MapPin, Briefcase, Users } from 'lucide-react';
 
 const ProfileItem = ({ profile }) => {
   const { user, status, company, location, skills } = profile;
@@ -23,11 +23,21 @@ const ProfileItem = ({ profile }) => {
         </p>
         
         {location && (
-          <p className="text-gray-500 flex items-center justify-center md:justify-start gap-2 text-sm mb-4">
+          <p className="text-gray-500 flex items-center justify-center md:justify-start gap-2 text-sm mb-2">
             <MapPin size={16} className="text-red-400" />
             {location}
           </p>
         )}
+
+        <div className="flex justify-center md:justify-start gap-4 mb-4 text-sm">
+          <span className="text-gray-700 flex items-center gap-1">
+            <Users size={16} className="text-blue-500" />
+            <span className="font-semibold">{user?.followers?.length || 0}</span> người theo dõi
+          </span>
+          <span className="text-gray-700">
+            <span className="font-semibold">{user?.following?.length || 0}</span> đang theo dõi
+          </span>
+        </div>
         
         <Link 
           to={`/profile/${user?._id}`}
