@@ -96,6 +96,7 @@ const FollowModal = ({ isOpen, onClose, type, userId, loggedInUserId, currentFol
                       <img 
                         src={u.avatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} 
                         alt={u.name} 
+                        onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
                         className="w-12 h-12 rounded-full object-cover border border-gray-100"
                       />
                       <div className="truncate">
