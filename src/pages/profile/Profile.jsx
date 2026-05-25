@@ -5,6 +5,7 @@ import { profileApi } from '../../services/api/profileApi';
 import { postApi } from '../../services/api/postApi';
 import { createOrGetConversation } from '../../store/chatSlice';
 import PostItem from '../../components/posts/PostItem';
+import FollowModal from '../../components/profile/FollowModal';
 import { MapPin, Briefcase, GraduationCap, Globe, Code, Video, MessageCircle, Users, Camera, Link as LinkIcon, MessageSquare, User, UserPlus, UserMinus } from 'lucide-react';
 
 // Helper to decode token
@@ -29,6 +30,7 @@ const Profile = () => {
   const [error, setError] = useState('');
   const [posts, setPosts] = useState([]);
   const [postsLoading, setPostsLoading] = useState(true);
+  const [modalConfig, setModalConfig] = useState({ isOpen: false, type: 'followers' });
 
   const handleMessage = async () => {
     if (!profile?.user?._id) return;
@@ -78,39 +80,39 @@ const Profile = () => {
     }
   };
 
-  useEffect(() => {
-    const fetchProfileAndPosts = async () => {
+  const fetchProfileAndPosts = async () => {
+    try {
+      setLoading(true);
+      setPostsLoading(true);
+      const res = await profileApi.getProfileById(id);
+      setProfile(res.data);
+
+      // Fetch posts and filter for this user
       try {
-        setLoading(true);
-        setPostsLoading(true);
-        const res = await profileApi.getProfileById(id);
-        setProfile(res.data);
-
-        // Fetch posts and filter for this user
-        try {
-          const postsRes = await postApi.getAllPosts();
-          
-          // postRes.data is the body which looks like { success: true, data: [...] }
-          const postsArray = postsRes?.data?.data || postsRes?.data;
-          
-          if (Array.isArray(postsArray)) {
-            const userPosts = postsArray.filter(
-              (post) => post.user === res.data.user?._id
-            );
-            setPosts(userPosts);
-          }
-        } catch (postErr) {
-          console.error('Lỗi tải bài viết của người dùng:', postErr);
+        const postsRes = await postApi.getAllPosts();
+        
+        // postRes.data is the body which looks like { success: true, data: [...] }
+        const postsArray = postsRes?.data?.data || postsRes?.data;
+        
+        if (Array.isArray(postsArray)) {
+          const userPosts = postsArray.filter(
+            (post) => post.user === res.data.user?._id
+          );
+          setPosts(userPosts);
         }
-      } catch (err) {
-        console.error('Lỗi tải profile:', err);
-        setError('Không tìm thấy hồ sơ người dùng này.');
-      } finally {
-        setLoading(false);
-        setPostsLoading(false);
+      } catch (postErr) {
+        console.error('Lỗi tải bài viết của người dùng:', postErr);
       }
-    };
+    } catch (err) {
+      console.error('Lỗi tải profile:', err);
+      setError('Không tìm thấy hồ sơ người dùng này.');
+    } finally {
+      setLoading(false);
+      setPostsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchProfileAndPosts();
   }, [id]);
 
@@ -192,8 +194,18 @@ const Profile = () => {
             <p className="text-xl text-gray-600 mt-1 font-medium">{status} {company && `tại ${company}`}</p>
             
             <div className="flex justify-center md:justify-start gap-4 mt-3">
-              <span className="font-semibold text-gray-900">{user?.followers?.length || 0} <span className="text-gray-500 font-normal">người theo dõi</span></span>
-              <span className="font-semibold text-gray-900">{user?.following?.length || 0} <span className="text-gray-500 font-normal">đang theo dõi</span></span>
+              <button 
+                onClick={() => setModalConfig({ isOpen: true, type: 'followers' })} 
+                className="font-semibold text-gray-900 hover:text-blue-600 transition-colors cursor-pointer"
+              >
+                {user?.followers?.length || 0} <span className="text-gray-500 font-normal">người theo dõi</span>
+              </button>
+              <button 
+                onClick={() => setModalConfig({ isOpen: true, type: 'following' })} 
+                className="font-semibold text-gray-900 hover:text-blue-600 transition-colors cursor-pointer"
+              >
+                {user?.following?.length || 0} <span className="text-gray-500 font-normal">đang theo dõi</span>
+              </button>
             </div>
             
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 mt-4 text-gray-500 text-sm">
@@ -285,6 +297,16 @@ const Profile = () => {
           )}
         </div>
       </div>
+
+      <FollowModal 
+        isOpen={modalConfig.isOpen} 
+        onClose={() => setModalConfig({ ...modalConfig, isOpen: false })} 
+        type={modalConfig.type} 
+        userId={user?._id}
+        loggedInUserId={loggedInUserId}
+        currentFollowing={user?.following}
+        onFollowToggle={() => fetchProfileAndPosts()}
+      />
     </div>
   );
 };
