@@ -19,5 +19,27 @@ export const postApi = {
   // Lấy bài viết theo ID
   getPostById: (id) => {
     return axiosClient.get(`/posts/${id}`);
-  }
+  },
+
+  // Lưu / bỏ lưu bài viết
+  savePost: (id) => {
+    return axiosClient.put(`/posts/save/${id}`);
+  },
+
+  // Lấy danh sách bài viết đã lưu
+  getSavedPosts: () => {
+    return axiosClient.get('/posts/saved');
+  },
+
+  // Like / Unlike bài viết
+  likePost: (id) => {
+    return axiosClient.put(`/posts/like/${id}`);
+  },
+
+  // Gửi bình luận
+  addComment: (id, text) => {
+    return axiosClient.post(`/posts/comment/${id}`, {
+      text: text.trim(),
+    });
+  },
 };
