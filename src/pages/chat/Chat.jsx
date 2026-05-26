@@ -41,11 +41,18 @@ const Chat = () => {
 
     socketRef.current.on('connect', () => {
       console.log('✅ Đã kết nối Socket.IO tới server!');
+      if (currentUserId) {
+        socketRef.current.emit('setup', currentUserId);
+      }
     });
 
     socketRef.current.on('receive_message', (newMessage) => {
       // Bắn action vào Redux để cập nhật UI
       dispatch(addMessage(newMessage));
+      
+      // Nếu có tin nhắn mới, ta dispatch getConversations để đảm bảo 
+      // conversation list luôn được cập nhật (trong trường hợp đây là conversation mới tinh)
+      dispatch(getConversations());
     });
 
     return () => {

@@ -13,6 +13,7 @@ import PostDetail from "./pages/posts/PostDetail";
 import Dashboard from "./pages/dashboard/Dashboard";
 import Chat from "./pages/chat/Chat";
 import SavedPosts from "./pages/posts/SavedPosts";
+import Notifications from "./pages/notifications/Notifications";
 
 function App() {
   return (
@@ -34,6 +35,7 @@ function App() {
         <Route path="/edit-profile" element={<EditProfile />} />
         <Route path="/chat" element={<Chat />} />
         <Route path="/saved-posts" element={<SavedPosts />} />
+        <Route path="/notifications" element={<Notifications />} />
       </Route>
 
       {/* Route mặc định: Điều hướng về trang chủ */}
