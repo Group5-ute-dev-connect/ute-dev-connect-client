@@ -52,7 +52,10 @@ const chatSlice = createSlice({
     addMessage: (state, action) => {
       // Chỉ push vào mảng nếu tin nhắn thuộc về room hiện tại
       if (action.payload.conversationId === state.activeConversationId) {
-        state.messages.push(action.payload);
+        const exists = state.messages.some(m => m._id === action.payload._id);
+        if (!exists) {
+          state.messages.push(action.payload);
+        }
       }
       
       // Cập nhật lastMessage cho conversation tương ứng
@@ -62,6 +65,18 @@ const chatSlice = createSlice({
         // Đưa conversation này lên đầu mảng
         const [conv] = state.conversations.splice(convIndex, 1);
         state.conversations.unshift(conv);
+      }
+    },
+    markMessagesAsRead: (state, action) => {
+      const { conversationId, userId } = action.payload;
+      if (state.activeConversationId === conversationId) {
+        state.messages = state.messages.map(msg => {
+          const msgSenderId = msg.sender?._id || msg.sender;
+          if (msgSenderId !== userId) {
+            return { ...msg, isRead: true };
+          }
+          return msg;
+        });
       }
     }
   },
@@ -98,5 +113,5 @@ const chatSlice = createSlice({
   }
 });
 
-export const { setActiveConversation, addMessage } = chatSlice.actions;
+export const { setActiveConversation, addMessage, markMessagesAsRead } = chatSlice.actions;
 export default chatSlice.reducer;
