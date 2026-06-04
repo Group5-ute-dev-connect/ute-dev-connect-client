@@ -2,8 +2,11 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { io } from 'socket.io-client';
 import './Chat.css';
-import { Send, MoreVertical, Phone, Video } from 'lucide-react';
+import { Send, MoreVertical, Phone, Video, Mic, MicOff, VideoOff, PhoneOff } from 'lucide-react';
 import { getConversations, getMessages, setActiveConversation, addMessage } from '../../store/chatSlice';
+import Peer from 'peerjs';
+import { toast } from 'react-toastify';
+import { profileApi } from '../../services/api/profileApi';
 
 const SOCKET_URL = 'http://localhost:5000';
 
@@ -19,21 +22,206 @@ const Chat = () => {
   
   const token = useSelector(state => state.auth?.token);
   
-  // Lấy ID user hiện tại từ token JWT
+  // Lấy ID và thông tin user hiện tại từ token JWT
   let currentUserId = null;
+  let currentUserName = '';
+  let currentUserAvatar = '';
   if (token) {
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
       currentUserId = payload.user?.id || payload.id;
+      currentUserName = payload.user?.name || payload.name || 'Người dùng UTE';
+      currentUserAvatar = payload.user?.avatar || payload.avatar || '';
     } catch (e) {
       console.error("Lỗi parse token:", e);
     }
   }
 
+  // Các trạng thái cuộc gọi: 'idle' | 'calling' (đang gọi đi) | 'ringing' (đang reo chuông nhận) | 'connected' (đang kết nối cuộc gọi)
+  const [callState, setCallState] = useState('idle');
+  const [callType, setCallType] = useState('video'); // 'video' | 'audio'
+  const [callerInfo, setCallerInfo] = useState(null); // { callerId, callerName, callerAvatar }
+  const [recipientInfo, setRecipientInfo] = useState(null); // { id, name, avatar }
+  const [isMuted, setIsMuted] = useState(false);
+  const [isCameraOff, setIsCameraOff] = useState(false);
+  const [remoteStreamReceived, setRemoteStreamReceived] = useState(false);
+
+  const peerRef = useRef(null);
+  const currentCallRef = useRef(null);
+  const localStreamRef = useRef(null);
+  const remoteStreamRef = useRef(null);
+
+  const localVideoRef = useRef(null);
+  const remoteVideoRef = useRef(null);
+
+  const audioContextRef = useRef(null);
+  const ringtoneIntervalRef = useRef(null);
+
+  const [currentUserProfile, setCurrentUserProfile] = useState(null);
+
+  // Fetch thông tin profile thực tế từ API để lấy name/avatar chính xác
+  useEffect(() => {
+    const fetchMyProfile = async () => {
+      try {
+        const res = await profileApi.getProfile();
+        if (res && res.user) {
+          setCurrentUserProfile(res.user);
+        } else if (res && res.data && res.data.user) {
+          setCurrentUserProfile(res.data.user);
+        } else if (res && res.data) {
+          setCurrentUserProfile(res.data);
+        }
+      } catch (err) {
+        console.error("Lỗi khi tải profile của tôi:", err);
+      }
+    };
+    if (currentUserId) {
+      fetchMyProfile();
+    }
+  }, [currentUserId]);
+
+  // Tìm thông tin của tôi từ danh sách cuộc trò chuyện làm fallback
+  let selfName = currentUserProfile?.name || '';
+  let selfAvatar = currentUserProfile?.avatar || '';
+
+  if (!selfName && conversations.length > 0) {
+    for (const conv of conversations) {
+      if (conv && Array.isArray(conv.participants)) {
+        const self = conv.participants.find(p => p && p._id === currentUserId);
+        if (self && self.name) {
+          selfName = self.name;
+          selfAvatar = self.avatar || '';
+          break;
+        }
+      }
+    }
+  }
+
+  const finalUserName = selfName || currentUserName || 'Người dùng UTE';
+  const finalUserAvatar = selfAvatar || currentUserAvatar || '';
+
+  // Dùng ref cho callState để socket listener không bị stale closure
+  const callStateRef = useRef('idle');
+  useEffect(() => {
+    callStateRef.current = callState;
+  }, [callState]);
+
   console.log("ChatState:", chatState);
   console.log("currentUserId:", currentUserId);
 
-  // 1. Khởi tạo Socket và Fetch danh sách Conversations ban đầu
+  // Phát nhạc chuông reo bằng Web Audio API
+  const startRingtone = (isIncoming) => {
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+      }
+      const ctx = new AudioContext();
+      audioContextRef.current = ctx;
+
+      const playTone = () => {
+        if (ctx.state === 'suspended') {
+          ctx.resume();
+        }
+        const osc1 = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc1.connect(gain);
+        osc2.connect(gain);
+        gain.connect(ctx.destination);
+
+        if (isIncoming) {
+          osc1.type = 'sine';
+          osc1.frequency.setValueAtTime(440, ctx.currentTime);
+          osc2.type = 'sine';
+          osc2.frequency.setValueAtTime(480, ctx.currentTime);
+          gain.gain.setValueAtTime(0, ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.1);
+          gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 1.8);
+        } else {
+          osc1.type = 'sine';
+          osc1.frequency.setValueAtTime(425, ctx.currentTime);
+          gain.gain.setValueAtTime(0, ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.15, ctx.currentTime + 0.1);
+          gain.gain.linearRampToValueAtTime(0.15, ctx.currentTime + 1.0);
+          gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 1.1);
+        }
+
+        osc1.start();
+        if (isIncoming) osc2.start();
+
+        setTimeout(() => {
+          try {
+            osc1.stop();
+            if (isIncoming) osc2.stop();
+          } catch (e) {}
+        }, isIncoming ? 2000 : 1200);
+      };
+
+      playTone();
+      ringtoneIntervalRef.current = setInterval(playTone, 3000);
+    } catch (err) {
+      console.error("Lỗi phát nhạc chuông:", err);
+    }
+  };
+
+  const stopRingtone = () => {
+    if (ringtoneIntervalRef.current) {
+      clearInterval(ringtoneIntervalRef.current);
+      ringtoneIntervalRef.current = null;
+    }
+    if (audioContextRef.current) {
+      try {
+        audioContextRef.current.close();
+      } catch (e) {}
+      audioContextRef.current = null;
+    }
+  };
+
+  const stopStream = (streamRef) => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => {
+        try { track.stop(); } catch (e) {}
+      });
+      streamRef.current = null;
+    }
+  };
+
+  // Khởi tạo PeerJS Client
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    peerRef.current = new Peer(currentUserId, {
+      host: 'localhost',
+      port: 5000,
+      path: '/peer',
+      secure: false
+    });
+
+    peerRef.current.on('open', (id) => {
+      console.log('✅ PeerJS Client kết nối với ID:', id);
+    });
+
+    peerRef.current.on('error', (err) => {
+      console.error('❌ Lỗi PeerJS Client:', err);
+    });
+
+    peerRef.current.on('call', async (incomingCall) => {
+      console.log('📞 Nhận cuộc gọi PeerJS từ:', incomingCall.peer);
+      currentCallRef.current = incomingCall;
+    });
+
+    return () => {
+      if (peerRef.current) {
+        peerRef.current.destroy();
+        peerRef.current = null;
+      }
+    };
+  }, [currentUserId]);
+
+  // 1. Khởi tạo Socket và Fetch danh sách Conversations ban đầu, cùng sự kiện gọi điện
   useEffect(() => {
     dispatch(getConversations());
 
@@ -47,18 +235,226 @@ const Chat = () => {
     });
 
     socketRef.current.on('receive_message', (newMessage) => {
-      // Bắn action vào Redux để cập nhật UI
       dispatch(addMessage(newMessage));
-      
-      // Nếu có tin nhắn mới, ta dispatch getConversations để đảm bảo 
-      // conversation list luôn được cập nhật (trong trường hợp đây là conversation mới tinh)
       dispatch(getConversations());
+    });
+
+    // --- ĐIỀU PHỐI CUỘC GỌI QUA SOCKET ---
+    socketRef.current.on('incoming-call', (data) => {
+      console.log('📞 incoming-call:', data);
+      if (callStateRef.current !== 'idle') {
+        socketRef.current.emit('answer-call', {
+          callerId: data.callerId,
+          recipientId: currentUserId,
+          status: 'busy'
+        });
+        return;
+      }
+      setCallState('ringing');
+      setCallType(data.callType);
+      setCallerInfo(data);
+      startRingtone(true);
+    });
+
+    socketRef.current.on('call-response', (data) => {
+      console.log('📞 call-response:', data);
+      if (data.status === 'accepted') {
+        stopRingtone();
+        setCallState('connected');
+        
+        if (localStreamRef.current) {
+          const call = peerRef.current.call(data.recipientId, localStreamRef.current);
+          currentCallRef.current = call;
+          
+          call.on('stream', (userRemoteStream) => {
+            remoteStreamRef.current = userRemoteStream;
+            setRemoteStreamReceived(true);
+          });
+        }
+      } else {
+        stopRingtone();
+        stopStream(localStreamRef);
+        setCallState('idle');
+        setRecipientInfo(null);
+        if (data.status === 'declined') {
+          toast.error('Cuộc gọi bị từ chối.');
+        } else if (data.status === 'busy') {
+          toast.warning('Người nhận đang bận cuộc gọi khác.');
+        }
+      }
+    });
+
+    socketRef.current.on('call-ended', () => {
+      console.log('📞 call-ended');
+      stopRingtone();
+      if (currentCallRef.current) {
+        try { currentCallRef.current.close(); } catch(e){}
+        currentCallRef.current = null;
+      }
+      stopStream(localStreamRef);
+      stopStream(remoteStreamRef);
+      setCallState('idle');
+      setCallerInfo(null);
+      setRecipientInfo(null);
+      setRemoteStreamReceived(false);
+      setIsMuted(false);
+      setIsCameraOff(false);
+      toast.info('Cuộc gọi đã kết thúc.');
     });
 
     return () => {
       if (socketRef.current) socketRef.current.disconnect();
+      stopRingtone();
+      stopStream(localStreamRef);
+      stopStream(remoteStreamRef);
     };
-  }, [dispatch]);
+  }, [dispatch, currentUserId]);
+
+  // Gắn luồng Stream vào thẻ Video khi sẵn sàng
+  useEffect(() => {
+    if (localVideoRef.current && localStreamRef.current) {
+      localVideoRef.current.srcObject = localStreamRef.current;
+    }
+  }, [callState, localStreamRef.current]);
+
+  useEffect(() => {
+    if (remoteVideoRef.current && remoteStreamRef.current) {
+      remoteVideoRef.current.srcObject = remoteStreamRef.current;
+    }
+  }, [callState, remoteStreamReceived]);
+
+  // Bắt đầu cuộc gọi đi
+  const startCall = async (type) => {
+    if (!otherUser) return;
+
+    setCallType(type);
+    setCallState('calling');
+    setRecipientInfo({
+      id: otherUser._id,
+      name: otherUser.name,
+      avatar: otherUser.avatar
+    });
+    startRingtone(false);
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: type === 'video',
+        audio: true
+      });
+      localStreamRef.current = stream;
+
+      socketRef.current.emit('call-user', {
+        callerId: currentUserId,
+        recipientId: otherUser._id,
+        callerName: finalUserName,
+        callerAvatar: finalUserAvatar,
+        callType: type
+      });
+    } catch (err) {
+      console.error("Không thể truy cập camera/mic:", err);
+      toast.error("Không thể mở camera hoặc microphone. Vui lòng cấp quyền.");
+      stopRingtone();
+      setCallState('idle');
+      setRecipientInfo(null);
+    }
+  };
+
+  // Chấp nhận cuộc gọi đến
+  const handleAcceptCall = async () => {
+    stopRingtone();
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: callType === 'video',
+        audio: true
+      });
+      localStreamRef.current = stream;
+      setCallState('connected');
+
+      socketRef.current.emit('answer-call', {
+        callerId: callerInfo.callerId,
+        recipientId: currentUserId,
+        status: 'accepted'
+      });
+
+      if (currentCallRef.current) {
+        currentCallRef.current.answer(stream);
+        currentCallRef.current.on('stream', (userRemoteStream) => {
+          remoteStreamRef.current = userRemoteStream;
+          setRemoteStreamReceived(true);
+        });
+      } else {
+        peerRef.current.on('call', (incomingCall) => {
+          currentCallRef.current = incomingCall;
+          incomingCall.answer(stream);
+          incomingCall.on('stream', (userRemoteStream) => {
+            remoteStreamRef.current = userRemoteStream;
+            setRemoteStreamReceived(true);
+          });
+        });
+      }
+    } catch (err) {
+      console.error("Lỗi khi mở camera/micro:", err);
+      toast.error("Không thể mở camera hoặc microphone.");
+      handleDeclineCall();
+    }
+  };
+
+  // Từ chối cuộc gọi đến
+  const handleDeclineCall = () => {
+    stopRingtone();
+    socketRef.current.emit('answer-call', {
+      callerId: callerInfo.callerId,
+      recipientId: currentUserId,
+      status: 'declined'
+    });
+    setCallState('idle');
+    setCallerInfo(null);
+  };
+
+  // Gác máy / Hủy cuộc gọi
+  const handleHangUp = () => {
+    stopRingtone();
+    
+    const otherUserId = recipientInfo?.id || recipientInfo?._id || callerInfo?.callerId;
+    if (otherUserId && socketRef.current) {
+      socketRef.current.emit('end-call', { targetId: otherUserId });
+    }
+
+    if (currentCallRef.current) {
+      try { currentCallRef.current.close(); } catch(e){}
+      currentCallRef.current = null;
+    }
+
+    stopStream(localStreamRef);
+    stopStream(remoteStreamRef);
+
+    setCallState('idle');
+    setCallerInfo(null);
+    setRecipientInfo(null);
+    setRemoteStreamReceived(false);
+    setIsMuted(false);
+    setIsCameraOff(false);
+  };
+
+  const toggleMute = () => {
+    if (localStreamRef.current) {
+      const audioTrack = localStreamRef.current.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.enabled = !audioTrack.enabled;
+        setIsMuted(!audioTrack.enabled);
+      }
+    }
+  };
+
+  const toggleCamera = () => {
+    if (localStreamRef.current) {
+      const videoTrack = localStreamRef.current.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.enabled = !videoTrack.enabled;
+        setIsCameraOff(!videoTrack.enabled);
+      }
+    }
+  };
 
   // 2. Lắng nghe thay đổi phòng chat -> Fetch Messages & Join Socket Room
   useEffect(() => {
@@ -148,8 +544,8 @@ const Chat = () => {
                   <div className="status">Đang hoạt động</div>
                 </div>
                 <div style={{ display: 'flex', gap: '20px', color: '#0084ff' }}>
-                  <Phone size={24} style={{cursor: 'pointer'}} />
-                  <Video size={24} style={{cursor: 'pointer'}} />
+                  <Phone size={24} style={{cursor: 'pointer'}} onClick={() => startCall('audio')} title="Gọi thoại" />
+                  <Video size={24} style={{cursor: 'pointer'}} onClick={() => startCall('video')} title="Gọi video" />
                   <MoreVertical size={24} style={{cursor: 'pointer'}} color="#666" />
                 </div>
               </div>
@@ -186,8 +582,115 @@ const Chat = () => {
           )}
         </div>
       </div>
-    </div>
-  );
+
+      {/* --- GIAO DIỆN CUỘC GỌI OVERLAY --- */}
+      {callState !== 'idle' && (
+      <div className={`call-overlay ${callState}`}>
+        <div className="call-glass-container">
+          {callState === 'ringing' && (
+            <div className="call-ringing-panel animate-fade-in">
+              <div className="call-avatar-pulsing">
+                <img src={callerInfo?.callerAvatar || 'https://via.placeholder.com/150'} alt="Caller Avatar" className="large-avatar" />
+                <div className="pulse-ring ring1"></div>
+                <div className="pulse-ring ring2"></div>
+              </div>
+              <h2 className="call-title">{callerInfo?.callerName || 'Sinh viên UTE'}</h2>
+              <p className="call-subtitle">{callType === 'video' ? 'Đang gọi video cho bạn...' : 'Đang gọi thoại cho bạn...'}</p>
+              <div className="call-actions-row">
+                <button className="btn-call btn-accept" onClick={handleAcceptCall}>
+                  <Phone size={20} style={{ marginRight: '8px' }} /> Chấp nhận
+                </button>
+                <button className="btn-call btn-decline" onClick={handleDeclineCall}>
+                  <PhoneOff size={20} style={{ marginRight: '8px' }} /> Từ chối
+                </button>
+              </div>
+            </div>
+          )}
+
+          {callState === 'calling' && (
+            <div className="call-ringing-panel animate-fade-in">
+              <div className="call-avatar-pulsing">
+                <img src={recipientInfo?.avatar || 'https://via.placeholder.com/150'} alt="Recipient Avatar" className="large-avatar" />
+                <div className="pulse-ring ring1"></div>
+                <div className="pulse-ring ring2"></div>
+              </div>
+              <h2 className="call-title">Đang gọi {recipientInfo?.name}...</h2>
+              <p className="call-subtitle">Vui lòng chờ phản hồi...</p>
+              
+              {callType === 'video' && localStreamRef.current && (
+                <div className="local-preview-mini">
+                  <video ref={localVideoRef} autoPlay playsInline muted className="local-video-mini-el" />
+                </div>
+              )}
+
+              <div className="call-actions-row">
+                <button className="btn-call btn-decline" onClick={handleHangUp}>
+                  <PhoneOff size={20} style={{ marginRight: '8px' }} /> Hủy cuộc gọi
+                </button>
+              </div>
+            </div>
+          )}
+
+          {callState === 'connected' && (
+            <div className="call-active-panel animate-fade-in">
+              <div className="video-streams-container">
+                {callType === 'video' ? (
+                  <>
+                    <div className="remote-video-wrapper">
+                      {remoteStreamReceived ? (
+                        <video ref={remoteVideoRef} autoPlay playsInline className="remote-video" />
+                      ) : (
+                        <div className="stream-loading">
+                          <img src={recipientInfo?.avatar || callerInfo?.callerAvatar || 'https://via.placeholder.com/150'} alt="Loading" className="large-avatar pulse" />
+                          <span>Đang kết nối luồng camera...</span>
+                        </div>
+                      )}
+                      <span className="user-label">{recipientInfo?.name || callerInfo?.callerName || 'Người nhận'}</span>
+                    </div>
+                    {!isCameraOff && (
+                      <div className="local-video-wrapper">
+                        <video ref={localVideoRef} autoPlay playsInline muted className="local-video" />
+                        <span className="user-label">Bạn</span>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="voice-only-container">
+                    <div className="voice-avatars">
+                      <div className="voice-avatar-item">
+                        <img src={currentUserAvatar || 'https://via.placeholder.com/150'} alt="My Avatar" className="large-avatar" />
+                        <span>Bạn</span>
+                      </div>
+                      <div className="voice-avatar-item pulse-avatar">
+                        <img src={recipientInfo?.avatar || callerInfo?.callerAvatar || 'https://via.placeholder.com/150'} alt="Other Avatar" className="large-avatar" />
+                        <span>{recipientInfo?.name || callerInfo?.callerName || 'Đối phương'}</span>
+                      </div>
+                    </div>
+                    <audio ref={remoteVideoRef} autoPlay />
+                  </div>
+                )}
+              </div>
+
+              <div className="call-active-controls">
+                <button className={`control-btn ${isMuted ? 'active-mute' : ''}`} onClick={toggleMute} title={isMuted ? 'Bật Micro' : 'Tắt Micro'}>
+                  {isMuted ? <MicOff size={22} /> : <Mic size={22} />}
+                </button>
+                {callType === 'video' && (
+                  <button className={`control-btn ${isCameraOff ? 'active-mute' : ''}`} onClick={toggleCamera} title={isCameraOff ? 'Bật Camera' : 'Tắt Camera'}>
+                    {isCameraOff ? <VideoOff size={22} /> : <Video size={22} />}
+                  </button>
+                )}
+                <button className="control-btn hang-up-btn" onClick={handleHangUp} title="Gác máy">
+                  <PhoneOff size={22} />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    )}
+  </div>
+);
 };
 
 export default Chat;
