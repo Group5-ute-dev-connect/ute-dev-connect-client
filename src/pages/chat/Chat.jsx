@@ -2,16 +2,18 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { io } from 'socket.io-client';
 import './Chat.css';
-import { Send, MoreVertical, Phone, Video, Mic, MicOff, VideoOff, PhoneOff } from 'lucide-react';
+import { Send, MoreVertical, Phone, Video, Mic, MicOff, VideoOff, PhoneOff, ArrowLeft, MessageCircle } from 'lucide-react';
 import { getConversations, getMessages, setActiveConversation, addMessage } from '../../store/chatSlice';
 import Peer from 'peerjs';
 import { toast } from 'react-toastify';
 import { profileApi } from '../../services/api/profileApi';
+import { useNavigate } from 'react-router-dom';
 
 const SOCKET_URL = 'http://localhost:5000';
 
 const Chat = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const socketRef = useRef(null);
   const [inputValue, setInputValue] = useState('');
   
@@ -58,6 +60,16 @@ const Chat = () => {
   const ringtoneIntervalRef = useRef(null);
 
   const [currentUserProfile, setCurrentUserProfile] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const messagesEndRef = useRef(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   // Fetch thông tin profile thực tế từ API để lấy name/avatar chính xác
   useEffect(() => {
@@ -494,42 +506,67 @@ const Chat = () => {
   const activeConversation = conversations.find(c => c && c._id === activeConversationId);
   const otherUser = activeConversation ? getOtherParticipant(activeConversation.participants) : null;
 
+  const filteredConversations = conversations.filter(conv => {
+    if (!conv) return false;
+    const participant = getOtherParticipant(conv.participants);
+    return participant?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+  });
+
   return (
     <div className="chat-container">
       <div className="chat-wrapper">
         {/* Sidebar */}
         <div className="chat-sidebar">
           <div className="chat-sidebar-header">
-            <span>Tin nhắn</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <ArrowLeft 
+                size={22} 
+                style={{ cursor: 'pointer', color: '#555' }} 
+                onClick={() => navigate('/dashboard')} 
+                title="Quay lại Bảng tin" 
+              />
+              <span style={{ fontWeight: 700 }}>Tin nhắn</span>
+            </div>
             <MoreVertical size={20} color="#666" style={{cursor: 'pointer'}} />
           </div>
           <div className="chat-search-bar">
-            <input type="text" placeholder="Tìm kiếm trên Messenger..." />
+            <input 
+              type="text" 
+              placeholder="Tìm kiếm hội thoại..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
           <div className="chat-conversation-list">
-            {conversations.map((conv, idx) => {
-              if (!conv) return null;
-              const participant = getOtherParticipant(conv.participants);
-              const isActive = conv._id === activeConversationId;
-              
-              return (
-                <div 
-                  className={`conversation-item ${isActive ? 'active' : ''}`} 
-                  key={conv._id || idx}
-                  onClick={() => handleSelectConversation(conv._id)}
-                >
-                  <img src={participant?.avatar || 'https://via.placeholder.com/50'} alt="Avatar" className="avatar" />
-                  <div className="conversation-info">
-                    <div className="conversation-header">
-                      <span className="conversation-name">{participant?.name || 'Người dùng ẩn danh'}</span>
-                    </div>
-                    <div className="conversation-last-message">
-                      {conv.lastMessage ? (conv.lastMessage.text || 'Tin nhắn đính kèm') : 'Chưa có tin nhắn...'}
+            {filteredConversations.length > 0 ? (
+              filteredConversations.map((conv, idx) => {
+                if (!conv) return null;
+                const participant = getOtherParticipant(conv.participants);
+                const isActive = conv._id === activeConversationId;
+                
+                return (
+                  <div 
+                    className={`conversation-item ${isActive ? 'active' : ''}`} 
+                    key={conv._id || idx}
+                    onClick={() => handleSelectConversation(conv._id)}
+                  >
+                    <img src={participant?.avatar || 'https://via.placeholder.com/50'} alt="Avatar" className="avatar" />
+                    <div className="conversation-info">
+                      <div className="conversation-header">
+                        <span className="conversation-name">{participant?.name || 'Người dùng ẩn danh'}</span>
+                      </div>
+                      <div className="conversation-last-message">
+                        {conv.lastMessage ? (conv.lastMessage.text || 'Tin nhắn đính kèm') : 'Chưa có tin nhắn...'}
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })
+            ) : (
+              <div style={{ padding: '20px', textAlign: 'center', color: '#999', fontSize: '0.9rem' }}>
+                Không tìm thấy hội thoại nào
+              </div>
+            )}
           </div>
         </div>
 
@@ -555,11 +592,21 @@ const Chat = () => {
                   if (!msg) return null;
                   const isMe = msg.sender?._id === currentUserId || msg.sender === currentUserId;
                   return (
-                    <div key={msg._id || idx} className={`message-bubble ${isMe ? 'message-sent' : 'message-received'}`}>
-                      {msg.text}
+                    <div key={msg._id || idx} className={`message-row ${isMe ? 'row-sent' : 'row-received'}`}>
+                      {!isMe && (
+                        <img 
+                          src={otherUser?.avatar || 'https://via.placeholder.com/50'} 
+                          alt="Avatar" 
+                          className="message-avatar-mini" 
+                        />
+                      )}
+                      <div className={`message-bubble ${isMe ? 'message-sent' : 'message-received'}`}>
+                        {msg.text}
+                      </div>
                     </div>
                   );
                 })}
+                <div ref={messagesEndRef} />
               </div>
 
               <form className="chat-input-area" onSubmit={handleSendMessage}>
@@ -576,8 +623,12 @@ const Chat = () => {
               </form>
             </>
           ) : (
-            <div style={{flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888'}}>
-              Chọn một cuộc trò chuyện để bắt đầu nhắn tin
+            <div className="chat-empty-state">
+              <div className="empty-state-icon-wrapper">
+                <MessageCircle size={64} className="empty-state-icon" />
+              </div>
+              <h3>Hộp thư của bạn</h3>
+              <p>Chọn một người bạn ở danh sách bên trái để gửi tin nhắn hoặc bắt đầu một cuộc gọi video.</p>
             </div>
           )}
         </div>

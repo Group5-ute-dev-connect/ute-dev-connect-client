@@ -640,3 +640,84 @@
   }
 }
 
+/* --- TỐI ƯU GIAO DIỆN TIN NHẮN (MESSAGE BUBBLE & AVATAR MINI) --- */
+.message-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  width: 100%;
+}
+
+.row-sent {
+  justify-content: flex-end;
+}
+
+.row-received {
+  justify-content: flex-start;
+}
+
+.message-avatar-mini {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  flex-shrink: 0;
+}
+
+/* --- GIAO DIỆN TRẠNG THÁI TRỐNG (EMPTY STATE) --- */
+.chat-empty-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at center, #ffffff 0%, #f1f5f9 100%);
+  padding: 40px;
+  text-align: center;
+  color: #334155;
+}
+
+.empty-state-icon-wrapper {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: rgba(0, 132, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+  border: 1px dashed rgba(0, 132, 255, 0.2);
+  animation: float 4s ease-in-out infinite;
+}
+
+.empty-state-icon {
+  color: #0084ff;
+}
+
+.chat-empty-state h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #1e293b;
+}
+
+.chat-empty-state p {
+  font-size: 0.95rem;
+  color: #64748b;
+  max-width: 380px;
+  line-height: 1.5;
+}
+
+/* Hiệu ứng trôi nổi (Float) */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+
