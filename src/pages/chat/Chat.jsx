@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { io } from 'socket.io-client';
 import './Chat.css';
 import { Send, MoreVertical, Phone, Video, Mic, MicOff, VideoOff, PhoneOff, ArrowLeft, MessageCircle, Image, Paperclip, Code } from 'lucide-react';
-import { getConversations, getMessages, setActiveConversation, addMessage } from '../../store/chatSlice';
+import { getConversations, getMessages, setActiveConversation, addMessage, markMessagesAsRead } from '../../store/chatSlice';
 import Peer from 'peerjs';
 import { toast } from 'react-toastify';
 import { profileApi } from '../../services/api/profileApi';
@@ -78,6 +78,16 @@ const Chat = () => {
   const [isCodeEditorOpen, setIsCodeEditorOpen] = useState(false);
   const [codeText, setCodeText] = useState('');
   const [codeLanguage, setCodeLanguage] = useState('javascript');
+
+  const [onlineUsers, setOnlineUsers] = useState([]);
+  const [isOtherUserTyping, setIsOtherUserTyping] = useState(false);
+  const typingTimeoutRef = useRef(null);
+  const activeConversationIdRef = useRef(activeConversationId);
+  const processedMessagesRef = useRef(new Set());
+
+  useEffect(() => {
+    activeConversationIdRef.current = activeConversationId;
+  }, [activeConversationId]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -268,8 +278,63 @@ const Chat = () => {
     });
 
     socketRef.current.on('receive_message', (newMessage) => {
+      if (!newMessage || !newMessage._id) return;
+      if (processedMessagesRef.current.has(newMessage._id)) {
+        return;
+      }
+      processedMessagesRef.current.add(newMessage._id);
+      if (processedMessagesRef.current.size > 100) {
+        const firstItem = processedMessagesRef.current.values().next().value;
+        processedMessagesRef.current.delete(firstItem);
+      }
+
       dispatch(addMessage(newMessage));
       dispatch(getConversations());
+
+      const msgSenderId = newMessage.sender?._id || newMessage.sender;
+      if (
+        newMessage.conversationId === activeConversationIdRef.current && 
+        msgSenderId !== currentUserId
+      ) {
+        socketRef.current.emit('mark-as-read', {
+          conversationId: newMessage.conversationId,
+          userId: currentUserId
+        });
+      }
+    });
+
+    // --- TRẠNG THÁI ONLINE & TYPING & READ RECEIPTS ---
+    socketRef.current.on('get-online-users', (users) => {
+      setOnlineUsers(users);
+    });
+
+    socketRef.current.on('user-online', (userId) => {
+      setOnlineUsers(prev => {
+        if (!prev.includes(userId)) {
+          return [...prev, userId];
+        }
+        return prev;
+      });
+    });
+
+    socketRef.current.on('user-offline', (userId) => {
+      setOnlineUsers(prev => prev.filter(id => id !== userId));
+    });
+
+    socketRef.current.on('typing', ({ conversationId }) => {
+      if (conversationId === activeConversationIdRef.current) {
+        setIsOtherUserTyping(true);
+      }
+    });
+
+    socketRef.current.on('stop-typing', ({ conversationId }) => {
+      if (conversationId === activeConversationIdRef.current) {
+        setIsOtherUserTyping(false);
+      }
+    });
+
+    socketRef.current.on('messages-read', ({ conversationId, userId }) => {
+      dispatch(markMessagesAsRead({ conversationId, userId }));
     });
 
     // --- ĐIỀU PHỐI CUỘC GỌI QUA SOCKET ---
@@ -558,14 +623,44 @@ const Chat = () => {
   useEffect(() => {
     if (activeConversationId) {
       dispatch(getMessages(activeConversationId));
+      setIsOtherUserTyping(false);
       if (socketRef.current) {
         socketRef.current.emit('join_room', activeConversationId);
+        socketRef.current.emit('mark-as-read', {
+          conversationId: activeConversationId,
+          userId: currentUserId
+        });
       }
     }
-  }, [activeConversationId, dispatch]);
+  }, [activeConversationId, dispatch, currentUserId]);
 
   const handleSelectConversation = (convId) => {
     dispatch(setActiveConversation(convId));
+  };
+
+  const handleInputChange = (e) => {
+    const val = e.target.value;
+    setInputValue(val);
+
+    if (!activeConversationId || !socketRef.current) return;
+
+    socketRef.current.emit('typing', {
+      conversationId: activeConversationId,
+      userId: currentUserId
+    });
+
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    typingTimeoutRef.current = setTimeout(() => {
+      if (socketRef.current) {
+        socketRef.current.emit('stop-typing', {
+          conversationId: activeConversationId,
+          userId: currentUserId
+        });
+      }
+    }, 2000);
   };
 
   const handleSendMessage = (e) => {
@@ -580,6 +675,17 @@ const Chat = () => {
 
     // Gửi lên server qua socket
     socketRef.current.emit('send_message', messageData);
+
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    if (socketRef.current) {
+      socketRef.current.emit('stop-typing', {
+        conversationId: activeConversationId,
+        userId: currentUserId
+      });
+    }
+
     setInputValue('');
   };
 
@@ -629,6 +735,7 @@ const Chat = () => {
                 if (!conv) return null;
                 const participant = getOtherParticipant(conv.participants);
                 const isActive = conv._id === activeConversationId;
+                const isOnline = participant && onlineUsers.includes(participant._id);
                 
                 return (
                   <div 
@@ -636,7 +743,10 @@ const Chat = () => {
                     key={conv._id || idx}
                     onClick={() => handleSelectConversation(conv._id)}
                   >
-                    <img src={participant?.avatar || 'https://via.placeholder.com/50'} alt="Avatar" className="avatar" />
+                    <div className="avatar-container">
+                      <img src={participant?.avatar || 'https://via.placeholder.com/50'} alt="Avatar" className="avatar" />
+                      {isOnline && <span className="status-online-dot"></span>}
+                    </div>
                     <div className="conversation-info">
                       <div className="conversation-header">
                         <span className="conversation-name">{participant?.name || 'Người dùng ẩn danh'}</span>
@@ -661,10 +771,15 @@ const Chat = () => {
           {activeConversationId && otherUser ? (
             <>
               <div className="chat-main-header">
-                <img src={otherUser.avatar || 'https://via.placeholder.com/50'} alt="Avatar" className="avatar" />
+                <div className="avatar-container">
+                  <img src={otherUser.avatar || 'https://via.placeholder.com/50'} alt="Avatar" className="avatar" />
+                  {onlineUsers.includes(otherUser._id) && <span className="status-online-dot"></span>}
+                </div>
                 <div className="chat-main-info" style={{ flex: 1 }}>
                   <div className="name">{otherUser.name || 'Người dùng'}</div>
-                  <div className="status">Đang hoạt động</div>
+                  <div className={`status ${onlineUsers.includes(otherUser._id) ? 'status-online' : 'status-offline'}`}>
+                    {onlineUsers.includes(otherUser._id) ? 'Đang hoạt động' : 'Ngoại tuyến'}
+                  </div>
                 </div>
                 <div style={{ display: 'flex', gap: '20px', color: '#0084ff' }}>
                   <Phone size={24} style={{cursor: 'pointer'}} onClick={() => startCall('audio')} title="Gọi thoại" />
@@ -674,75 +789,111 @@ const Chat = () => {
               </div>
 
               <div className="chat-messages">
-                {messages.map((msg, idx) => {
-                  if (!msg) return null;
-                  const isMe = msg.sender?._id === currentUserId || msg.sender === currentUserId;
-                  return (
-                    <div key={msg._id || idx} className={`message-row ${isMe ? 'row-sent' : 'row-received'}`}>
-                      {!isMe && (
-                        <img 
-                          src={otherUser?.avatar || 'https://via.placeholder.com/50'} 
-                          alt="Avatar" 
-                          className="message-avatar-mini" 
-                        />
-                      )}
-                      
-                      <div className={`message-bubble-wrapper ${isMe ? 'msg-sent' : 'msg-received'}`}>
-                        {msg.fileUrl && msg.fileType === 'image' && (
-                          <div className="message-image-container animate-fade-in">
+                {(() => {
+                  const lastSentReadMessageId = (() => {
+                    const sentMessages = messages.filter(m => {
+                      const senderId = m.sender?._id || m.sender;
+                      return senderId === currentUserId;
+                    });
+                    if (sentMessages.length === 0) return null;
+                    const readMessages = sentMessages.filter(m => m.isRead);
+                    if (readMessages.length === 0) return null;
+                    return readMessages[readMessages.length - 1]._id;
+                  })();
+
+                  return messages.map((msg, idx) => {
+                    if (!msg) return null;
+                    const isMe = msg.sender?._id === currentUserId || msg.sender === currentUserId;
+                    const isLastSentRead = msg._id === lastSentReadMessageId;
+
+                    return (
+                      <React.Fragment key={msg._id || idx}>
+                        <div className={`message-row ${isMe ? 'row-sent' : 'row-received'}`}>
+                          {!isMe && (
                             <img 
-                              src={msg.fileUrl} 
-                              alt="Hình ảnh đính kèm" 
-                              className="message-image-el" 
-                              onClick={() => window.open(msg.fileUrl, '_blank')}
+                              src={otherUser?.avatar || 'https://via.placeholder.com/50'} 
+                              alt="Avatar" 
+                              className="message-avatar-mini" 
                             />
-                          </div>
-                        )}
-
-                        {msg.fileUrl && msg.fileType === 'file' && (
-                          <div className="message-file-container animate-fade-in">
-                            <div className="file-info-row">
-                              <Paperclip size={22} className="file-icon-svg" />
-                              <div className="file-meta">
-                                <span className="file-name" title={msg.fileName}>{msg.fileName}</span>
-                                <span className="file-type-label">Tài liệu đính kèm</span>
+                          )}
+                          
+                          <div className={`message-bubble-wrapper ${isMe ? 'msg-sent' : 'msg-received'}`}>
+                            {msg.fileUrl && msg.fileType === 'image' && (
+                              <div className="message-image-container animate-fade-in">
+                                <img 
+                                  src={msg.fileUrl} 
+                                  alt="Hình ảnh đính kèm" 
+                                  className="message-image-el" 
+                                  onClick={() => window.open(msg.fileUrl, '_blank')}
+                                />
                               </div>
-                            </div>
-                            <a href={msg.fileUrl} download={msg.fileName} target="_blank" rel="noreferrer" className="btn-file-download">
-                              Tải xuống
-                            </a>
-                          </div>
-                        )}
+                            )}
 
-                        {msg.codeSnippet && msg.codeSnippet.code && (
-                          <div className="message-code-container animate-fade-in">
-                            <div className="code-header-bar">
-                              <span className="code-lang-badge">{msg.codeSnippet.language}</span>
-                              <button 
-                                className="btn-copy-code" 
-                                onClick={() => {
-                                  navigator.clipboard.writeText(msg.codeSnippet.code);
-                                  toast.success("Đã sao chép mã nguồn!");
-                                }}
-                              >
-                                Sao chép
-                              </button>
-                            </div>
-                            <pre className={`language-${msg.codeSnippet.language} code-content-pre`}>
-                              <code>{msg.codeSnippet.code}</code>
-                            </pre>
-                          </div>
-                        )}
+                            {msg.fileUrl && msg.fileType === 'file' && (
+                              <div className="message-file-container animate-fade-in">
+                                <div className="file-info-row">
+                                  <Paperclip size={22} className="file-icon-svg" />
+                                  <div className="file-meta">
+                                    <span className="file-name" title={msg.fileName}>{msg.fileName}</span>
+                                    <span className="file-type-label">Tài liệu đính kèm</span>
+                                  </div>
+                                </div>
+                                <a href={msg.fileUrl} download={msg.fileName} target="_blank" rel="noreferrer" className="btn-file-download">
+                                  Tải xuống
+                                </a>
+                              </div>
+                            )}
 
-                        {msg.text && !msg.fileUrl && !msg.codeSnippet && (
-                          <div className={`message-bubble ${isMe ? 'message-sent' : 'message-received'}`}>
-                            {msg.text}
+                            {msg.codeSnippet && msg.codeSnippet.code && (
+                              <div className="message-code-container animate-fade-in">
+                                <div className="code-header-bar">
+                                  <span className="code-lang-badge">{msg.codeSnippet.language}</span>
+                                  <button 
+                                    className="btn-copy-code" 
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(msg.codeSnippet.code);
+                                      toast.success("Đã sao chép mã nguồn!");
+                                    }}
+                                  >
+                                    Sao chép
+                                  </button>
+                                </div>
+                                <pre className={`language-${msg.codeSnippet.language} code-content-pre`}>
+                                  <code>{msg.codeSnippet.code}</code>
+                                </pre>
+                              </div>
+                            )}
+
+                            {msg.text && !msg.fileUrl && !msg.codeSnippet && (
+                              <div className={`message-bubble ${isMe ? 'message-sent' : 'message-received'}`}>
+                                {msg.text}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        {isMe && isLastSentRead && (
+                          <div className="read-receipt-row">
+                            <span className="read-receipt-label">Đã xem</span>
                           </div>
                         )}
-                      </div>
+                      </React.Fragment>
+                    );
+                  });
+                })()}
+                {isOtherUserTyping && (
+                  <div className="message-row row-received animate-fade-in">
+                    <img 
+                      src={otherUser?.avatar || 'https://via.placeholder.com/50'} 
+                      alt="Avatar" 
+                      className="message-avatar-mini" 
+                    />
+                    <div className="typing-indicator-bubble">
+                      <span className="typing-dot"></span>
+                      <span className="typing-dot"></span>
+                      <span className="typing-dot"></span>
                     </div>
-                  );
-                })}
+                  </div>
+                )}
                 <div ref={messagesEndRef} />
               </div>
 
@@ -830,7 +981,7 @@ const Chat = () => {
                   className="chat-input" 
                   placeholder={isCodeEditorOpen ? "Nhập code ở khung phía trên..." : "Nhập tin nhắn..."} 
                   value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
+                  onChange={handleInputChange}
                   disabled={isCodeEditorOpen}
                 />
                 <button type="submit" className="send-button" title="Gửi tin nhắn" disabled={isCodeEditorOpen}>
