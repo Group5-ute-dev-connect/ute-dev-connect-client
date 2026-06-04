@@ -2,12 +2,22 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { io } from 'socket.io-client';
 import './Chat.css';
-import { Send, MoreVertical, Phone, Video, Mic, MicOff, VideoOff, PhoneOff, ArrowLeft, MessageCircle } from 'lucide-react';
+import { Send, MoreVertical, Phone, Video, Mic, MicOff, VideoOff, PhoneOff, ArrowLeft, MessageCircle, Image, Paperclip, Code } from 'lucide-react';
 import { getConversations, getMessages, setActiveConversation, addMessage } from '../../store/chatSlice';
 import Peer from 'peerjs';
 import { toast } from 'react-toastify';
 import { profileApi } from '../../services/api/profileApi';
 import { useNavigate } from 'react-router-dom';
+import axiosClient from '../../services/api/axiosClient';
+
+import Prism from 'prismjs';
+import 'prismjs/themes/prism-tomorrow.css';
+import 'prismjs/components/prism-javascript';
+import 'prismjs/components/prism-python';
+import 'prismjs/components/prism-c';
+import 'prismjs/components/prism-cpp';
+import 'prismjs/components/prism-java';
+import 'prismjs/components/prism-css';
 
 const SOCKET_URL = 'http://localhost:5000';
 
@@ -63,12 +73,23 @@ const Chat = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const messagesEndRef = useRef(null);
 
+  const fileInputRef = useRef(null);
+  const imageInputRef = useRef(null);
+  const [isCodeEditorOpen, setIsCodeEditorOpen] = useState(false);
+  const [codeText, setCodeText] = useState('');
+  const [codeLanguage, setCodeLanguage] = useState('javascript');
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   useEffect(() => {
     scrollToBottom();
+  }, [messages]);
+
+  // Kích hoạt Highlight PrismJS khi tin nhắn thay đổi
+  useEffect(() => {
+    Prism.highlightAll();
   }, [messages]);
 
   // Fetch thông tin profile thực tế từ API để lấy name/avatar chính xác
@@ -468,6 +489,71 @@ const Chat = () => {
     }
   };
 
+  const triggerFileUpload = (inputType) => {
+    if (inputType === 'image') {
+      imageInputRef.current?.click();
+    } else {
+      fileInputRef.current?.click();
+    }
+  };
+
+  const onFileChange = async (e, type) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File quá lớn. Giới hạn tải lên là 10MB.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      toast.info("Đang tải tệp lên...");
+      const response = await axiosClient.post('/chat/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      if (response.data && response.data.fileUrl) {
+        const messageData = {
+          conversationId: activeConversationId,
+          senderId: currentUserId,
+          text: '',
+          fileUrl: response.data.fileUrl,
+          fileName: response.data.fileName,
+          fileType: response.data.fileType
+        };
+        socketRef.current.emit('send_message', messageData);
+        toast.success("Đã gửi tệp thành công!");
+      }
+    } catch (err) {
+      console.error("Lỗi khi tải file:", err);
+      toast.error("Không thể tải tệp lên. Vui lòng thử lại.");
+    } finally {
+      e.target.value = '';
+    }
+  };
+
+  const handleSendCodeSnippet = (e) => {
+    e.preventDefault();
+    if (!codeText.trim() || !activeConversationId) return;
+
+    const messageData = {
+      conversationId: activeConversationId,
+      senderId: currentUserId,
+      text: '[Mã nguồn]',
+      codeSnippet: {
+        code: codeText,
+        language: codeLanguage
+      }
+    };
+
+    socketRef.current.emit('send_message', messageData);
+    setCodeText('');
+    setIsCodeEditorOpen(false);
+  };
+
   // 2. Lắng nghe thay đổi phòng chat -> Fetch Messages & Join Socket Room
   useEffect(() => {
     if (activeConversationId) {
@@ -600,8 +686,59 @@ const Chat = () => {
                           className="message-avatar-mini" 
                         />
                       )}
-                      <div className={`message-bubble ${isMe ? 'message-sent' : 'message-received'}`}>
-                        {msg.text}
+                      
+                      <div className={`message-bubble-wrapper ${isMe ? 'msg-sent' : 'msg-received'}`}>
+                        {msg.fileUrl && msg.fileType === 'image' && (
+                          <div className="message-image-container animate-fade-in">
+                            <img 
+                              src={msg.fileUrl} 
+                              alt="Hình ảnh đính kèm" 
+                              className="message-image-el" 
+                              onClick={() => window.open(msg.fileUrl, '_blank')}
+                            />
+                          </div>
+                        )}
+
+                        {msg.fileUrl && msg.fileType === 'file' && (
+                          <div className="message-file-container animate-fade-in">
+                            <div className="file-info-row">
+                              <Paperclip size={22} className="file-icon-svg" />
+                              <div className="file-meta">
+                                <span className="file-name" title={msg.fileName}>{msg.fileName}</span>
+                                <span className="file-type-label">Tài liệu đính kèm</span>
+                              </div>
+                            </div>
+                            <a href={msg.fileUrl} download={msg.fileName} target="_blank" rel="noreferrer" className="btn-file-download">
+                              Tải xuống
+                            </a>
+                          </div>
+                        )}
+
+                        {msg.codeSnippet && msg.codeSnippet.code && (
+                          <div className="message-code-container animate-fade-in">
+                            <div className="code-header-bar">
+                              <span className="code-lang-badge">{msg.codeSnippet.language}</span>
+                              <button 
+                                className="btn-copy-code" 
+                                onClick={() => {
+                                  navigator.clipboard.writeText(msg.codeSnippet.code);
+                                  toast.success("Đã sao chép mã nguồn!");
+                                }}
+                              >
+                                Sao chép
+                              </button>
+                            </div>
+                            <pre className={`language-${msg.codeSnippet.language} code-content-pre`}>
+                              <code>{msg.codeSnippet.code}</code>
+                            </pre>
+                          </div>
+                        )}
+
+                        {msg.text && !msg.fileUrl && !msg.codeSnippet && (
+                          <div className={`message-bubble ${isMe ? 'message-sent' : 'message-received'}`}>
+                            {msg.text}
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
@@ -609,15 +746,94 @@ const Chat = () => {
                 <div ref={messagesEndRef} />
               </div>
 
+              {isCodeEditorOpen && (
+                <div className="code-editor-panel animate-slide-up">
+                  <div className="code-editor-header">
+                    <span className="editor-title">Chia sẻ mã nguồn</span>
+                    <select 
+                      value={codeLanguage} 
+                      onChange={(e) => setCodeLanguage(e.target.value)}
+                      className="language-selector"
+                    >
+                      <option value="javascript">JavaScript</option>
+                      <option value="python">Python</option>
+                      <option value="c">C</option>
+                      <option value="cpp">C++</option>
+                      <option value="java">Java</option>
+                      <option value="html">HTML</option>
+                      <option value="css">CSS</option>
+                      <option value="sql">SQL</option>
+                    </select>
+                  </div>
+                  <textarea 
+                    value={codeText} 
+                    onChange={(e) => setCodeText(e.target.value)}
+                    placeholder="Dán hoặc nhập đoạn code của bạn vào đây..."
+                    className="code-editor-textarea"
+                    rows={6}
+                  />
+                  <div className="code-editor-actions">
+                    <button type="button" className="btn-editor-cancel" onClick={() => setIsCodeEditorOpen(false)}>
+                      Hủy
+                    </button>
+                    <button type="button" className="btn-editor-send" onClick={handleSendCodeSnippet} disabled={!codeText.trim()}>
+                      Gửi Code
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <form className="chat-input-area" onSubmit={handleSendMessage}>
+                <input 
+                  type="file" 
+                  ref={imageInputRef} 
+                  style={{ display: 'none' }} 
+                  accept="image/*"
+                  onChange={(e) => onFileChange(e, 'image')}
+                />
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  style={{ display: 'none' }}
+                  onChange={(e) => onFileChange(e, 'file')}
+                />
+
+                <div className="input-toolbar-left">
+                  <button 
+                    type="button" 
+                    className="toolbar-btn" 
+                    onClick={() => triggerFileUpload('image')} 
+                    title="Gửi hình ảnh"
+                  >
+                    <Image size={20} />
+                  </button>
+                  <button 
+                    type="button" 
+                    className="toolbar-btn" 
+                    onClick={() => triggerFileUpload('file')} 
+                    title="Đính kèm tệp tin"
+                  >
+                    <Paperclip size={20} />
+                  </button>
+                  <button 
+                    type="button" 
+                    className={`toolbar-btn ${isCodeEditorOpen ? 'active-toolbar-btn' : ''}`} 
+                    onClick={() => setIsCodeEditorOpen(!isCodeEditorOpen)} 
+                    title="Gửi đoạn code"
+                  >
+                    <Code size={20} />
+                  </button>
+                </div>
+
                 <input 
                   type="text" 
                   className="chat-input" 
-                  placeholder="Nhập tin nhắn..." 
+                  placeholder={isCodeEditorOpen ? "Nhập code ở khung phía trên..." : "Nhập tin nhắn..."} 
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
+                  disabled={isCodeEditorOpen}
                 />
-                <button type="submit" className="send-button" title="Gửi tin nhắn">
+                <button type="submit" className="send-button" title="Gửi tin nhắn" disabled={isCodeEditorOpen}>
                   <Send />
                 </button>
               </form>
