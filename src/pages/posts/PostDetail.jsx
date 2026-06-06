@@ -77,11 +77,12 @@ const PostDetail = () => {
         <div className="p-6 border-b border-gray-50">
           <div className="flex items-center space-x-4">
             <div className="h-12 w-12 rounded-full bg-gradient-to-r from-blue-100 to-indigo-100 flex items-center justify-center flex-shrink-0">
-              {post.avatar ? (
-                <img src={post.avatar} alt={post.name} className="h-12 w-12 rounded-full object-cover" />
-              ) : (
-                <User className="h-6 w-6 text-blue-600" />
-              )}
+              <img 
+                src={post.avatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} 
+                alt={post.name} 
+                className="h-12 w-12 rounded-full object-cover" 
+                onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
+              />
             </div>
             <div>
               <h2 className="text-lg font-bold text-gray-900">{post.name || 'Người dùng ẩn danh'}</h2>

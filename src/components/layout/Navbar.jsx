@@ -126,6 +126,18 @@ const Navbar = () => {
             >
               Cộng đồng
             </Link>
+            <Link 
+              to="/groups" 
+              className="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+            >
+              Nhóm học tập
+            </Link>
+            <Link 
+              to="/search" 
+              className="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+            >
+              Tìm kiếm
+            </Link>
             {token ? (
               <>
                 <Link 

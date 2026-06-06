@@ -39,15 +39,12 @@ const PostItem = ({ post }) => {
             className="flex-shrink-0"
           >
             <div className="h-11 w-11 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center overflow-hidden ring-2 ring-white shadow-sm group-hover:ring-blue-200 transition-all duration-300">
-              {avatar ? (
                 <img 
-                  src={avatar} 
+                  src={avatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} 
                   alt={name} 
                   className="h-11 w-11 rounded-full object-cover" 
+                  onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
                 />
-              ) : (
-                <User className="h-5 w-5 text-blue-600" />
-              )}
             </div>
           </Link>
           
