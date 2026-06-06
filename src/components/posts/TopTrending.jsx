@@ -147,17 +147,12 @@ const TopTrending = () => {
               </div>
 
               <div className="mb-3 flex items-center gap-2">
-                {post.avatar ? (
                   <img
-                    src={post.avatar}
+                    src={post.avatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'}
                     alt={post.name || 'Avatar'}
                     className="h-9 w-9 rounded-full object-cover"
+                    onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
                   />
-                ) : (
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-500">
-                    <User className="h-4 w-4" />
-                  </div>
-                )}
 
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-gray-900">

@@ -52,8 +52,14 @@ const GroupDetail = () => {
       const groupData = response.data?.data || response.data || null;
       setGroup(groupData);
       
+      // Calculate membership in frontend
+      const isMember = userId && groupData?.members?.some(
+        (m) => (m.user?._id || m.user || '').toString() === userId.toString()
+      );
+      const isAdmin = userId && (groupData?.admin?._id || groupData?.admin || '').toString() === userId.toString();
+
       // If member/admin, fetch internal feed
-      if (groupData && (groupData.isMember || groupData.isAdmin)) {
+      if (groupData && (isMember || isAdmin)) {
         await fetchFeed();
       }
       setError('');
@@ -247,8 +253,10 @@ const GroupDetail = () => {
     );
   }
 
-  const isUserMember = group.isMember || group.isAdmin;
-  const isUserAdmin = group.isAdmin;
+  const isUserMember = userId && group.members?.some(
+    (m) => (m.user?._id || m.user || '').toString() === userId.toString()
+  );
+  const isUserAdmin = userId && (group.admin?._id || group.admin || '').toString() === userId.toString();
 
   // Format Date
   const formattedDate = new Date(group.date).toLocaleDateString('vi-VN', {
@@ -442,11 +450,12 @@ const GroupDetail = () => {
                             {/* Post Header */}
                             <div className="p-5 flex items-center space-x-3 border-b border-gray-50">
                               <div className="h-10 w-10 bg-indigo-50 rounded-full flex items-center justify-center overflow-hidden">
-                                {post.avatar ? (
-                                  <img src={post.avatar} alt={post.name} className="w-full h-full object-cover" />
-                                ) : (
-                                  <span className="text-indigo-600 font-bold">{post.name?.[0]?.toUpperCase() || 'U'}</span>
-                                )}
+                                <img 
+                                  src={post.avatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} 
+                                  alt={post.name} 
+                                  className="w-full h-full object-cover" 
+                                  onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
+                                />
                               </div>
                               <div>
                                 <h4 className="text-sm font-bold text-gray-900">{post.name || 'Thành viên'}</h4>
@@ -516,11 +525,12 @@ const GroupDetail = () => {
                                       return (
                                         <div key={comment._id} className="flex items-start space-x-2.5">
                                           <div className="h-8 w-8 bg-gray-200 rounded-full flex-shrink-0 flex items-center justify-center overflow-hidden">
-                                            {comment.avatar ? (
-                                              <img src={comment.avatar} alt={comment.name} className="w-full h-full object-cover" />
-                                            ) : (
-                                              <span className="text-gray-600 font-bold text-xs">{comment.name?.[0]?.toUpperCase()}</span>
-                                            )}
+                                             <img 
+                                               src={comment.avatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} 
+                                               alt={comment.name} 
+                                               className="w-full h-full object-cover" 
+                                               onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
+                                             />
                                           </div>
                                           <div className="flex-1 bg-white p-3 rounded-xl border border-gray-100 text-xs">
                                             <div className="flex items-center justify-between mb-1">
@@ -591,11 +601,12 @@ const GroupDetail = () => {
                       <div key={memberUser._id} className="flex items-center justify-between gap-2">
                         <div className="flex items-center space-x-2.5 min-w-0">
                           <div className="h-8 w-8 bg-gray-100 rounded-full flex-shrink-0 flex items-center justify-center overflow-hidden border border-gray-200">
-                            {memberUser.avatar ? (
-                              <img src={memberUser.avatar} alt={memberUser.name} className="w-full h-full object-cover" />
-                            ) : (
-                              <span className="text-gray-500 font-bold text-xs">{memberUser.name?.[0]?.toUpperCase()}</span>
-                            )}
+                            <img 
+                              src={memberUser.avatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} 
+                              alt={memberUser.name} 
+                              className="w-full h-full object-cover" 
+                              onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
+                            />
                           </div>
                           <Link 
                             to={`/profile/${memberUser._id}`} 

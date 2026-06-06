@@ -299,11 +299,12 @@ const SearchPage = () => {
                       <div key={post._id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-all duration-300 group">
                         <div className="flex items-center space-x-3 mb-3">
                           <div className="h-9 w-9 bg-blue-50 rounded-full overflow-hidden flex items-center justify-center">
-                            {post.avatar ? (
-                              <img src={post.avatar} alt={post.name} className="w-full h-full object-cover" />
-                            ) : (
-                              <User className="h-4.5 w-4.5 text-blue-600" />
-                            )}
+                            <img 
+                              src={post.avatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} 
+                              alt={post.name} 
+                              className="w-full h-full object-cover" 
+                              onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
+                            />
                           </div>
                           <div>
                             <Link to={`/profile/${post.user}`} className="text-sm font-bold text-gray-900 hover:text-blue-600 transition-colors">
@@ -395,11 +396,12 @@ const SearchPage = () => {
                           {/* Developer Header */}
                           <div className="flex items-center space-x-3 mb-4">
                             <div className="h-11 w-11 bg-gray-100 rounded-full overflow-hidden flex items-center justify-center border border-gray-200">
-                              {profUser.avatar ? (
-                                <img src={profUser.avatar} alt={profUser.name} className="w-full h-full object-cover" />
-                              ) : (
-                                <User className="h-5 w-5 text-gray-400" />
-                              )}
+                              <img 
+                                src={profUser.avatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} 
+                                alt={profUser.name} 
+                                className="w-full h-full object-cover" 
+                                onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
+                              />
                             </div>
                             <div className="min-w-0">
                               <h4 className="text-sm font-bold text-gray-950 truncate">{profUser.name}</h4>
