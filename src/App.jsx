@@ -14,6 +14,9 @@ import Dashboard from "./pages/dashboard/Dashboard";
 import Chat from "./pages/chat/Chat";
 import SavedPosts from "./pages/posts/SavedPosts";
 import Notifications from "./pages/notifications/Notifications";
+import Groups from "./pages/groups/Groups";
+import GroupDetail from "./pages/groups/GroupDetail";
+import SearchPage from "./pages/search/SearchPage";
 
 function App() {
   return (
@@ -29,6 +32,11 @@ function App() {
 
       {/* Trang Dashboard - Bảng tin Newsfeed */}
       <Route path="/dashboard" element={<Dashboard />} />
+
+      {/* Các route nhóm học tập & tìm kiếm */}
+      <Route path="/groups" element={<Groups />} />
+      <Route path="/groups/:id" element={<GroupDetail />} />
+      <Route path="/search" element={<SearchPage />} />
 
       {/* Các route yêu cầu đăng nhập */}
       <Route element={<ProtectedRoute />}>
