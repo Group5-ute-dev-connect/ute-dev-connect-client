@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { User, LogOut, Bell, Heart, MessageCircle, UserPlus, CheckCircle2 } from 'lucide-react';
+import { User, LogOut, Bell, Heart, MessageCircle, UserPlus, CheckCircle2, Star } from 'lucide-react';
 import { logout } from '../../store/authSlice';
 import { getNotifications, getUnreadCount, markAsRead, markAllAsRead } from '../../store/notificationSlice';
+import { profileApi } from '../../services/api/profileApi';
 
 // Helper to decode token
 const parseJwt = (token) => {
@@ -21,6 +22,7 @@ const Navbar = () => {
   const { notifications, unreadCount } = useSelector((state) => state.notification);
 
   const [showNotifications, setShowNotifications] = useState(false);
+  const [reputation, setReputation] = useState(0);
   const notificationRef = useRef(null);
 
   const userPayload = token ? parseJwt(token) : null;
@@ -30,6 +32,12 @@ const Navbar = () => {
     if (token) {
       dispatch(getUnreadCount());
       dispatch(getNotifications());
+      profileApi.getProfile().then(res => {
+         const profileData = res.data?.data || res.data;
+         if (profileData && profileData.user) {
+            setReputation(profileData.user.reputation || 0);
+         }
+      }).catch(err => console.error(err));
     }
   }, [dispatch, token]);
 
@@ -140,13 +148,15 @@ const Navbar = () => {
             </Link>
             {token ? (
               <>
-                <Link 
-                  to="/chat" 
-                  className="flex items-center gap-2 text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-all"
-                >
+                <Link to="/chat" className="flex items-center gap-2 text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-all">
                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-message-circle"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
                   <span className="hidden md:inline">Tin nhắn</span>
                 </Link>
+                
+                <div className="flex items-center gap-1.5 px-3 py-1.5 mx-1 rounded-full bg-indigo-50 border border-indigo-100 text-sm font-bold text-indigo-700 transition-all cursor-default" title="Điểm Uy Tín (Reputation)">
+                  <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                  <span>{reputation}</span>
+                </div>
                 
                 {/* Notifications Dropdown */}
                 <div className="relative" ref={notificationRef}>

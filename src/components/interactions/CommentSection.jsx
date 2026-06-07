@@ -30,7 +30,7 @@ const extractCommentsFromPayload = (payload, currentComments) => {
   return currentComments;
 };
 
-const CommentSection = ({ postId, comments = [], onCommentsChange }) => {
+const CommentSection = ({ postId, post, comments = [], onCommentsChange }) => {
   const handleCommentCreated = (payload) => {
     const nextComments = extractCommentsFromPayload(payload, comments);
     onCommentsChange?.(nextComments);
@@ -48,7 +48,7 @@ const CommentSection = ({ postId, comments = [], onCommentsChange }) => {
       </div>
 
       <CommentForm postId={postId} onCommentCreated={handleCommentCreated} />
-      <CommentList comments={comments} />
+      <CommentList post={post} comments={comments} onCommentsChange={onCommentsChange} />
     </section>
   );
 };
