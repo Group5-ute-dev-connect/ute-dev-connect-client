@@ -42,6 +42,7 @@ const PostInteractions = ({ post, setPost }) => {
 
       <CommentSection
         postId={post._id}
+        post={post}
         comments={comments}
         onCommentsChange={handleCommentsChange}
       />

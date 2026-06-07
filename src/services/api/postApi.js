@@ -12,8 +12,8 @@ export const postApi = {
   },
 
   // Tạo bài viết mới
-  createPost: (text) => {
-    return axiosClient.post('/posts', { text });
+  createPost: (text, isQuestion = false) => {
+    return axiosClient.post('/posts', { text, isQuestion });
   },
 
   // Lấy bài viết theo ID
@@ -41,5 +41,32 @@ export const postApi = {
     return axiosClient.post(`/posts/comment/${id}`, {
       text: text.trim(),
     });
+  },
+
+  // Cập nhật bài viết
+  updatePost: (id, text, isQuestion) => {
+    return axiosClient.put(`/posts/${id}`, { text, isQuestion });
+  },
+
+  // Xóa bài viết
+  deletePost: (id) => {
+    return axiosClient.delete(`/posts/${id}`);
+  },
+
+  // Cập nhật bình luận
+  updateComment: (postId, commentId, text) => {
+    return axiosClient.put(`/posts/comment/${postId}/${commentId}`, {
+      text: text.trim(),
+    });
+  },
+
+  // Xóa bình luận
+  deleteComment: (postId, commentId) => {
+    return axiosClient.delete(`/posts/comment/${postId}/${commentId}`);
+  },
+
+  // Chấp nhận câu trả lời
+  acceptAnswer: (postId, commentId) => {
+    return axiosClient.put(`/posts/accept/${postId}/${commentId}`);
   },
 };

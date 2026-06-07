@@ -3,8 +3,12 @@ import { useParams, Link } from 'react-router-dom';
 import { postApi } from '../../services/api/postApi';
 import Spinner from '../../components/common/Spinner';
 import Alert from '../../components/common/Alert';
-import { ArrowLeft, User, Calendar, MessageSquare } from 'lucide-react';
+import { ArrowLeft, User, Calendar, MessageSquare, HelpCircle, CheckCircle } from 'lucide-react';
 import PostInteractions from '../../components/interactions/PostInteractions';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 const PostDetail = () => {
   const { id } = useParams();
@@ -96,7 +100,44 @@ const PostDetail = () => {
 
         {/* Nội dung bài viết */}
         <div className="p-6">
-          <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">{post.text}</p>
+          <div className="mb-4">
+             {post.isQuestion && (
+               <span className="inline-flex items-center px-2 py-1 rounded text-sm font-medium bg-indigo-100 text-indigo-800 mr-2">
+                 <HelpCircle className="w-4 h-4 mr-1.5" /> Câu hỏi
+               </span>
+             )}
+             {post.isQuestion && post.acceptedAnswer && (
+               <span className="inline-flex items-center px-2 py-1 rounded text-sm font-medium bg-green-100 text-green-800 mr-2">
+                 <CheckCircle className="w-4 h-4 mr-1.5" /> Đã giải quyết
+               </span>
+             )}
+          </div>
+          <div className="text-slate-800 leading-relaxed max-w-none prose prose-slate prose-p:my-2 prose-pre:my-4 prose-headings:my-4 prose-ul:my-2 prose-ol:my-2">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                code({node, inline, className, children, ...props}) {
+                  const match = /language-(\w+)/.exec(className || '')
+                  return !inline && match ? (
+                    <SyntaxHighlighter
+                      {...props}
+                      children={String(children).replace(/\n$/, '')}
+                      style={vscDarkPlus}
+                      language={match[1]}
+                      PreTag="div"
+                      className="rounded-md my-2"
+                    />
+                  ) : (
+                    <code {...props} className={`${className} bg-gray-100 text-red-500 px-1.5 py-0.5 rounded text-sm font-mono`}>
+                      {children}
+                    </code>
+                  )
+                }
+              }}
+            >
+              {post.text}
+            </ReactMarkdown>
+          </div>
         </div>
         
         {/* Footer bài viết (Thống kê) */}

@@ -87,6 +87,36 @@ export const getSavedPosts = createAsyncThunk(
   }
 );
 
+// Async thunk: Cập nhật bài viết
+export const updatePost = createAsyncThunk(
+  "post/updatePost",
+  async ({ id, formData }, { rejectWithValue }) => {
+    try {
+      const response = await axiosClient.put(`/posts/${id}`, formData);
+      return response.data?.data || response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || error.message || "Lỗi khi cập nhật bài viết"
+      );
+    }
+  }
+);
+
+// Async thunk: Xóa bài viết
+export const deletePost = createAsyncThunk(
+  "post/deletePost",
+  async (id, { rejectWithValue }) => {
+    try {
+      await axiosClient.delete(`/posts/${id}`);
+      return id;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || error.message || "Lỗi khi xóa bài viết"
+      );
+    }
+  }
+);
+
 const postSlice = createSlice({
   name: "post",
   initialState,
@@ -154,6 +184,40 @@ const postSlice = createSlice({
         state.posts = [action.payload, ...state.posts];
       })
       .addCase(addPost.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      // UPDATE POST
+      .addCase(updatePost.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(updatePost.fulfilled, (state, action) => {
+        state.loading = false;
+        state.posts = state.posts.map(post => 
+          post._id === action.payload._id ? action.payload : post
+        );
+        if (state.post && state.post._id === action.payload._id) {
+          state.post = action.payload;
+        }
+      })
+      .addCase(updatePost.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      // DELETE POST
+      .addCase(deletePost.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(deletePost.fulfilled, (state, action) => {
+        state.loading = false;
+        state.posts = state.posts.filter(post => post._id !== action.payload);
+        if (state.post && state.post._id === action.payload) {
+          state.post = null;
+        }
+      })
+      .addCase(deletePost.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })

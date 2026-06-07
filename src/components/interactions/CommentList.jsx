@@ -2,7 +2,7 @@ import React from 'react';
 import { MessageCircle } from 'lucide-react';
 import CommentItem from './CommentItem';
 
-const CommentList = ({ comments = [] }) => {
+const CommentList = ({ post, comments = [], onCommentsChange }) => {
   if (!comments.length) {
     return (
       <div className="mt-4 rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-6 text-center">
@@ -20,6 +20,8 @@ const CommentList = ({ comments = [] }) => {
         <CommentItem
           key={comment._id || comment.id || `${comment.text}-${index}`}
           comment={comment}
+          post={post}
+          onCommentsChange={onCommentsChange}
         />
       ))}
     </div>
