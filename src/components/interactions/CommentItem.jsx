@@ -109,6 +109,8 @@ const CommentItem = ({ comment, post, onCommentsChange }) => {
             src={avatar}
             alt={name}
             className="h-full w-full object-cover"
+            referrerPolicy="no-referrer"
+            onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
           />
         ) : (
           <User size={20} className="text-gray-500" />
