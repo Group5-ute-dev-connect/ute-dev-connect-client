@@ -72,6 +72,7 @@ const PostItem = ({ post }) => {
                   src={avatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} 
                   alt={name} 
                   className="h-11 w-11 rounded-full object-cover" 
+                  referrerPolicy="no-referrer"
                   onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
                 />
             </div>
