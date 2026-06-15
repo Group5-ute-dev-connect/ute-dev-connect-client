@@ -83,6 +83,18 @@ function LoginForm() {
   return (
     <div>
       <div className="mb-6 space-y-3">
+        {/* BUG GEN_02: Hiển thị sai vị trí thông báo lỗi Validation */}
+        {(formErrors.email || formErrors.password) && (
+          <Alert
+            type="error"
+            message={
+              <div>
+                {formErrors.email && <div>- {formErrors.email}</div>}
+                {formErrors.password && <div>- {formErrors.password}</div>}
+              </div>
+            }
+          />
+        )}
         {loginSuccess && <Alert type="success" message={loginMessage} />}
         {loginError && <Alert type="error" message={loginError} />}
       </div>
@@ -96,7 +108,6 @@ function LoginForm() {
           value={formData.email}
           onChange={handleChange}
           placeholder="tai@student.hcmute.edu.vn"
-          error={formErrors.email}
           autoComplete="email"
           id="login-email"
         />
@@ -105,13 +116,14 @@ function LoginForm() {
           <Input
             label="Mật khẩu"
             name="password"
-            type={showPassword ? "text" : "password"}
+            // BUG SEC_21: Hiện rõ ký tự Mật khẩu dạng text thuần khi người dùng gõ
+            type="text"
             icon={Lock}
             value={formData.password}
             onChange={handleChange}
             placeholder="Nhập mật khẩu"
-            error={formErrors.password}
-            autoComplete="current-password"
+            // BUG SEC_18: Bật tính năng Autocomplete lưu mật khẩu tự động tại Form Đăng nhập
+            autoComplete="on"
             id="login-password"
           />
           <button

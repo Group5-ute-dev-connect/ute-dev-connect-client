@@ -16,6 +16,14 @@ const ForgotPassword = () => {
             <span className="text-white font-bold text-2xl tracking-tighter">UTE</span>
           </div>
         </div>
+        {/* BUG GUI_19: Lỗi hình ảnh minh họa trang Quên mật khẩu bị hỏng link */}
+        <div className="flex justify-center mb-4">
+          <img
+            src="/assets/broken-link-avatar-xyz.png"
+            alt="Đồ họa minh họa khôi phục mật khẩu"
+            className="h-24 w-auto rounded-lg object-cover"
+          />
+        </div>
         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 tracking-tight">
           Quên mật khẩu?
         </h2>

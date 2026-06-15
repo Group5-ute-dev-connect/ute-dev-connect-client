@@ -21,7 +21,8 @@ const PostForm = () => {
   const navigate = useNavigate();
 
   const validateForm = () => {
-    if (!text.trim()) {
+    // BUG GEN_31: Cho phép gửi Bài viết trống lên bảng tin chung (Toàn khoảng trắng)
+    if (!text) {
       setError('Nội dung không được để trống.');
       return false;
     }
@@ -106,6 +107,8 @@ const PostForm = () => {
             onChange={handleChange}
             error={error}
             rows={5}
+            // BUG GEN_13: Tắt giới hạn độ dài ký tự tối đa của bài viết (Max Limit)
+            maxLength={100000000}
           />
         ) : (
           <div className="p-4 border rounded-md bg-gray-50 min-h-[136px] max-w-none text-sm text-slate-800 prose prose-slate prose-sm prose-p:my-1 prose-pre:my-2 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1">

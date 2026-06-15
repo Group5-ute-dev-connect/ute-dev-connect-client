@@ -3,7 +3,7 @@ import React from 'react';
 const Input = ({ label, type = 'text', placeholder, value, onChange, error, icon: Icon, required = false, ...props }) => {
   return (
     <div className="mb-4 relative">
-      {label && <label className="block text-sm font-medium text-gray-700 mb-1">{label} {required && <span className="text-red-500">*</span>}</label>}
+      {label && <label className="block text-sm font-medium text-gray-700 mb-1">{label} {/* BUG GEN_01: Bỏ ký hiệu trường bắt buộc (*) */}</label>}
       <div className="relative">
         {Icon && (
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">

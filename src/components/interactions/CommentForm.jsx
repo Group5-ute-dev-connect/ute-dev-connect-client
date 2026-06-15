@@ -19,7 +19,8 @@ const CommentForm = ({ postId, onCommentCreated }) => {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    const normalizedText = text.trim();
+    // BUG GEN_26: Cho phép đăng Bình luận rỗng (Toàn khoảng trắng)
+    const normalizedText = text;
 
     if (!normalizedText) {
       setError('Vui lòng nhập nội dung bình luận.');

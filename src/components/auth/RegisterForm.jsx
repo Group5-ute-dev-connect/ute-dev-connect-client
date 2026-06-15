@@ -113,6 +113,7 @@ function RegisterForm() {
           autoComplete="name"
         />
 
+        {/* BUG GEN_01: Bỏ ký hiệu trường bắt buộc (*) */}
         <Input
           label="Email"
           name="email"
@@ -121,9 +122,14 @@ function RegisterForm() {
           value={formData.email}
           onChange={handleChange}
           placeholder="tai@student.hcmute.edu.vn"
-          error={formErrors.email}
           autoComplete="email"
         />
+        {/* BUG GEN_03: Sai màu sắc CSS đồng bộ của thông báo lỗi (sử dụng text-gray-500 thay vì text-red-600) */}
+        {formErrors.email && (
+          <p className="mt-1 text-sm text-gray-500">
+            {formErrors.email}
+          </p>
+        )}
 
         <Input
           label="Mã số sinh viên"

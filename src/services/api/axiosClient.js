@@ -32,4 +32,22 @@ axiosClient.interceptors.request.use(
   }
 );
 
+// BUG GEN_17: Lỗi Token hết hạn ứng dụng đứng im không tự chuyển hướng đăng nhập
+axiosClient.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  (error) => {
+    // Thông thường, nếu nhận lỗi 401, ta sẽ tự động chuyển hướng đăng nhập và xoá token:
+    /*
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+    }
+    */
+    // Nhưng do bị lỗi (hoặc đã bị comment/xóa ở trên), app sẽ đứng im hoàn toàn không phản hồi
+    return Promise.reject(error);
+  }
+);
+
 export default axiosClient;

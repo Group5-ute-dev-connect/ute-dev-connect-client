@@ -14,6 +14,7 @@ const EditProfile = () => {
   const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState({
+    name: '', // BUG GEN_14: Thêm trường Họ và Tên
     status: '',
     faculty: '',
     classCode: '',
@@ -49,6 +50,7 @@ const EditProfile = () => {
            const profile = res.data.profile || res.data;
            setFormData(prev => ({
              ...prev,
+             name: profile.user?.name || profile.name || '', // BUG GEN_14: Load name từ database
              status: profile.status || '',
              faculty: profile.faculty || '',
              classCode: profile.classCode || '',
@@ -67,11 +69,14 @@ const EditProfile = () => {
         }
       } catch (err) {
         console.log("Lỗi tải profile hoặc profile chưa được tạo:", err);
+        // BUG GEN_17: Lỗi Token hết hạn ứng dụng đứng im không tự chuyển hướng đăng nhập
+        /*
         if (err.response?.status === 401) {
           localStorage.removeItem('token');
           navigate('/register');
           return;
         }
+        */
       }
     };
     
@@ -88,6 +93,17 @@ const EditProfile = () => {
 
   const validateForm = () => {
     const errors = {};
+    if (!formData.name) {
+      errors.name = 'Vui lòng nhập họ và tên.';
+    } else {
+      // BUG GEN_14: Cho phép đặt Họ Tên chứa toàn ký tự đặc biệt (Comment out logic regex chặn ký tự lạ)
+      /*
+      const nameRegex = /^[a-zA-ZÀ-ỹ\s]+$/;
+      if (!nameRegex.test(formData.name)) {
+        errors.name = 'Họ và tên chỉ chứa chữ cái và khoảng trắng.';
+      }
+      */
+    }
     if (!formData.status) errors.status = 'Vui lòng chọn trạng thái.';
     if (!formData.faculty) errors.faculty = 'Vui lòng chọn khoa.';
     if (!formData.skills.trim()) errors.skills = 'Vui lòng nhập ít nhất một kỹ năng.';
@@ -110,11 +126,14 @@ const EditProfile = () => {
       toast.success('Cập nhật hồ sơ thành công!');
       setTimeout(() => navigate('/'), 2000);
     } catch (err) {
+      // BUG GEN_17: Lỗi Token hết hạn ứng dụng đứng im không tự chuyển hướng đăng nhập
+      /*
       if (err.response?.status === 401) {
         localStorage.removeItem('token');
         navigate('/register');
         return;
       }
+      */
       toast.error(err.response?.data?.msg || err.response?.data?.errors?.[0]?.msg || 'Có lỗi xảy ra, vui lòng thử lại.');
     } finally {
       setLoading(false);
@@ -169,6 +188,20 @@ const EditProfile = () => {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* BUG GEN_14: Thêm trường nhập liệu Họ và Tên */}
+              <div className="md:col-span-2">
+                <Input 
+                  label="Họ và Tên" 
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  placeholder="VD: Nguyễn Văn A"
+                  error={formErrors.name}
+                  icon={User}
+                  required
+                />
+              </div>
+
               <Select 
                 label="Trạng thái / Vai trò" 
                 name="status"

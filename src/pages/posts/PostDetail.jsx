@@ -1,17 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { postApi } from '../../services/api/postApi';
 import Spinner from '../../components/common/Spinner';
 import Alert from '../../components/common/Alert';
-import { ArrowLeft, User, Calendar, MessageSquare, HelpCircle, CheckCircle } from 'lucide-react';
+import { ArrowLeft, User, Calendar, MessageSquare, HelpCircle, CheckCircle, Trash2 } from 'lucide-react';
 import PostInteractions from '../../components/interactions/PostInteractions';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
+const parseJwt = (t) => { try { return JSON.parse(atob(t.split('.')[1])); } catch { return null; } };
+
 const PostDetail = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const { token } = useSelector((state) => state.auth);
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -62,6 +67,20 @@ const PostDetail = () => {
     return null;
   }
 
+  const currentUserId = token ? parseJwt(token)?.user?.id || parseJwt(token)?.id : null;
+  const isPostAuthor = currentUserId && post.user === currentUserId;
+
+  const handleDelete = async () => {
+    // BUG GEN_07: Thiếu hộp thoại xác nhận khi thực hiện chức năng Xóa bài viết (Bỏ qua confirm)
+    try {
+      await postApi.deletePost(id);
+      navigate('/dashboard');
+    } catch (err) {
+      console.error('Lỗi khi xóa bài viết:', err);
+      setError('Không thể xóa bài viết này.');
+    }
+  };
+
   const formattedDate = new Date(post.date).toLocaleDateString('vi-VN', {
     year: 'numeric',
     month: 'long',
@@ -96,6 +115,15 @@ const PostDetail = () => {
                 <span>{formattedDate}</span>
               </div>
             </div>
+            {isPostAuthor && (
+              <button
+                onClick={handleDelete}
+                className="ml-auto text-gray-400 hover:text-red-500 p-2 rounded-full hover:bg-red-50 transition-colors"
+                title="Xóa bài viết"
+              >
+                <Trash2 className="w-5 h-5" />
+              </button>
+            )}
           </div>
         </div>
 

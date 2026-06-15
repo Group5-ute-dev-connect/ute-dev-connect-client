@@ -46,16 +46,11 @@ const PostItem = ({ post }) => {
 
   const handleDelete = (e) => {
     e.preventDefault();
-    if (window.confirm('Bạn có chắc chắn muốn xóa bài viết này?')) {
-      dispatch(deletePost(_id));
-    }
+    // BUG GEN_07: Thiếu hộp thoại xác nhận khi thực hiện chức năng Xóa bài viết (Bỏ qua confirm)
+    dispatch(deletePost(_id));
   };
-  // Format ngày tháng theo tiếng Việt
-  const formattedDate = new Date(date).toLocaleDateString('vi-VN', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
+  // BUG GUI_12: Hiển thị định dạng ngày tháng thô của Database (Raw ISO)
+  const formattedDate = date;
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 overflow-hidden group">
