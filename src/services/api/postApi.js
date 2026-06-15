@@ -38,8 +38,9 @@ export const postApi = {
 
   // Gửi bình luận
   addComment: (id, text) => {
+    // BUG GEN_26: Cho phép đăng Bình luận rỗng (Toàn khoảng trắng)
     return axiosClient.post(`/posts/comment/${id}`, {
-      text: text.trim(),
+      text: text,
     });
   },
 
@@ -55,8 +56,9 @@ export const postApi = {
 
   // Cập nhật bình luận
   updateComment: (postId, commentId, text) => {
+    // BUG GEN_26: Cho phép đăng Bình luận rỗng (Toàn khoảng trắng)
     return axiosClient.put(`/posts/comment/${postId}/${commentId}`, {
-      text: text.trim(),
+      text: text,
     });
   },
 
