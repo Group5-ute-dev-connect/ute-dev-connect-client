@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { User, LogOut, Bell, Heart, MessageCircle, UserPlus, CheckCircle2, Star } from 'lucide-react';
+import { User, LogOut, Bell, Heart, MessageCircle, UserPlus, CheckCircle2, Star, ShieldCheck } from 'lucide-react';
 import { logout } from '../../store/authSlice';
 import { getNotifications, getUnreadCount, markAsRead, markAllAsRead } from '../../store/notificationSlice';
 import { profileApi } from '../../services/api/profileApi';
@@ -20,6 +20,7 @@ const Navbar = () => {
   const dispatch = useDispatch();
   const { token } = useSelector((state) => state.auth);
   const { notifications, unreadCount } = useSelector((state) => state.notification);
+  const role = localStorage.getItem('role');
 
   const [showNotifications, setShowNotifications] = useState(false);
   const [reputation, setReputation] = useState(0);
@@ -121,34 +122,34 @@ const Navbar = () => {
             </Link>
           </div>
           
-          <div className="flex items-center space-x-2 sm:space-x-4">
+          <div className="flex items-center space-x-1 lg:space-x-3 overflow-x-auto no-scrollbar">
             <Link 
               to="/dashboard" 
-              className="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+              className="text-gray-600 hover:text-blue-600 px-2 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap"
             >
               Bảng tin
             </Link>
             <Link 
               to="/profiles" 
-              className="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+              className="text-gray-600 hover:text-blue-600 px-2 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap"
             >
               Cộng đồng
             </Link>
             <Link 
               to="/groups" 
-              className="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+              className="text-gray-600 hover:text-blue-600 px-2 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap"
             >
               Nhóm học tập
             </Link>
             <Link 
               to="/search" 
-              className="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+              className="text-gray-600 hover:text-blue-600 px-2 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap"
             >
               Tìm kiếm
             </Link>
             {token ? (
               <>
-                <Link to="/chat" className="flex items-center gap-2 text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-all">
+                <Link to="/chat" className="flex items-center gap-1 text-gray-600 hover:text-blue-600 px-2 py-2 rounded-md text-sm font-medium transition-all whitespace-nowrap">
                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-message-circle"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
                   <span className="inline">Tin nhắn</span>
                 </Link>
@@ -157,12 +158,22 @@ const Navbar = () => {
                   <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
                   <span>{reputation}</span>
                 </div>
+
+                {role === 'admin' && (
+                  <Link 
+                    to="/admin" 
+                    className="flex items-center gap-1.5 px-3 py-1.5 mx-1 rounded-full bg-red-50 border border-red-100 text-sm font-bold text-red-600 hover:bg-red-100 transition-all shadow-sm whitespace-nowrap" title="Quản trị viên"
+                  >
+                    <ShieldCheck className="w-4 h-4" />
+                    <span>Admin</span>
+                  </Link>
+                )}
                 
                 {/* Notifications Dropdown */}
                 <div className="relative" ref={notificationRef}>
                   <button 
                     onClick={() => setShowNotifications(!showNotifications)}
-                    className="flex items-center gap-2 text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-all relative"
+                    className="flex items-center gap-1 text-gray-600 hover:text-blue-600 px-2 py-2 rounded-md text-sm font-medium transition-all relative whitespace-nowrap"
                   >
                     <Bell size={18} />
                     <span className="inline">Thông báo</span>
@@ -248,14 +259,14 @@ const Navbar = () => {
                 </div>
                 <Link 
                   to={userId ? `/profile/${userId}` : `/edit-profile`} 
-                  className="flex items-center gap-2 text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-all"
+                  className="flex items-center gap-1 text-gray-600 hover:text-blue-600 px-2 py-2 rounded-md text-sm font-medium transition-all whitespace-nowrap"
                 >
                   <User size={18} />
                   <span className="inline">Hồ sơ của tôi</span>
                 </Link>
                 <button 
                   onClick={handleLogout}
-                  className="flex items-center gap-2 text-red-600 hover:bg-red-50 px-3 py-2 rounded-md text-sm font-medium transition-all"
+                  className="flex items-center gap-1 text-red-600 hover:bg-red-50 px-2 py-2 rounded-md text-sm font-medium transition-all whitespace-nowrap"
                 >
                   <LogOut size={18} />
                   <span className="inline">Đăng xuất</span>

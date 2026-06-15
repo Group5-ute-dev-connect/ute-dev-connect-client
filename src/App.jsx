@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Suspense, lazy } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import Login from "./pages/auth/Login";
@@ -17,6 +17,15 @@ import Notifications from "./pages/notifications/Notifications";
 import Groups from "./pages/groups/Groups";
 import GroupDetail from "./pages/groups/GroupDetail";
 import SearchPage from "./pages/search/SearchPage";
+import AdminRoute from "./routes/AdminRoute";
+
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+
+const LoadingFallback = () => (
+  <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
+    <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+  </div>
+);
 
 function App() {
   return (
@@ -44,6 +53,18 @@ function App() {
         <Route path="/chat" element={<Chat />} />
         <Route path="/saved-posts" element={<SavedPosts />} />
         <Route path="/notifications" element={<Notifications />} />
+      </Route>
+
+      {/* Admin Route with Lazy Loading */}
+      <Route element={<AdminRoute />}>
+        <Route 
+          path="/admin" 
+          element={
+            <Suspense fallback={<LoadingFallback />}>
+              <AdminDashboard />
+            </Suspense>
+          } 
+        />
       </Route>
 
       {/* Route mặc định: Điều hướng về trang chủ */}
