@@ -17,7 +17,9 @@ import {
   X,
   PlusCircle,
   Info,
-  CheckCircle
+  CheckCircle,
+  Download,
+  UploadCloud
 } from 'lucide-react';
 
 const WordFilterPage = () => {
@@ -150,6 +152,52 @@ const WordFilterPage = () => {
       toast.error('Lỗi khi thêm từ mẫu.');
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  // Xuất CSV
+  const handleExportCsv = async () => {
+    setActionLoading(true);
+    try {
+      const response = await filterApi.exportCsv();
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'banned_words.csv');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success('Xuất file CSV thành công!');
+    } catch (err) {
+      console.error(err);
+      toast.error('Lỗi khi xuất file CSV.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Nhập CSV
+  const handleImportCsv = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    setActionLoading(true);
+    try {
+      const res = await filterApi.importCsv(formData);
+      if (res.data?.success) {
+        setBannedWords(res.data.data.bannedWords || []);
+        toast.success(res.data.message || 'Nhập file CSV thành công!');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || 'Lỗi khi nhập file CSV.');
+    } finally {
+      setActionLoading(false);
+      e.target.value = '';
     }
   };
 
@@ -287,6 +335,34 @@ const WordFilterPage = () => {
                     <p className="text-sm text-gray-500 mt-0.5">
                       Bất kỳ bài viết hoặc bình luận nào chứa từ khóa cấm sẽ bị hệ thống chặn đăng ngay lập tức.
                     </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 self-start sm:self-center">
+                    <button
+                      type="button"
+                      onClick={handleExportCsv}
+                      disabled={actionLoading}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-semibold transition-all border border-gray-200/50 hover:border-gray-300 disabled:opacity-50"
+                      title="Tải về danh sách từ khóa cấm dưới dạng file CSV"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      <span>Xuất CSV</span>
+                    </button>
+                    
+                    <label
+                      className={`inline-flex items-center gap-1.5 px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl text-xs font-semibold transition-all border border-rose-100 hover:border-rose-200 cursor-pointer ${actionLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      title="Nhập danh sách từ khóa cấm từ file CSV"
+                    >
+                      <UploadCloud className="h-3.5 w-3.5" />
+                      <span>Nhập CSV</span>
+                      <input
+                        type="file"
+                        accept=".csv"
+                        onChange={handleImportCsv}
+                        disabled={actionLoading}
+                        className="hidden"
+                      />
+                    </label>
                   </div>
                 </div>
 

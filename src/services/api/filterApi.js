@@ -12,6 +12,16 @@ export const filterApi = {
   },
   toggleAiFilter: (enabled) => {
     return axiosClient.put('/filters/ai', { enabled });
+  },
+  exportCsv: () => {
+    return axiosClient.get('/filters/export', { responseType: 'blob' });
+  },
+  importCsv: (formData) => {
+    return axiosClient.post('/filters/import', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
   }
 };
 
