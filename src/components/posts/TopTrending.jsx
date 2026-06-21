@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   AlertCircle,
   Calendar,
@@ -11,7 +12,7 @@ import {
 } from 'lucide-react';
 import { postApi } from '../../services/api/postApi';
 
-const TopTrending = () => {
+const TopTrending = ({ layout = 'horizontal' }) => {
   const [trendingPosts, setTrendingPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -95,6 +96,62 @@ const TopTrending = () => {
           <h2 className="text-lg font-bold text-gray-900">Top Trending</h2>
         </div>
         <p className="text-sm text-gray-500">Chưa có bài viết nổi bật.</p>
+      </section>
+    );
+  }
+
+  if (layout === 'vertical') {
+    return (
+      <section className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+        <div className="mb-4 flex items-center gap-2 pb-3 border-b border-gray-50">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
+            <Flame className="h-4.5 w-4.5" />
+          </div>
+          <div>
+            <h2 className="text-sm font-bold text-gray-900">Được quan tâm nhất</h2>
+            <p className="text-2xs text-gray-400 mt-0.5">Top bài viết thảo luận sôi nổi</p>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-3.5">
+          {trendingPosts.map((post, index) => {
+            const likeCount = post.likesCount ?? post.likes?.length ?? 0;
+            const commentCount = post.commentsCount ?? post.comments?.length ?? 0;
+
+            return (
+              <Link
+                key={post._id || index}
+                to={`/post/${post._id}`}
+                className="group flex gap-3 pb-3.5 border-b border-gray-50 last:border-b-0 last:pb-0 hover:bg-gray-50/50 p-1 rounded-lg transition-colors"
+              >
+                <div className="flex-shrink-0 flex items-center justify-center h-6 w-6 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 text-2xs font-bold text-white shadow-sm shadow-orange-500/10">
+                  {index + 1}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-1">
+                    <h4 className="text-xs font-semibold text-gray-800 truncate group-hover:text-blue-600 transition-colors">
+                      {post.name || 'Người dùng ẩn danh'}
+                    </h4>
+                    {index < 3 && <Trophy className="h-3.5 w-3.5 text-yellow-500 flex-shrink-0" />}
+                  </div>
+                  <p className="text-2xs text-gray-500 line-clamp-2 mt-1 leading-normal">
+                    {shortenText(post.text)}
+                  </p>
+                  <div className="flex items-center gap-3 mt-1.5 text-[10px] text-gray-400 font-medium">
+                    <span className="flex items-center gap-0.5">
+                      <ThumbsUp className="h-3 w-3" />
+                      {likeCount}
+                    </span>
+                    <span className="flex items-center gap-0.5">
+                      <MessageCircle className="h-3 w-3" />
+                      {commentCount}
+                    </span>
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
       </section>
     );
   }

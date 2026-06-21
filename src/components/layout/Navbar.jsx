@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { User, LogOut, Bell, Heart, MessageCircle, UserPlus, CheckCircle2, Star } from 'lucide-react';
+import { User, LogOut, Bell, Heart, MessageCircle, UserPlus, CheckCircle2, Star, Menu, X, Home, Users, FolderGit2, Search, Bookmark } from 'lucide-react';
 import { logout } from '../../store/authSlice';
 import { getNotifications, getUnreadCount, markAsRead, markAllAsRead } from '../../store/notificationSlice';
 import { profileApi } from '../../services/api/profileApi';
@@ -22,6 +22,7 @@ const Navbar = () => {
   const { notifications, unreadCount } = useSelector((state) => state.notification);
 
   const [showNotifications, setShowNotifications] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [reputation, setReputation] = useState(0);
   const notificationRef = useRef(null);
 
@@ -106,51 +107,55 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-50">
+    <nav className="bg-white border-b border-gray-100 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
-          <div className="flex items-center">
+          <div className="flex items-center space-x-6">
             {/* Logo */}
             <Link to="/" className="flex-shrink-0 flex items-center gap-2 group">
               <div className="h-10 w-10 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl flex items-center justify-center shadow-md transform group-hover:scale-105 transition-transform duration-200">
                 <span className="text-white font-bold text-lg tracking-tighter">UTE</span>
               </div>
-              <span className="font-bold text-xl text-gray-900 tracking-tight hidden sm:block">
+              <span className="font-bold text-xl text-gray-900 tracking-tight">
                 Connect
               </span>
             </Link>
+
+            {/* Desktop Navigation Links */}
+            <div className="hidden md:flex items-center space-x-1">
+              <Link 
+                to="/dashboard" 
+                className="text-gray-600 hover:text-blue-600 hover:bg-gray-50 px-3 py-2 rounded-lg text-sm font-semibold transition-colors"
+              >
+                Bảng tin
+              </Link>
+              <Link 
+                to="/profiles" 
+                className="text-gray-600 hover:text-blue-600 hover:bg-gray-50 px-3 py-2 rounded-lg text-sm font-semibold transition-colors"
+              >
+                Cộng đồng
+              </Link>
+              <Link 
+                to="/groups" 
+                className="text-gray-600 hover:text-blue-600 hover:bg-gray-50 px-3 py-2 rounded-lg text-sm font-semibold transition-colors"
+              >
+                Nhóm học tập
+              </Link>
+              <Link 
+                to="/search" 
+                className="text-gray-600 hover:text-blue-600 hover:bg-gray-50 px-3 py-2 rounded-lg text-sm font-semibold transition-colors"
+              >
+                Tìm kiếm
+              </Link>
+            </div>
           </div>
           
-          <div className="flex items-center space-x-2 sm:space-x-4">
-            <Link 
-              to="/dashboard" 
-              className="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-            >
-              Bảng tin
-            </Link>
-            <Link 
-              to="/profiles" 
-              className="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-            >
-              Cộng đồng
-            </Link>
-            <Link 
-              to="/groups" 
-              className="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-            >
-              Nhóm học tập
-            </Link>
-            <Link 
-              to="/search" 
-              className="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-            >
-              Tìm kiếm
-            </Link>
+          <div className="flex items-center space-x-2 sm:space-x-3">
             {token ? (
               <>
-                <Link to="/chat" className="flex items-center gap-2 text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-all">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-message-circle"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
-                  <span className="hidden md:inline">Tin nhắn</span>
+                <Link to="/chat" className="hidden md:flex items-center gap-2 text-gray-600 hover:text-blue-600 hover:bg-gray-50 px-3 py-2 rounded-lg text-sm font-semibold transition-all">
+                  <MessageCircle size={18} />
+                  <span>Tin nhắn</span>
                 </Link>
                 
                 <div className="flex items-center gap-1.5 px-3 py-1.5 mx-1 rounded-full bg-indigo-50 border border-indigo-100 text-sm font-bold text-indigo-700 transition-all cursor-default" title="Điểm Uy Tín (Reputation)">
@@ -162,7 +167,7 @@ const Navbar = () => {
                 <div className="relative" ref={notificationRef}>
                   <button 
                     onClick={() => setShowNotifications(!showNotifications)}
-                    className="flex items-center gap-2 text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-all relative"
+                    className="flex items-center gap-2 text-gray-600 hover:text-blue-600 hover:bg-gray-50 px-3 py-2 rounded-lg text-sm font-semibold transition-all relative"
                   >
                     <Bell size={18} />
                     <span className="hidden md:inline">Thông báo</span>
@@ -179,7 +184,7 @@ const Navbar = () => {
                   </button>
                   
                   {showNotifications && (
-                    <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-100 z-50 overflow-hidden transform transition-all">
+                    <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden transform transition-all">
                       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50">
                         <h3 className="text-sm font-bold text-gray-800">Thông báo</h3>
                         {unreadCount > 0 && (
@@ -246,52 +251,190 @@ const Navbar = () => {
                     </div>
                   )}
                 </div>
+                
                 <Link 
                   to={userId ? `/profile/${userId}` : `/edit-profile`} 
-                  className="flex items-center gap-2 text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-all"
+                  className="hidden md:flex items-center gap-2 text-gray-600 hover:text-blue-600 hover:bg-gray-50 px-3 py-2 rounded-lg text-sm font-semibold transition-all"
                 >
                   <User size={18} />
-                  <span className="hidden md:inline">Hồ sơ của tôi</span>
+                  <span>Hồ sơ của tôi</span>
                 </Link>
+
+                <Link
+                  to="/saved-posts"
+                  className="hidden md:flex items-center gap-2 text-gray-600 hover:text-blue-600 hover:bg-gray-50 px-3 py-2 rounded-lg text-sm font-semibold transition-all"
+                >
+                  <Bookmark size={18} />
+                  <span>Bài viết đã lưu</span>
+                </Link>
+
                 <button 
                   onClick={handleLogout}
-                  className="flex items-center gap-2 text-red-600 hover:bg-red-50 px-3 py-2 rounded-md text-sm font-medium transition-all"
+                  className="hidden md:flex items-center gap-2 text-red-600 hover:bg-red-50 px-3 py-2 rounded-lg text-sm font-semibold transition-all"
                 >
                   <LogOut size={18} />
-                  <span className="hidden md:inline">Đăng xuất</span>
+                  <span>Đăng xuất</span>
                 </button>
               </>
             ) : (
               <>
                 <Link 
                   to="/login" 
-                  className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-lg text-sm font-semibold transition-colors"
                 >
                   Đăng nhập
                 </Link>
                 <Link 
                   to="/register" 
-                  className="bg-blue-50 text-blue-700 hover:bg-blue-100 px-3 py-2 rounded-md text-sm font-medium transition-colors hidden sm:block"
+                  className="bg-blue-50 text-blue-700 hover:bg-blue-100 px-3 py-2 rounded-lg text-sm font-semibold transition-colors hidden sm:block"
                 >
                   Đăng ký
                 </Link>
                 <Link 
                   to="/auth/forgot-password" 
-                  className="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded-md text-sm font-medium shadow-sm shadow-blue-500/30 transition-all hover:shadow-md hover:shadow-blue-500/40"
+                  className="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded-lg text-sm font-semibold shadow-sm shadow-blue-500/30 transition-all hover:shadow-md hover:shadow-blue-500/40"
                 >
                   Quên mật khẩu
                 </Link>
                 <Link
                   to="/saved-posts"
-                  className="text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors"
+                  className="hidden md:flex items-center gap-2 text-gray-600 hover:text-blue-600 hover:bg-gray-50 px-3 py-2 rounded-lg text-sm font-semibold transition-colors"
                 >
                   Bài viết đã lưu
                 </Link>
               </>
             )}
+
+            {/* Mobile Hamburger Button */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="p-2 rounded-lg text-gray-500 hover:bg-gray-50 hover:text-gray-700 md:hidden transition-colors"
+              aria-label="Toggle Menu"
+            >
+              {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+            </button>
           </div>
         </div>
       </div>
+
+      {/* Mobile Drawer Overlay */}
+      {mobileMenuOpen && (
+        <div className="md:hidden fixed inset-0 z-40 bg-black/30 backdrop-blur-xs animate-fade-in" onClick={() => setMobileMenuOpen(false)}>
+          <div 
+            className="absolute right-0 top-0 bottom-0 w-64 bg-white shadow-2xl p-6 flex flex-col space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header Drawer */}
+            <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+              <span className="font-bold text-lg text-gray-900">Danh mục</span>
+              <button onClick={() => setMobileMenuOpen(false)} className="p-1 rounded-lg hover:bg-gray-50 text-gray-500">
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Navigation links */}
+            <div className="flex flex-col space-y-1 overflow-y-auto flex-1">
+              <Link 
+                to="/dashboard" 
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-3 text-gray-700 hover:text-blue-600 hover:bg-gray-50 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors"
+              >
+                <Home size={18} />
+                Bảng tin
+              </Link>
+              <Link 
+                to="/profiles" 
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-3 text-gray-700 hover:text-blue-600 hover:bg-gray-50 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors"
+              >
+                <Users size={18} />
+                Cộng đồng
+              </Link>
+              <Link 
+                to="/groups" 
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-3 text-gray-700 hover:text-blue-600 hover:bg-gray-50 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors"
+              >
+                <FolderGit2 size={18} />
+                Nhóm học tập
+              </Link>
+              <Link 
+                to="/search" 
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-3 text-gray-700 hover:text-blue-600 hover:bg-gray-50 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors"
+              >
+                <Search size={18} />
+                Tìm kiếm
+              </Link>
+
+              {token ? (
+                <>
+                  <Link 
+                    to="/chat" 
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-3 text-gray-700 hover:text-blue-600 hover:bg-gray-50 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors"
+                  >
+                    <MessageCircle size={18} />
+                    Tin nhắn
+                  </Link>
+                  <Link 
+                    to={userId ? `/profile/${userId}` : `/edit-profile`} 
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-3 text-gray-700 hover:text-blue-600 hover:bg-gray-50 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors"
+                  >
+                    <User size={18} />
+                    Hồ sơ của tôi
+                  </Link>
+                  <Link 
+                    to="/saved-posts" 
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-3 text-gray-700 hover:text-blue-600 hover:bg-gray-50 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors"
+                  >
+                    <Bookmark size={18} />
+                    Bài viết đã lưu
+                  </Link>
+                  
+                  <div className="pt-4 mt-4 border-t border-gray-100">
+                    <button 
+                      onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
+                      className="w-full flex items-center gap-3 text-red-600 hover:bg-red-50 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors"
+                    >
+                      <LogOut size={18} />
+                      Đăng xuất
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="pt-4 mt-4 border-t border-gray-100 flex flex-col gap-2">
+                    <Link 
+                      to="/login" 
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="w-full flex justify-center py-2 px-3 text-center text-gray-700 hover:bg-gray-50 rounded-lg text-sm font-semibold transition-colors border border-gray-200"
+                    >
+                      Đăng nhập
+                    </Link>
+                    <Link 
+                      to="/register" 
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="w-full flex justify-center py-2 px-3 text-center bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-sm font-semibold transition-colors"
+                    >
+                      Đăng ký
+                    </Link>
+                    <Link 
+                      to="/auth/forgot-password" 
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="w-full flex justify-center py-2 px-3 text-center text-gray-500 hover:text-gray-700 text-xs font-semibold"
+                    >
+                      Quên mật khẩu?
+                    </Link>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </nav>
   );
 };
