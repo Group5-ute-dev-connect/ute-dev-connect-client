@@ -12,8 +12,8 @@ export const postApi = {
   },
 
   // Tạo bài viết mới
-  createPost: (text, isQuestion = false) => {
-    return axiosClient.post('/posts', { text, isQuestion });
+  createPost: (text, isQuestion = false, groupId = null, codeSnippet = '', codeLanguage = 'javascript') => {
+    return axiosClient.post('/posts', { text, isQuestion, groupId, codeSnippet, codeLanguage });
   },
 
   // Lấy bài viết theo ID
@@ -37,15 +37,17 @@ export const postApi = {
   },
 
   // Gửi bình luận
-  addComment: (id, text) => {
+  addComment: (id, text, codeSnippet = '', codeLanguage = 'javascript') => {
     return axiosClient.post(`/posts/comment/${id}`, {
       text: text.trim(),
+      codeSnippet,
+      codeLanguage,
     });
   },
 
   // Cập nhật bài viết
-  updatePost: (id, text, isQuestion) => {
-    return axiosClient.put(`/posts/${id}`, { text, isQuestion });
+  updatePost: (id, text, isQuestion, codeSnippet = '', codeLanguage = 'javascript') => {
+    return axiosClient.put(`/posts/${id}`, { text, isQuestion, codeSnippet, codeLanguage });
   },
 
   // Xóa bài viết
@@ -68,5 +70,10 @@ export const postApi = {
   // Chấp nhận câu trả lời
   acceptAnswer: (postId, commentId) => {
     return axiosClient.put(`/posts/accept/${postId}/${commentId}`);
+  },
+
+  // Phê duyệt bình luận (Upvote)
+  approveComment: (postId, commentId) => {
+    return axiosClient.put(`/posts/comment/${postId}/${commentId}/approve`);
   },
 };
