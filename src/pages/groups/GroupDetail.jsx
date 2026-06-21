@@ -41,8 +41,10 @@ const GroupDetail = () => {
   const [commentTexts, setCommentTexts] = useState({}); // { [postId]: string }
   const [submittingComment, setSubmittingComment] = useState({}); // { [postId]: boolean }
 
-  // Tabs on Mobile
-  const [activeTab, setActiveTab] = useState('feed'); // 'feed' or 'members'
+  // Tabs
+  const [activeTab, setActiveTab] = useState('feed'); // 'feed' or 'members' or 'pending'
+  const [pendingPosts, setPendingPosts] = useState([]);
+  const [pendingLoading, setPendingLoading] = useState(false);
 
   // Fetch Group Info & Feed
   const fetchGroupData = async () => {
@@ -57,10 +59,23 @@ const GroupDetail = () => {
         (m) => (m.user?._id || m.user || '').toString() === userId.toString()
       );
       const isAdmin = userId && (groupData?.admin?._id || groupData?.admin || '').toString() === userId.toString();
+      const isUserMod = userId && groupData?.moderators?.some(
+        (m) => (m._id || m || '').toString() === userId.toString()
+      );
 
       // If member/admin, fetch internal feed
       if (groupData && (isMember || isAdmin)) {
         await fetchFeed();
+        
+        // If admin/mod, fetch pending posts count
+        if (isAdmin || isUserMod) {
+          try {
+            const pendingResponse = await groupApi.getPendingPosts(id);
+            setPendingPosts(pendingResponse.data?.data || pendingResponse.data || []);
+          } catch (e) {
+            console.error('Lỗi khi lấy số lượng bài viết chờ duyệt:', e);
+          }
+        }
       }
       setError('');
     } catch (err) {
@@ -82,6 +97,62 @@ const GroupDetail = () => {
       toast.error('Không thể tải bảng tin nhóm.');
     } finally {
       setFeedLoading(false);
+    }
+  };
+
+  const fetchPendingPosts = async () => {
+    try {
+      setPendingLoading(true);
+      const response = await groupApi.getPendingPosts(id);
+      setPendingPosts(response.data?.data || response.data || []);
+    } catch (err) {
+      console.error('Lỗi khi tải bài đăng chờ duyệt:', err);
+      toast.error('Không thể tải bài đăng chờ duyệt.');
+    } finally {
+      setPendingLoading(false);
+    }
+  };
+
+  const handleToggleModerator = async (targetUserId) => {
+    try {
+      const res = await groupApi.toggleModerator(id, targetUserId);
+      if (res.data) {
+        toast.success(res.data.message || 'Cập nhật quyền kiểm duyệt viên thành công');
+        fetchGroupData();
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || 'Không thể cập nhật quyền kiểm duyệt viên.');
+    }
+  };
+
+  const handleApprovePost = async (postId) => {
+    try {
+      const res = await groupApi.approvePost(id, postId);
+      if (res.data) {
+        toast.success('Đã phê duyệt bài viết.');
+        setPendingPosts(prev => prev.filter(p => p._id !== postId));
+        fetchFeed();
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Không thể phê duyệt bài viết.');
+    }
+  };
+
+  const handleRejectPost = async (postId) => {
+    if (!window.confirm('Bạn có chắc muốn từ chối và xóa bài viết này?')) {
+      return;
+    }
+    try {
+      const res = await groupApi.rejectPost(id, postId);
+      if (res.data) {
+        toast.success('Đã từ chối bài viết.');
+        setPendingPosts(prev => prev.filter(p => p._id !== postId));
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Không thể từ chối bài viết.');
     }
   };
 
@@ -257,6 +328,10 @@ const GroupDetail = () => {
     (m) => (m.user?._id || m.user || '').toString() === userId.toString()
   );
   const isUserAdmin = userId && (group.admin?._id || group.admin || '').toString() === userId.toString();
+  const isUserMod = userId && group.moderators?.some(
+    (m) => (m._id || m || '').toString() === userId.toString()
+  );
+  const canModerate = isUserAdmin || isUserMod;
 
   // Format Date
   const formattedDate = new Date(group.date).toLocaleDateString('vi-VN', {
@@ -264,6 +339,14 @@ const GroupDetail = () => {
     month: 'long',
     day: 'numeric'
   });
+
+  const tabs = [
+    { id: 'feed', label: 'Thảo luận' },
+    { id: 'members', label: `Thành viên (${group.members?.length || 0})` }
+  ];
+  if (canModerate) {
+    tabs.splice(1, 0, { id: 'pending', label: `Duyệt bài (${pendingPosts.length})` });
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -280,7 +363,6 @@ const GroupDetail = () => {
           {/* Group Banner */}
           <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden mb-8">
             <div className="h-32 md:h-48 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 relative">
-              {/* Absolutes styling if needed */}
             </div>
             
             <div className="p-6 md:p-8 relative pt-4 md:pt-6">
@@ -294,6 +376,12 @@ const GroupDetail = () => {
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-2xs font-semibold bg-purple-50 text-purple-700 border border-purple-100">
                         <Shield className="w-3 h-3 mr-0.5" />
                         Quản trị
+                      </span>
+                    )}
+                    {isUserMod && !isUserAdmin && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-2xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">
+                        <Shield className="w-3 h-3 mr-0.5" />
+                        Kiểm duyệt viên
                       </span>
                     )}
                   </div>
@@ -342,31 +430,33 @@ const GroupDetail = () => {
             </div>
           </div>
 
-          {/* Mobile Tabs */}
-          <div className="flex md:hidden bg-white p-1 rounded-xl border border-gray-100 shadow-sm mb-6">
-            <button
-              onClick={() => setActiveTab('feed')}
-              className={`flex-1 py-2 text-center text-sm font-semibold rounded-lg transition-colors ${
-                activeTab === 'feed' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-500'
-              }`}
-            >
-              Bảng tin
-            </button>
-            <button
-              onClick={() => setActiveTab('members')}
-              className={`flex-1 py-2 text-center text-sm font-semibold rounded-lg transition-colors ${
-                activeTab === 'members' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-500'
-              }`}
-            >
-              Thành viên ({group.members?.length || 0})
-            </button>
+          {/* Navigation Tabs (Responsive) */}
+          <div className="flex bg-white p-1 rounded-xl border border-gray-100 shadow-sm mb-6">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  if (tab.id === 'pending') {
+                    fetchPendingPosts();
+                  }
+                }}
+                className={`flex-grow py-2.5 text-center text-sm font-semibold rounded-lg transition-all ${
+                  activeTab === tab.id 
+                    ? 'bg-indigo-600 text-white shadow-sm' 
+                    : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50/50'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
 
           {/* Main content grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             
-            {/* Feed Section */}
-            <div className={`md:col-span-2 ${activeTab !== 'feed' ? 'hidden md:block' : ''}`}>
+            {/* Left Content Area (Feed or Pending Posts) */}
+            <div className={`md:col-span-2 ${activeTab === 'members' ? 'hidden md:block' : ''}`}>
               
               {/* Check if member */}
               {!isUserMember ? (
@@ -387,203 +477,345 @@ const GroupDetail = () => {
                 </div>
               ) : (
                 <>
-                  {/* Create Post Form */}
-                  <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm mb-6">
-                    <h3 className="text-sm font-bold text-gray-900 mb-3 uppercase tracking-wider">
-                      Đăng bài viết mới
-                    </h3>
-                    <form onSubmit={handleCreatePost}>
-                      <textarea
-                        placeholder="Thảo luận code, tài liệu môn học, tìm thành viên..."
-                        value={newPostText}
-                        onChange={(e) => setNewPostText(e.target.value)}
-                        rows={3}
-                        className="block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-950 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors resize-none"
-                      />
-                      <div className="flex justify-end mt-3">
-                        <button
-                          type="submit"
-                          disabled={submittingPost}
-                          className="inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-xl text-xs font-bold transition-all shadow-sm hover:shadow active:scale-95"
-                        >
-                          {submittingPost ? (
-                            <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-                          ) : (
-                            <SendHorizontal className="w-3.5 h-3.5 mr-1.5" />
-                          )}
-                          Đăng bài
-                        </button>
-                      </div>
-                    </form>
-                  </div>
-
-                  {/* Feed list */}
-                  <div className="space-y-4">
-                    <h3 className="text-sm font-extrabold text-gray-800 uppercase tracking-wider">
-                      Bài viết thảo luận ({posts.length})
-                    </h3>
-
-                    {feedLoading && posts.length === 0 ? (
-                      <div className="text-center py-10">
-                        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mx-auto mb-2" />
-                        <span className="text-sm text-gray-500">Đang tải bài viết...</span>
-                      </div>
-                    ) : posts.length === 0 ? (
-                      <div className="bg-white rounded-2xl border border-gray-150 p-10 text-center shadow-sm text-gray-500">
-                        Chưa có bài thảo luận nào trong nhóm này. Hãy đăng bài đầu tiên!
-                      </div>
-                    ) : (
-                      posts.map((post) => {
-                        const postLikesCount = post.likes?.length || 0;
-                        const isLiked = userId && post.likes?.some(
-                          (l) => (l.user?._id || l.user || '').toString() === userId.toString()
-                        );
-                        const postDate = new Date(post.date).toLocaleDateString('vi-VN', {
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        });
-
-                        return (
-                          <div key={post._id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                            {/* Post Header */}
-                            <div className="p-5 flex items-center space-x-3 border-b border-gray-50">
-                              <div className="h-10 w-10 bg-indigo-50 rounded-full flex items-center justify-center overflow-hidden">
-                                <img 
-                                  src={post.avatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} 
-                                  alt={post.name} 
-                                  className="w-full h-full object-cover" 
-                                  onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
-                                />
-                              </div>
-                              <div>
-                                <h4 className="text-sm font-bold text-gray-900">{post.name || 'Thành viên'}</h4>
-                                <div className="flex items-center text-xs text-gray-400 mt-0.5">
-                                  <Calendar className="w-3.5 h-3.5 mr-1" />
-                                  <span>{postDate}</span>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Post Body */}
-                            <div className="p-5">
-                              <p className="text-gray-800 text-sm leading-relaxed whitespace-pre-wrap">
-                                {post.text}
-                              </p>
-                            </div>
-
-                            {/* Post Interactions Footer */}
-                            <div className="px-5 py-3.5 bg-gray-50 border-t border-gray-50 flex items-center justify-between">
-                              <div className="flex items-center space-x-4">
-                                {/* Like button */}
-                                <button
-                                  onClick={() => handleLike(post._id)}
-                                  className={`flex items-center text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
-                                    isLiked 
-                                      ? 'text-indigo-600 bg-indigo-50 hover:bg-indigo-100' 
-                                      : 'text-gray-500 hover:text-indigo-600 hover:bg-gray-100'
-                                  }`}
-                                >
-                                  <ThumbsUp className={`w-3.5 h-3.5 mr-1.5 ${isLiked ? 'fill-indigo-600' : ''}`} />
-                                  <span>{postLikesCount} Thích</span>
-                                </button>
-
-                                {/* Comments toggle button */}
-                                <button
-                                  onClick={() => toggleComments(post._id)}
-                                  className={`flex items-center text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
-                                    expandedComments[post._id]
-                                      ? 'text-indigo-600 bg-indigo-50'
-                                      : 'text-gray-500 hover:text-indigo-600 hover:bg-gray-100'
-                                  }`}
-                                >
-                                  <MessageSquare className="w-3.5 h-3.5 mr-1.5" />
-                                  <span>{post.comments?.length || 0} Bình luận</span>
-                                </button>
-                              </div>
-                            </div>
-
-                            {/* Comments Section (Expanded Inline) */}
-                            {expandedComments[post._id] && (
-                              <div className="bg-gray-50 border-t border-gray-100 p-5 space-y-4">
-                                
-                                {/* Comments List */}
-                                <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
-                                  {post.comments?.length === 0 ? (
-                                    <p className="text-xs text-gray-500 text-center py-2">
-                                      Chưa có bình luận nào. Hãy gửi phản hồi đầu tiên!
-                                    </p>
-                                  ) : (
-                                    post.comments.map((comment) => {
-                                      const commentDate = new Date(comment.date).toLocaleDateString('vi-VN', {
-                                        month: 'short',
-                                        day: 'numeric',
-                                        hour: '2-digit',
-                                        minute: '2-digit'
-                                      });
-                                      return (
-                                        <div key={comment._id} className="flex items-start space-x-2.5">
-                                          <div className="h-8 w-8 bg-gray-200 rounded-full flex-shrink-0 flex items-center justify-center overflow-hidden">
-                                             <img 
-                                               src={comment.avatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} 
-                                               alt={comment.name} 
-                                               className="w-full h-full object-cover" 
-                                               onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
-                                             />
-                                          </div>
-                                          <div className="flex-1 bg-white p-3 rounded-xl border border-gray-100 text-xs">
-                                            <div className="flex items-center justify-between mb-1">
-                                              <strong className="font-bold text-gray-900">{comment.name}</strong>
-                                              <span className="text-3xs text-gray-400">{commentDate}</span>
-                                            </div>
-                                            <p className="text-gray-700 leading-normal whitespace-pre-wrap">
-                                              {comment.text}
-                                            </p>
-                                          </div>
-                                        </div>
-                                      );
-                                    })
-                                  )}
-                                </div>
-
-                                {/* Write Comment Form */}
-                                <form 
-                                  onSubmit={(e) => handleCommentSubmit(e, post._id)}
-                                  className="flex items-center gap-2 pt-2 border-t border-gray-100"
-                                >
-                                  <input
-                                    type="text"
-                                    placeholder="Viết bình luận..."
-                                    value={commentTexts[post._id] || ''}
-                                    onChange={(e) => handleCommentTextChange(post._id, e.target.value)}
-                                    className="flex-grow px-3.5 py-2 bg-white border border-gray-200 rounded-xl text-xs text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
-                                  />
-                                  <button
-                                    type="submit"
-                                    disabled={submittingComment[post._id] || !(commentTexts[post._id] || '').trim()}
-                                    className="p-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:bg-gray-300 transition-colors flex items-center justify-center"
-                                  >
-                                    {submittingComment[post._id] ? (
-                                      <Loader2 className="w-4 h-4 animate-spin" />
-                                    ) : (
-                                      <Send className="w-4 h-4" />
-                                    )}
-                                  </button>
-                                </form>
-                              </div>
-                            )}
-
+                  {/* TAB 1: DISCUSSION FEED */}
+                  {activeTab === 'feed' && (
+                    <>
+                      {/* Create Post Form */}
+                      <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm mb-6">
+                        <h3 className="text-sm font-bold text-gray-900 mb-3 uppercase tracking-wider">
+                          Đăng bài viết mới
+                        </h3>
+                        <form onSubmit={handleCreatePost}>
+                          <textarea
+                            placeholder="Thảo luận code, tài liệu môn học, tìm thành viên..."
+                            value={newPostText}
+                            onChange={(e) => setNewPostText(e.target.value)}
+                            rows={3}
+                            className="block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-950 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors resize-none"
+                          />
+                          <div className="flex justify-end mt-3">
+                            <button
+                              type="submit"
+                              disabled={submittingPost}
+                              className="inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-xl text-xs font-bold transition-all shadow-sm hover:shadow active:scale-95"
+                            >
+                              {submittingPost ? (
+                                <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                              ) : (
+                                <SendHorizontal className="w-3.5 h-3.5 mr-1.5" />
+                              )}
+                              Đăng bài
+                            </button>
                           </div>
-                        );
-                      })
-                    )}
-                  </div>
+                        </form>
+                      </div>
+
+                      {/* Feed list */}
+                      <div className="space-y-4">
+                        <h3 className="text-sm font-extrabold text-gray-800 uppercase tracking-wider">
+                          Bài viết thảo luận ({posts.length})
+                        </h3>
+
+                        {feedLoading && posts.length === 0 ? (
+                          <div className="text-center py-10">
+                            <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mx-auto mb-2" />
+                            <span className="text-sm text-gray-500">Đang tải bài viết...</span>
+                          </div>
+                        ) : posts.length === 0 ? (
+                          <div className="bg-white rounded-2xl border border-gray-150 p-10 text-center shadow-sm text-gray-500">
+                            Chưa có bài thảo luận nào trong nhóm này. Hãy đăng bài đầu tiên!
+                          </div>
+                        ) : (
+                          posts.map((post) => {
+                            const postLikesCount = post.likes?.length || 0;
+                            const isLiked = userId && post.likes?.some(
+                              (l) => (l.user?._id || l.user || '').toString() === userId.toString()
+                            );
+                            const postDate = new Date(post.date).toLocaleDateString('vi-VN', {
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            });
+
+                            return (
+                              <div key={post._id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                                {post.status === 'pending' && (
+                                  <div className="bg-amber-50 text-amber-800 px-5 py-3 border-b border-amber-100 flex items-center gap-1.5 text-xs font-semibold">
+                                    <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                                    <span>Bài viết này đang chờ duyệt. Chỉ bạn và Quản trị viên nhóm mới nhìn thấy.</span>
+                                  </div>
+                                )}
+
+                                {/* Post Header */}
+                                <div className="p-5 flex items-center space-x-3 border-b border-gray-50">
+                                  <div className="h-10 w-10 bg-indigo-50 rounded-full flex items-center justify-center overflow-hidden">
+                                    <img 
+                                      src={post.avatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} 
+                                      alt={post.name} 
+                                      className="w-full h-full object-cover" 
+                                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
+                                    />
+                                  </div>
+                                  <div>
+                                    <h4 className="text-sm font-bold text-gray-900">{post.name || 'Thành viên'}</h4>
+                                    <div className="flex items-center text-xs text-gray-400 mt-0.5">
+                                      <Calendar className="w-3.5 h-3.5 mr-1" />
+                                      <span>{postDate}</span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Post Body */}
+                                <div className="p-5">
+                                  <p className="text-gray-800 text-sm leading-relaxed whitespace-pre-wrap">
+                                    {post.text}
+                                  </p>
+                                </div>
+
+                                {/* Post Interactions Footer */}
+                                <div className="px-5 py-3.5 bg-gray-50 border-t border-gray-50 flex items-center justify-between">
+                                  <div className="flex items-center space-x-4">
+                                    {/* Like button */}
+                                    <button
+                                      onClick={() => handleLike(post._id)}
+                                      className={`flex items-center text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
+                                        isLiked 
+                                          ? 'text-indigo-600 bg-indigo-50 hover:bg-indigo-100' 
+                                          : 'text-gray-500 hover:text-indigo-600 hover:bg-gray-100'
+                                      }`}
+                                    >
+                                      <ThumbsUp className={`w-3.5 h-3.5 mr-1.5 ${isLiked ? 'fill-indigo-600' : ''}`} />
+                                      <span>{postLikesCount} Thích</span>
+                                    </button>
+
+                                    {/* Comments toggle button */}
+                                    <button
+                                      onClick={() => toggleComments(post._id)}
+                                      className={`flex items-center text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
+                                        expandedComments[post._id]
+                                          ? 'text-indigo-600 bg-indigo-50'
+                                          : 'text-gray-500 hover:text-indigo-600 hover:bg-gray-100'
+                                      }`}
+                                    >
+                                      <MessageSquare className="w-3.5 h-3.5 mr-1.5" />
+                                      <span>{post.comments?.length || 0} Bình luận</span>
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* Comments Section (Expanded Inline) */}
+                                {expandedComments[post._id] && (
+                                  <div className="bg-gray-50 border-t border-gray-100 p-5 space-y-4">
+                                    
+                                    {/* Comments List */}
+                                    <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+                                      {post.comments?.length === 0 ? (
+                                        <p className="text-xs text-gray-500 text-center py-2">
+                                          Chưa có bình luận nào. Hãy gửi phản hồi đầu tiên!
+                                        </p>
+                                      ) : (
+                                        post.comments.map((comment) => {
+                                          const commentDate = new Date(comment.date).toLocaleDateString('vi-VN', {
+                                            month: 'short',
+                                            day: 'numeric',
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                          });
+                                          return (
+                                            <div key={comment._id} className="flex items-start space-x-2.5">
+                                              <div className="h-8 w-8 bg-gray-200 rounded-full flex-shrink-0 flex items-center justify-center overflow-hidden">
+                                                 <img 
+                                                   src={comment.avatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} 
+                                                   alt={comment.name} 
+                                                   className="w-full h-full object-cover" 
+                                                   onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
+                                                 />
+                                              </div>
+                                              <div className="flex-1 bg-white p-3 rounded-xl border border-gray-100 text-xs">
+                                                <div className="flex items-center justify-between mb-1">
+                                                  <strong className="font-bold text-gray-900">{comment.name}</strong>
+                                                  <span className="text-3xs text-gray-400">{commentDate}</span>
+                                                </div>
+                                                <p className="text-gray-700 leading-normal whitespace-pre-wrap">
+                                                  {comment.text}
+                                                </p>
+                                              </div>
+                                            </div>
+                                          );
+                                        })
+                                      )}
+                                    </div>
+
+                                    {/* Write Comment Form */}
+                                    <form 
+                                      onSubmit={(e) => handleCommentSubmit(e, post._id)}
+                                      className="flex items-center gap-2 pt-2 border-t border-gray-100"
+                                    >
+                                      <input
+                                        type="text"
+                                        placeholder="Viết bình luận..."
+                                        value={commentTexts[post._id] || ''}
+                                        onChange={(e) => handleCommentTextChange(post._id, e.target.value)}
+                                        className="flex-grow px-3.5 py-2 bg-white border border-gray-200 rounded-xl text-xs text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                                      />
+                                      <button
+                                        type="submit"
+                                        disabled={submittingComment[post._id] || !(commentTexts[post._id] || '').trim()}
+                                        className="p-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:bg-gray-300 transition-colors flex items-center justify-center"
+                                      >
+                                        {submittingComment[post._id] ? (
+                                          <Loader2 className="w-4 h-4 animate-spin" />
+                                        ) : (
+                                          <Send className="w-4 h-4" />
+                                        )}
+                                      </button>
+                                    </form>
+                                  </div>
+                                )}
+
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </>
+                  )}
+
+                  {/* TAB 2: PENDING POSTS FOR MODERATORS */}
+                  {activeTab === 'pending' && canModerate && (
+                    <div className="space-y-4">
+                      <h3 className="text-sm font-extrabold text-gray-800 uppercase tracking-wider">
+                        Bài viết đang chờ duyệt ({pendingPosts.length})
+                      </h3>
+
+                      {pendingLoading ? (
+                        <div className="text-center py-10">
+                          <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mx-auto mb-2" />
+                          <span className="text-sm text-gray-500">Đang tải bài viết...</span>
+                        </div>
+                      ) : pendingPosts.length === 0 ? (
+                        <div className="bg-white rounded-2xl border border-gray-150 p-10 text-center shadow-sm text-gray-500">
+                          Không có bài viết nào đang chờ duyệt.
+                        </div>
+                      ) : (
+                        pendingPosts.map((post) => {
+                          const postDate = new Date(post.date).toLocaleDateString('vi-VN', {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          });
+
+                          return (
+                            <div key={post._id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                              <div className="p-5 flex items-center justify-between border-b border-gray-50">
+                                <div className="flex items-center space-x-3">
+                                  <div className="h-10 w-10 bg-indigo-50 rounded-full flex-shrink-0 flex items-center justify-center overflow-hidden">
+                                    <img 
+                                      src={post.avatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} 
+                                      alt={post.name} 
+                                      className="w-full h-full object-cover" 
+                                    />
+                                  </div>
+                                  <div>
+                                    <h4 className="text-sm font-bold text-gray-900">{post.name || 'Thành viên'}</h4>
+                                    <span className="text-xs text-gray-400 block mt-0.5">{postDate}</span>
+                                  </div>
+                                </div>
+                                
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => handleApprovePost(post._id)}
+                                    className="px-3.5 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-bold transition-colors shadow-sm"
+                                  >
+                                    Phê duyệt
+                                  </button>
+                                  <button
+                                    onClick={() => handleRejectPost(post._id)}
+                                    className="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition-colors shadow-sm"
+                                  >
+                                    Từ chối
+                                  </button>
+                                </div>
+                              </div>
+
+                              <div className="p-5">
+                                <p className="text-gray-800 text-sm leading-relaxed whitespace-pre-wrap">
+                                  {post.text}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  )}
+
+                  {/* TAB 3: MEMBERS DETAILED VIEW (ONLY VISIBLE ON MOBILE IF ACTIVE, OR OPTIONAL ON DESKTOP) */}
+                  {activeTab === 'members' && (
+                    <div className="space-y-4 block md:hidden">
+                      <h3 className="text-sm font-extrabold text-gray-800 uppercase tracking-wider">
+                        Thành viên nhóm ({group.members?.length || 0})
+                      </h3>
+                      <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-4">
+                        {group.members?.map((m) => {
+                          const memberUser = m.user;
+                          if (!memberUser) return null;
+                          const isMemberAdmin = group.admin?._id?.toString() === memberUser._id?.toString();
+                          const isMemberMod = group.moderators && group.moderators.some(
+                            (mod) => (mod._id || mod || '').toString() === memberUser._id?.toString()
+                          );
+
+                          return (
+                            <div key={memberUser._id} className="flex items-center justify-between gap-2 border-b border-gray-50 pb-3 last:border-b-0 last:pb-0">
+                              <div className="flex items-center space-x-2.5 min-w-0">
+                                <div className="h-8 w-8 bg-gray-100 rounded-full flex-shrink-0 flex items-center justify-center overflow-hidden border border-gray-200">
+                                  <img 
+                                    src={memberUser.avatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} 
+                                    alt={memberUser.name} 
+                                    className="w-full h-full object-cover" 
+                                  />
+                                </div>
+                                <Link 
+                                  to={`/profile/${memberUser._id}`} 
+                                  className="text-xs font-semibold text-gray-900 hover:text-indigo-600 transition-colors truncate block"
+                                >
+                                  {memberUser.name}
+                                </Link>
+                              </div>
+
+                              <div className="flex items-center gap-1.5 flex-shrink-0">
+                                {isMemberAdmin && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-3xs font-semibold bg-purple-50 text-purple-700 border border-purple-100 whitespace-nowrap">
+                                    Admin
+                                  </span>
+                                )}
+                                {isMemberMod && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-3xs font-semibold bg-blue-600 text-white whitespace-nowrap">
+                                    Mod
+                                  </span>
+                                )}
+                                {isUserAdmin && !isMemberAdmin && (
+                                  <button
+                                    onClick={() => handleToggleModerator(memberUser._id)}
+                                    className="text-3xs text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-1.5 py-0.5 rounded transition-colors font-bold"
+                                  >
+                                    {isMemberMod ? 'Bãi chức Mod' : 'Thăng chức Mod'}
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
             </div>
 
-            {/* Sidebar Section (Members List) */}
+            {/* Sidebar Section (Members List - Desktop Only) */}
             <div className={`md:col-span-1 ${activeTab !== 'members' ? 'hidden md:block' : ''}`}>
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sticky top-24">
                 <h3 className="text-sm font-extrabold text-gray-800 uppercase tracking-wider mb-4 flex items-center justify-between">
@@ -596,6 +828,9 @@ const GroupDetail = () => {
                     const memberUser = m.user;
                     if (!memberUser) return null;
                     const isMemberAdmin = group.admin?._id?.toString() === memberUser._id?.toString();
+                    const isMemberMod = group.moderators && group.moderators.some(
+                      (mod) => (mod._id || mod || '').toString() === memberUser._id?.toString()
+                    );
 
                     return (
                       <div key={memberUser._id} className="flex items-center justify-between gap-2">
@@ -616,11 +851,26 @@ const GroupDetail = () => {
                           </Link>
                         </div>
 
-                        {isMemberAdmin && (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-3xs font-semibold bg-purple-50 text-purple-700 border border-purple-100 whitespace-nowrap">
-                            Admin
-                          </span>
-                        )}
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          {isMemberAdmin && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-3xs font-semibold bg-purple-50 text-purple-700 border border-purple-100 whitespace-nowrap">
+                              Admin
+                            </span>
+                          )}
+                          {isMemberMod && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-3xs font-semibold bg-blue-600 text-white whitespace-nowrap">
+                              Mod
+                            </span>
+                          )}
+                          {isUserAdmin && !isMemberAdmin && (
+                            <button
+                              onClick={() => handleToggleModerator(memberUser._id)}
+                              className="text-3xs text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-1.5 py-0.5 rounded transition-colors font-bold"
+                            >
+                              {isMemberMod ? 'Bãi chức' : 'Thăng chức'}
+                            </button>
+                          )}
+                        </div>
                       </div>
                     );
                   })}

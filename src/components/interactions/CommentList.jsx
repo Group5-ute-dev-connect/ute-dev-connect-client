@@ -14,9 +14,20 @@ const CommentList = ({ post, comments = [], onCommentsChange }) => {
     );
   }
 
+  const sortedComments = [...comments].sort((a, b) => {
+    // 1. Câu trả lời được chấp nhận (isAccepted) lên đầu
+    if (a.isAccepted && !b.isAccepted) return -1;
+    if (!a.isAccepted && b.isAccepted) return 1;
+
+    // 2. Tiếp theo sắp xếp theo số lượt duyệt (approvals) giảm dần
+    const aApprovals = a.approvals?.length || 0;
+    const bApprovals = b.approvals?.length || 0;
+    return bApprovals - aApprovals;
+  });
+
   return (
     <div className="mt-4 space-y-3">
-      {comments.map((comment, index) => (
+      {sortedComments.map((comment, index) => (
         <CommentItem
           key={comment._id || comment.id || `${comment.text}-${index}`}
           comment={comment}

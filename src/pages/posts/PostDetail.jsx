@@ -139,6 +139,19 @@ const PostDetail = () => {
               {post.text}
             </ReactMarkdown>
           </div>
+          
+          {post.codeSnippet && (
+            <div className="mt-6 border-t border-gray-100 pt-4">
+              <span className="text-xs font-bold text-slate-500 block mb-2 uppercase tracking-wider">Mã nguồn đính kèm ({post.codeLanguage || 'javascript'}):</span>
+              <SyntaxHighlighter
+                children={post.codeSnippet}
+                style={vscDarkPlus}
+                language={post.codeLanguage || 'javascript'}
+                PreTag="div"
+                className="rounded-xl shadow-sm overflow-hidden text-xs"
+              />
+            </div>
+          )}
         </div>
         
         {/* Footer bài viết (Thống kê) */}

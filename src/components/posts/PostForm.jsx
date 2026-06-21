@@ -18,6 +18,9 @@ const PostForm = () => {
   const [apiError, setApiError] = useState('');
   const [apiSuccess, setApiSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [codeSnippet, setCodeSnippet] = useState('');
+  const [codeLanguage, setCodeLanguage] = useState('javascript');
+  const [showCodeSnippet, setShowCodeSnippet] = useState(false);
   const navigate = useNavigate();
 
   const validateForm = () => {
@@ -42,10 +45,18 @@ const PostForm = () => {
 
     setIsLoading(true);
     try {
-      const response = await postApi.createPost(text, isQuestion);
+      const response = await postApi.createPost(
+        text, 
+        isQuestion, 
+        null, 
+        showCodeSnippet ? codeSnippet : '', 
+        showCodeSnippet ? codeLanguage : 'javascript'
+      );
       if (response.success || response.status === 201 || (response.data && response.data.success)) {
         setApiSuccess('Đăng bài thành công!');
         setText('');
+        setCodeSnippet('');
+        setShowCodeSnippet(false);
         
         // Chuyển hướng đến trang chi tiết bài viết (nếu cần)
         const newPostId = response.data?._id || (response.data?.data?._id);
@@ -67,7 +78,7 @@ const PostForm = () => {
 
   return (
     <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 mb-6">
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
         <h3 className="text-lg font-bold text-gray-900 flex items-center">
           {isQuestion ? (
              <HelpCircle className="w-5 h-5 mr-2 text-indigo-600" />
@@ -76,14 +87,25 @@ const PostForm = () => {
           )}
           {isQuestion ? 'Tạo câu hỏi' : 'Tạo bài viết mới'}
         </h3>
-        <label className="flex items-center cursor-pointer">
-          <div className="relative">
-            <input type="checkbox" className="sr-only" checked={isQuestion} onChange={() => setIsQuestion(!isQuestion)} />
-            <div className={`block w-10 h-6 rounded-full transition-colors ${isQuestion ? 'bg-indigo-600' : 'bg-gray-300'}`}></div>
-            <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${isQuestion ? 'transform translate-x-4' : ''}`}></div>
-          </div>
-          <div className="ml-3 text-sm font-medium text-gray-700">Đây là một câu hỏi?</div>
-        </label>
+        <div className="flex items-center gap-6">
+          <label className="flex items-center cursor-pointer">
+            <div className="relative">
+              <input type="checkbox" className="sr-only" checked={isQuestion} onChange={() => setIsQuestion(!isQuestion)} />
+              <div className={`block w-10 h-6 rounded-full transition-colors ${isQuestion ? 'bg-indigo-600' : 'bg-gray-300'}`}></div>
+              <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${isQuestion ? 'transform translate-x-4' : ''}`}></div>
+            </div>
+            <div className="ml-3 text-sm font-medium text-gray-700">Đây là một câu hỏi?</div>
+          </label>
+
+          <label className="flex items-center cursor-pointer">
+            <div className="relative">
+              <input type="checkbox" className="sr-only" checked={showCodeSnippet} onChange={() => setShowCodeSnippet(!showCodeSnippet)} />
+              <div className={`block w-10 h-6 rounded-full transition-colors ${showCodeSnippet ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
+              <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${showCodeSnippet ? 'transform translate-x-4' : ''}`}></div>
+            </div>
+            <div className="ml-3 text-sm font-medium text-gray-700">Chèn Code Snippet?</div>
+          </label>
+        </div>
       </div>
       
       {apiSuccess && <Alert type="success" message={apiSuccess} />}
@@ -100,13 +122,43 @@ const PostForm = () => {
 
       <form onSubmit={handleSubmit} className="mt-2">
         {!isPreview ? (
-          <Textarea
-            placeholder={isQuestion ? "Bạn đang gặp vấn đề gì? Hãy miêu tả chi tiết, bạn có thể dùng Markdown để format code..." : "Bạn đang nghĩ gì? Có thể dùng Markdown..."}
-            value={text}
-            onChange={handleChange}
-            error={error}
-            rows={5}
-          />
+          <>
+            <Textarea
+              placeholder={isQuestion ? "Bạn đang gặp vấn đề gì? Hãy miêu tả chi tiết, bạn có thể dùng Markdown để format code..." : "Bạn đang nghĩ gì? Có thể dùng Markdown..."}
+              value={text}
+              onChange={handleChange}
+              error={error}
+              rows={5}
+            />
+
+            {showCodeSnippet && (
+              <div className="mt-3 p-4 border border-blue-100 rounded-xl bg-slate-50">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Mã nguồn (Code Snippet)</span>
+                  <select
+                    value={codeLanguage}
+                    onChange={(e) => setCodeLanguage(e.target.value)}
+                    className="text-xs px-2 py-1.5 bg-white border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium"
+                  >
+                    <option value="javascript">JavaScript</option>
+                    <option value="python">Python</option>
+                    <option value="cpp">C++</option>
+                    <option value="html">HTML</option>
+                    <option value="css">CSS</option>
+                    <option value="java">Java</option>
+                    <option value="go">Go</option>
+                  </select>
+                </div>
+                <textarea
+                  value={codeSnippet}
+                  onChange={(e) => setCodeSnippet(e.target.value)}
+                  placeholder="Dán hoặc viết mã code của bạn ở đây..."
+                  rows={6}
+                  className="w-full font-mono text-xs px-3 py-2 bg-slate-900 text-slate-100 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-y"
+                />
+              </div>
+            )}
+          </>
         ) : (
           <div className="p-4 border rounded-md bg-gray-50 min-h-[136px] max-w-none text-sm text-slate-800 prose prose-slate prose-sm prose-p:my-1 prose-pre:my-2 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1">
             {text ? (
@@ -136,6 +188,19 @@ const PostForm = () => {
               </ReactMarkdown>
             ) : (
               <span className="text-gray-400 italic">Chưa có nội dung để xem trước...</span>
+            )}
+
+            {showCodeSnippet && codeSnippet && (
+              <div className="mt-4 border-t border-gray-200 pt-4">
+                <span className="text-xs font-bold text-slate-500 block mb-1">Mã nguồn ({codeLanguage}):</span>
+                <SyntaxHighlighter
+                  children={codeSnippet}
+                  style={vscDarkPlus}
+                  language={codeLanguage}
+                  PreTag="div"
+                  className="rounded-md my-2 text-xs"
+                />
+              </div>
             )}
           </div>
         )}

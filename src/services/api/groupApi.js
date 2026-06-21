@@ -37,8 +37,8 @@ export const groupApi = {
   },
 
   // Đăng bài viết mới trong nhóm
-  createGroupPost: (id, text) => {
-    return axiosClient.post(`/groups/${id}/posts`, { text });
+  createGroupPost: (id, text, isQuestion = false, codeSnippet = '', codeLanguage = 'javascript') => {
+    return axiosClient.post(`/groups/${id}/posts`, { text, isQuestion, codeSnippet, codeLanguage });
   },
 
   // Bình luận bài viết trong nhóm
@@ -46,6 +46,26 @@ export const groupApi = {
     return axiosClient.post(`/groups/${id}/posts/${postId}/comments`, {
       text: text.trim()
     });
+  },
+
+  // Thăng chức / hạ chức Moderator (chỉ Admin của nhóm)
+  toggleModerator: (groupId, userId) => {
+    return axiosClient.put(`/groups/${groupId}/moderator`, { userId });
+  },
+
+  // Lấy danh sách bài đăng chờ duyệt (chỉ Admin / Mod nhóm)
+  getPendingPosts: (groupId) => {
+    return axiosClient.get(`/groups/${groupId}/pending-posts`);
+  },
+
+  // Phê duyệt bài viết (chỉ Admin / Mod nhóm)
+  approvePost: (groupId, postId) => {
+    return axiosClient.put(`/groups/${groupId}/posts/${postId}/status`, { status: 'approved' });
+  },
+
+  // Từ chối và xóa bài viết (chỉ Admin / Mod nhóm)
+  rejectPost: (groupId, postId) => {
+    return axiosClient.put(`/groups/${groupId}/posts/${postId}/status`, { status: 'rejected' });
   }
 };
 

@@ -17,6 +17,7 @@ import Notifications from "./pages/notifications/Notifications";
 import Groups from "./pages/groups/Groups";
 import GroupDetail from "./pages/groups/GroupDetail";
 import SearchPage from "./pages/search/SearchPage";
+import WordFilterPage from "./pages/admin/WordFilterPage";
 
 function App() {
   return (
@@ -44,6 +45,7 @@ function App() {
         <Route path="/chat" element={<Chat />} />
         <Route path="/saved-posts" element={<SavedPosts />} />
         <Route path="/notifications" element={<Notifications />} />
+        <Route path="/admin/filters" element={<WordFilterPage />} />
       </Route>
 
       {/* Route mặc định: Điều hướng về trang chủ */}
