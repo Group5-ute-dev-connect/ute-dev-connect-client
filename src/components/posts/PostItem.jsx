@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { User, Calendar, MessageSquare, ThumbsUp, Tag, Bookmark, HelpCircle, CheckCircle, Edit2, Trash2 } from 'lucide-react';
-import { savePost, deletePost, updatePost } from '../../store/postSlice';
+import { User, Calendar, MessageSquare, ThumbsUp, Tag, Bookmark, HelpCircle, CheckCircle, Edit2, Trash2, Eye, EyeOff, Globe, Lock, Users, UserCheck } from 'lucide-react';
+import { savePost, deletePost, updatePost, hidePost } from '../../store/postSlice';
 import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -19,7 +19,7 @@ const PostItem = ({ post }) => {
   
   const parseJwt = (t) => { try { return JSON.parse(atob(t.split('.')[1])); } catch { return null; } };
   
-  const { _id, text, name, avatar, user, likes, comments, tags, date, isSaved, isQuestion, acceptedAnswer } = post || {};
+  const { _id, text, name, avatar, user, likes, comments, tags, date, isSaved, isQuestion, acceptedAnswer, visibility, isHidden } = post || {};
   
   const currentUserId = token ? parseJwt(token)?.user?.id || parseJwt(token)?.id : null;
   const authorId = user?._id || user;
@@ -29,7 +29,55 @@ const PostItem = ({ post }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(text);
   const [editIsQuestion, setEditIsQuestion] = useState(isQuestion || false);
+  const [editVisibility, setEditVisibility] = useState(visibility || 'public');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const getVisibilityIcon = (vis) => {
+    switch (vis) {
+      case 'personal':
+        return <Lock className="w-3 h-3 text-gray-555" />;
+      case 'followers':
+        return <Users className="w-3 h-3 text-blue-500" />;
+      case 'friends':
+        return <UserCheck className="w-3 h-3 text-green-500" />;
+      case 'public':
+      default:
+        return <Globe className="w-3 h-3 text-gray-400" />;
+    }
+  };
+
+  const getVisibilityText = (vis) => {
+    switch (vis) {
+      case 'personal':
+        return 'Chỉ mình tôi';
+      case 'followers':
+        return 'Người theo dõi';
+      case 'friends':
+        return 'Bạn bè';
+      case 'public':
+      default:
+        return 'Công khai';
+    }
+  };
+
+  const getVisibilityTitle = (vis) => {
+    switch (vis) {
+      case 'personal':
+        return 'Chế độ: Chỉ mình tôi';
+      case 'followers':
+        return 'Chế độ: Người theo dõi';
+      case 'friends':
+        return 'Chế độ: Bạn bè (Theo dõi chéo)';
+      case 'public':
+      default:
+        return 'Chế độ: Công khai';
+    }
+  };
+
+  const handleHideToggle = (e) => {
+    e.preventDefault();
+    dispatch(hidePost(_id));
+  };
 
   const handleSavePost = (e) => {
     e.preventDefault();
@@ -41,7 +89,7 @@ const PostItem = ({ post }) => {
     e.preventDefault();
     if (!editText.trim()) return;
     setIsSubmitting(true);
-    await dispatch(updatePost({ id: _id, formData: { text: editText, isQuestion: editIsQuestion } }));
+    await dispatch(updatePost({ id: _id, formData: { text: editText, isQuestion: editIsQuestion, visibility: editVisibility } }));
     setIsSubmitting(false);
     setIsEditing(false);
   };
@@ -95,14 +143,28 @@ const PostItem = ({ post }) => {
                 </span>
               )}
             </div>
-            {/* Ngày đăng */}
-            <div className="flex items-center text-xs text-gray-400 mt-0.5">
-              <Calendar className="w-3 h-3 mr-1" />
-              <span>{formattedDate}</span>
+            {/* Ngày đăng & Quyền riêng tư */}
+            <div className="flex items-center text-xs text-gray-400 mt-0.5 gap-2">
+              <span className="flex items-center">
+                <Calendar className="w-3 h-3 mr-1" />
+                {formattedDate}
+              </span>
+              <span className="text-gray-300">•</span>
+              <span className="flex items-center gap-1" title={getVisibilityTitle(visibility)}>
+                {getVisibilityIcon(visibility)}
+                <span>{getVisibilityText(visibility)}</span>
+              </span>
             </div>
           </div>
           {isPostAuthor && !isEditing && (
             <div className="flex items-center space-x-1">
+              <button 
+                onClick={handleHideToggle} 
+                className="text-gray-400 hover:text-indigo-500 p-1.5 rounded-full hover:bg-indigo-50 transition-colors" 
+                title={isHidden ? "Hiện lại bài viết" : "Ẩn bài viết"}
+              >
+                {isHidden ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+              </button>
               <button onClick={(e) => { e.preventDefault(); setIsEditing(true); }} className="text-gray-400 hover:text-blue-500 p-1.5 rounded-full hover:bg-blue-50 transition-colors" title="Chỉnh sửa bài viết">
                 <Edit2 className="w-4 h-4" />
               </button>
@@ -122,10 +184,25 @@ const PostItem = ({ post }) => {
               className="w-full min-h-[100px] resize-none rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             />
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mt-2 gap-2">
-              <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700 font-medium bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200 w-fit">
-                <input type="checkbox" checked={editIsQuestion} onChange={(e) => setEditIsQuestion(e.target.checked)} className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" />
-                Đây là một câu hỏi?
-              </label>
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700 font-medium bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200">
+                  <input type="checkbox" checked={editIsQuestion} onChange={(e) => setEditIsQuestion(e.target.checked)} className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" />
+                  Câu hỏi
+                </label>
+                <div className="flex items-center gap-1.5 text-sm text-gray-700 font-medium bg-gray-50 px-2 py-1.5 rounded-lg border border-gray-200">
+                  <span className="text-xs text-gray-555 pl-1">Hiển thị:</span>
+                  <select
+                    value={editVisibility}
+                    onChange={(e) => setEditVisibility(e.target.value)}
+                    className="text-xs px-2 py-0.5 bg-white border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium"
+                  >
+                    <option value="public">🌐 Công khai</option>
+                    <option value="personal">🔒 Chỉ mình tôi</option>
+                    <option value="followers">👥 Người theo dõi</option>
+                    <option value="friends">🤝 Bạn bè</option>
+                  </select>
+                </div>
+              </div>
               <div className="flex gap-2 self-end">
                  <button onClick={(e) => { e.preventDefault(); setIsEditing(false); }} className="px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">Hủy</button>
                  <button onClick={handleEditSubmit} disabled={isSubmitting} className="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-70">

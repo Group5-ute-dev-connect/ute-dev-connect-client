@@ -12,8 +12,8 @@ export const postApi = {
   },
 
   // Tạo bài viết mới
-  createPost: (text, isQuestion = false, groupId = null, codeSnippet = '', codeLanguage = 'javascript') => {
-    return axiosClient.post('/posts', { text, isQuestion, groupId, codeSnippet, codeLanguage });
+  createPost: (text, isQuestion = false, groupId = null, codeSnippet = '', codeLanguage = 'javascript', visibility = 'public') => {
+    return axiosClient.post('/posts', { text, isQuestion, groupId, codeSnippet, codeLanguage, visibility });
   },
 
   // Lấy bài viết theo ID
@@ -31,6 +31,16 @@ export const postApi = {
     return axiosClient.get('/posts/saved');
   },
 
+  // Lấy danh sách bài viết đã ẩn
+  getHiddenPosts: () => {
+    return axiosClient.get('/posts/hidden');
+  },
+
+  // Ẩn / hiện bài viết
+  hidePost: (id) => {
+    return axiosClient.put(`/posts/hide/${id}`);
+  },
+
   // Like / Unlike bài viết
   likePost: (id) => {
     return axiosClient.put(`/posts/like/${id}`);
@@ -46,8 +56,8 @@ export const postApi = {
   },
 
   // Cập nhật bài viết
-  updatePost: (id, text, isQuestion, codeSnippet = '', codeLanguage = 'javascript') => {
-    return axiosClient.put(`/posts/${id}`, { text, isQuestion, codeSnippet, codeLanguage });
+  updatePost: (id, text, isQuestion, codeSnippet = '', codeLanguage = 'javascript', visibility) => {
+    return axiosClient.put(`/posts/${id}`, { text, isQuestion, codeSnippet, codeLanguage, visibility });
   },
 
   // Xóa bài viết

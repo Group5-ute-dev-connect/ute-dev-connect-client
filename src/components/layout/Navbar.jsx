@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { User, LogOut, Bell, Heart, MessageCircle, UserPlus, CheckCircle2, Star, Menu, X, Home, Users, FolderGit2, Search, Bookmark, ChevronDown } from 'lucide-react';
+import { User, LogOut, Bell, Heart, MessageCircle, UserPlus, CheckCircle2, Star, Menu, X, Home, Users, FolderGit2, Search, Bookmark, ChevronDown, EyeOff } from 'lucide-react';
 import { logout } from '../../store/authSlice';
 import { getNotifications, getUnreadCount, markAsRead, markAllAsRead } from '../../store/notificationSlice';
 import { profileApi } from '../../services/api/profileApi';
@@ -316,6 +316,15 @@ const Navbar = () => {
                         <span>Bài viết đã lưu</span>
                       </Link>
 
+                      <Link
+                        to="/hidden-posts"
+                        onClick={() => setShowUserDropdown(false)}
+                        className="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-blue-50/50 hover:text-blue-600 font-medium transition-colors"
+                      >
+                        <EyeOff size={16} className="text-gray-400" />
+                        <span>Bài viết đã ẩn</span>
+                      </Link>
+
                       {role === 'admin' && (
                         <Link
                           to="/admin/filters"
@@ -480,6 +489,14 @@ const Navbar = () => {
                   >
                     <Bookmark size={18} />
                     Bài viết đã lưu
+                  </Link>
+                  <Link 
+                    to="/hidden-posts" 
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-3 text-gray-700 hover:text-blue-600 hover:bg-gray-50 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors"
+                  >
+                    <EyeOff size={18} />
+                    Bài viết đã ẩn
                   </Link>
                   {role === 'admin' && (
                     <Link 

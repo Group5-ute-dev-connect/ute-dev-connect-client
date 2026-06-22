@@ -4,6 +4,7 @@ import axiosClient from "../services/api/axiosClient";
 const initialState = {
   posts: [],
   savedPosts: [],
+  hiddenPosts: [],
   post: null,
   loading: true,
   loadingMore: false,
@@ -117,6 +118,36 @@ export const deletePost = createAsyncThunk(
   }
 );
 
+// Async thunk: Ẩn / Hiện bài viết
+export const hidePost = createAsyncThunk(
+  "post/hidePost",
+  async (id, { rejectWithValue }) => {
+    try {
+      const response = await axiosClient.put(`/posts/hide/${id}`);
+      return response.data?.data || response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || error.message || "Lỗi khi ẩn/hiện bài viết"
+      );
+    }
+  }
+);
+
+// Async thunk: Lấy danh sách bài viết đã ẩn
+export const getHiddenPosts = createAsyncThunk(
+  "post/getHiddenPosts",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await axiosClient.get("/posts/hidden");
+      return response.data?.data || response.data || [];
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || error.message || "Lỗi khi tải bài viết đã ẩn"
+      );
+    }
+  }
+);
+
 const postSlice = createSlice({
   name: "post",
   initialState,
@@ -213,12 +244,38 @@ const postSlice = createSlice({
       .addCase(deletePost.fulfilled, (state, action) => {
         state.loading = false;
         state.posts = state.posts.filter(post => post._id !== action.payload);
+        state.hiddenPosts = state.hiddenPosts.filter(post => post._id !== action.payload);
         if (state.post && state.post._id === action.payload) {
           state.post = null;
         }
       })
       .addCase(deletePost.rejected, (state, action) => {
         state.loading = false;
+        state.error = action.payload;
+      })
+
+      // HIDE / UNHIDE POST
+      .addCase(hidePost.pending, (state) => {
+        state.error = null;
+      })
+      .addCase(hidePost.fulfilled, (state, action) => {
+        const updatedPost = action.payload;
+        if (updatedPost.isHidden) {
+          state.posts = state.posts.filter(post => post._id !== updatedPost._id);
+          if (!state.hiddenPosts.some(p => p._id === updatedPost._id)) {
+            state.hiddenPosts = [updatedPost, ...state.hiddenPosts];
+          }
+        } else {
+          state.hiddenPosts = state.hiddenPosts.filter(post => post._id !== updatedPost._id);
+          state.posts = state.posts.map(post => 
+            post._id === updatedPost._id ? updatedPost : post
+          );
+        }
+        if (state.post && state.post._id === updatedPost._id) {
+          state.post = updatedPost;
+        }
+      })
+      .addCase(hidePost.rejected, (state, action) => {
         state.error = action.payload;
       })
             // SAVE / UNSAVE POST
@@ -256,6 +313,20 @@ const postSlice = createSlice({
         state.savedPosts = action.payload;
       })
       .addCase(getSavedPosts.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      // GET HIDDEN POSTS
+      .addCase(getHiddenPosts.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(getHiddenPosts.fulfilled, (state, action) => {
+        state.loading = false;
+        state.hiddenPosts = action.payload;
+      })
+      .addCase(getHiddenPosts.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       });

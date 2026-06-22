@@ -13,6 +13,7 @@ import PostDetail from "./pages/posts/PostDetail";
 import Dashboard from "./pages/dashboard/Dashboard";
 import Chat from "./pages/chat/Chat";
 import SavedPosts from "./pages/posts/SavedPosts";
+import HiddenPosts from "./pages/posts/HiddenPosts";
 import Notifications from "./pages/notifications/Notifications";
 import Groups from "./pages/groups/Groups";
 import GroupDetail from "./pages/groups/GroupDetail";
@@ -44,6 +45,7 @@ function App() {
         <Route path="/edit-profile" element={<EditProfile />} />
         <Route path="/chat" element={<Chat />} />
         <Route path="/saved-posts" element={<SavedPosts />} />
+        <Route path="/hidden-posts" element={<HiddenPosts />} />
         <Route path="/notifications" element={<Notifications />} />
         <Route path="/admin/filters" element={<WordFilterPage />} />
       </Route>
