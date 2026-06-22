@@ -217,7 +217,12 @@ const Navbar = () => {
                             >
                               <div className="relative flex-shrink-0 mt-1">
                                 {notif.sender?.avatar ? (
-                                  <img src={notif.sender.avatar} alt="Avatar" className="w-10 h-10 rounded-full object-cover border border-gray-200" />
+                                  <img 
+                                    src={notif.sender.avatar} 
+                                    alt="Avatar" 
+                                    className="w-10 h-10 rounded-full object-cover border border-gray-200"
+                                    onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
+                                  />
                                 ) : (
                                   <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center border border-gray-300">
                                     <User size={16} className="text-gray-500" />
@@ -272,6 +277,7 @@ const Navbar = () => {
                         src={userInfo.avatar}
                         alt={userInfo.name}
                         className="w-7 h-7 rounded-full object-cover border border-gray-200 shadow-3xs"
+                        onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
                       />
                     ) : (
                       <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center border border-blue-200 shadow-3xs">
@@ -390,7 +396,12 @@ const Navbar = () => {
               {token && userInfo ? (
                 <div className="flex items-center gap-2">
                   {userInfo.avatar ? (
-                    <img src={userInfo.avatar} alt="Avatar" className="w-8 h-8 rounded-full object-cover border border-gray-200" />
+                    <img 
+                      src={userInfo.avatar} 
+                      alt="Avatar" 
+                      className="w-8 h-8 rounded-full object-cover border border-gray-200"
+                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
+                    />
                   ) : (
                     <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center border border-blue-200">
                       <User size={14} />

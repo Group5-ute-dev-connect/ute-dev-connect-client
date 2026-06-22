@@ -12,6 +12,7 @@ const ProfileItem = ({ profile }) => {
           src={user?.avatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} 
           alt={user?.name} 
           className="w-24 h-24 rounded-full object-cover border-4 border-blue-50"
+          onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
         />
       </div>
       
