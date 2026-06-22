@@ -137,7 +137,12 @@ const Notifications = () => {
               >
                 <div className="relative flex-shrink-0 mt-1">
                   {notif.sender?.avatar ? (
-                    <img src={notif.sender.avatar} alt="Avatar" className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm" />
+                    <img 
+                      src={notif.sender.avatar} 
+                      alt="Avatar" 
+                      className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm" 
+                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
+                    />
                   ) : (
                     <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center border-2 border-white shadow-sm">
                       <User size={20} className="text-gray-500" />

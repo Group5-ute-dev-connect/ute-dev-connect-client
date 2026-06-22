@@ -1,20 +1,31 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { postApi } from '../../services/api/postApi';
 import Spinner from '../../components/common/Spinner';
 import Alert from '../../components/common/Alert';
-import { ArrowLeft, User, Calendar, MessageSquare, HelpCircle, CheckCircle } from 'lucide-react';
+import { ArrowLeft, X } from 'lucide-react';
+import PostItem from '../../components/posts/PostItem';
 import PostInteractions from '../../components/interactions/PostInteractions';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
-const PostDetail = () => {
+const PostDetail = ({ isModal = false }) => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  const handleClose = () => {
+    navigate(-1);
+  };
+
+  useEffect(() => {
+    if (isModal) {
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = '';
+      };
+    }
+  }, [isModal]);
 
   useEffect(() => {
     const fetchPost = async () => {
@@ -39,7 +50,33 @@ const PostDetail = () => {
     }
   }, [id]);
 
+  const handlePostUpdate = (updatedPost) => {
+    setPost(updatedPost);
+  };
+
   if (loading) {
+    if (isModal) {
+      return (
+        <div 
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={handleClose}
+        >
+          <div 
+            className="bg-white rounded-3xl max-w-3xl w-full min-h-[300px] flex items-center justify-center shadow-2xl relative p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button 
+              onClick={handleClose}
+              className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all"
+              title="Đóng"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <Spinner size="lg" />
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="flex justify-center items-center min-h-screen">
         <Spinner size="lg" />
@@ -48,6 +85,28 @@ const PostDetail = () => {
   }
 
   if (error) {
+    if (isModal) {
+      return (
+        <div 
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={handleClose}
+        >
+          <div 
+            className="bg-white rounded-3xl max-w-3xl w-full shadow-2xl relative p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button 
+              onClick={handleClose}
+              className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all"
+              title="Đóng"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <Alert type="error" message={error} />
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="max-w-3xl mx-auto mt-10 px-4">
         <Alert type="error" message={error} />
@@ -62,116 +121,41 @@ const PostDetail = () => {
     return null;
   }
 
-  const formattedDate = new Date(post.date).toLocaleDateString('vi-VN', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+  if (isModal) {
+    return (
+      <div 
+        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto"
+        onClick={handleClose}
+      >
+        <div 
+          className="bg-gray-50 rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl relative p-6 sm:p-8 my-8"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Close Button */}
+          <button 
+            onClick={handleClose}
+            className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-150 rounded-full transition-all"
+            title="Đóng"
+          >
+            <X className="w-5 h-5" />
+          </button>
+
+          <div className="mt-2">
+            <PostItem post={post} isDetail={true} onPostUpdate={handlePostUpdate} />
+            <PostInteractions post={post} setPost={setPost} />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-3xl mx-auto mt-8 px-4 pb-12">
-     <Link to="/dashboard" className="inline-flex items-center mb-6 text-gray-500 hover:text-blue-600 transition-colors">
+      <Link to="/dashboard" className="inline-flex items-center mb-6 text-gray-500 hover:text-blue-600 transition-colors">
         <ArrowLeft className="w-4 h-4 mr-1" /> Quay lại
       </Link>
       
-      <article className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        {/* Header bài viết */}
-        <div className="p-6 border-b border-gray-50">
-          <div className="flex items-center space-x-4">
-            <div className="h-12 w-12 rounded-full bg-gradient-to-r from-blue-100 to-indigo-100 flex items-center justify-center flex-shrink-0">
-              <img 
-                src={post.avatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} 
-                alt={post.name} 
-                className="h-12 w-12 rounded-full object-cover" 
-                referrerPolicy="no-referrer"
-                onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
-              />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-gray-900">{post.name || 'Người dùng ẩn danh'}</h2>
-                {post.user?.reputation !== undefined && (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-2xs font-semibold bg-amber-50 text-amber-700 border border-amber-100 shadow-3xs" title="Điểm uy tín">
-                    ★ {post.user.reputation}
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center text-sm text-gray-500 mt-1">
-                <Calendar className="w-4 h-4 mr-1" />
-                <span>{formattedDate}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Nội dung bài viết */}
-        <div className="p-6">
-          <div className="mb-4">
-             {post.isQuestion && (
-               <span className="inline-flex items-center px-2 py-1 rounded text-sm font-medium bg-indigo-100 text-indigo-800 mr-2">
-                 <HelpCircle className="w-4 h-4 mr-1.5" /> Câu hỏi
-               </span>
-             )}
-             {post.isQuestion && post.acceptedAnswer && (
-               <span className="inline-flex items-center px-2 py-1 rounded text-sm font-medium bg-green-100 text-green-800 mr-2">
-                 <CheckCircle className="w-4 h-4 mr-1.5" /> Đã giải quyết
-               </span>
-             )}
-          </div>
-          <div className="text-slate-800 leading-relaxed max-w-none prose prose-slate prose-p:my-2 prose-pre:my-4 prose-headings:my-4 prose-ul:my-2 prose-ol:my-2">
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              components={{
-                code({node, inline, className, children, ...props}) {
-                  const match = /language-(\w+)/.exec(className || '')
-                  return !inline && match ? (
-                    <SyntaxHighlighter
-                      {...props}
-                      children={String(children).replace(/\n$/, '')}
-                      style={vscDarkPlus}
-                      language={match[1]}
-                      PreTag="div"
-                      className="rounded-md my-2"
-                    />
-                  ) : (
-                    <code {...props} className={`${className} bg-gray-100 text-red-500 px-1.5 py-0.5 rounded text-sm font-mono`}>
-                      {children}
-                    </code>
-                  )
-                }
-              }}
-            >
-              {post.text}
-            </ReactMarkdown>
-          </div>
-          
-          {post.codeSnippet && (
-            <div className="mt-6 border-t border-gray-100 pt-4">
-              <span className="text-xs font-bold text-slate-500 block mb-2 uppercase tracking-wider">Mã nguồn đính kèm ({post.codeLanguage || 'javascript'}):</span>
-              <SyntaxHighlighter
-                children={post.codeSnippet}
-                style={vscDarkPlus}
-                language={post.codeLanguage || 'javascript'}
-                PreTag="div"
-                className="rounded-xl shadow-sm overflow-hidden text-xs"
-              />
-            </div>
-          )}
-        </div>
-        
-        {/* Footer bài viết (Thống kê) */}
-        <div className="px-6 py-4 bg-gray-50 flex items-center text-gray-500 text-sm">
-          <div className="flex items-center mr-6">
-            <span className="font-semibold text-gray-700 mr-1">{post.likes?.length || 0}</span> lượt thích
-          </div>
-          <div className="flex items-center">
-            <MessageSquare className="w-4 h-4 mr-1" />
-            <span className="font-semibold text-gray-700 mr-1">{post.comments?.length || 0}</span> bình luận
-          </div>
-        </div>
-      </article>
+      <PostItem post={post} isDetail={true} onPostUpdate={handlePostUpdate} />
       <PostInteractions post={post} setPost={setPost} />
     </div>
   );
