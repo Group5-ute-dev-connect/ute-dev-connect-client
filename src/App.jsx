@@ -1,6 +1,7 @@
 import React from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import ForgotPassword from "./pages/auth/ForgotPassword";
+import ChatWidget from "./components/chat/ChatWidget";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import VerifyOtp from "./pages/auth/VerifyOtp";
@@ -64,6 +65,9 @@ function App() {
           <Route path="/post/:id" element={<PostDetail isModal={true} />} />
         </Routes>
       )}
+
+      {/* Persistent Chat Widget */}
+      <ChatWidget />
     </>
   );
 }
