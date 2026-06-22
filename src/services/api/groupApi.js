@@ -42,9 +42,11 @@ export const groupApi = {
   },
 
   // Bình luận bài viết trong nhóm
-  addGroupComment: (id, postId, text) => {
+  addGroupComment: (id, postId, text, codeSnippet = '', codeLanguage = 'javascript') => {
     return axiosClient.post(`/groups/${id}/posts/${postId}/comments`, {
-      text: text.trim()
+      text: text.trim(),
+      codeSnippet,
+      codeLanguage,
     });
   },
 
