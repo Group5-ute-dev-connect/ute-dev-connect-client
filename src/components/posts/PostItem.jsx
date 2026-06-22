@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import { useSelector, useDispatch } from 'react-redux';
 import { User, Calendar, MessageSquare, ThumbsUp, Tag, Bookmark, HelpCircle, CheckCircle, Edit2, Trash2, Eye, EyeOff, Globe, Lock, Users, UserCheck } from 'lucide-react';
 import { savePost, deletePost, updatePost, hidePost } from '../../store/postSlice';
@@ -13,8 +14,9 @@ import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
  * Hiển thị: Avatar, tên tác giả, nội dung ngắn, ngày đăng, số likes/comments
  * Tham khảo từ devconnector_2.0/client/src/components/posts/PostItem.js
  */
-const PostItem = ({ post }) => {
+const PostItem = ({ post, isDetail = false, onPostUpdate }) => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { token } = useSelector((state) => state.auth);
   
   const parseJwt = (t) => { try { return JSON.parse(atob(t.split('.')[1])); } catch { return null; } };
@@ -74,30 +76,130 @@ const PostItem = ({ post }) => {
     }
   };
 
-  const handleHideToggle = (e) => {
+  const handleHideToggle = async (e) => {
     e.preventDefault();
-    dispatch(hidePost(_id));
+    const actionWord = isHidden ? 'hiện lại' : 'ẩn';
+    const confirmed = window.confirm(`Bạn có chắc chắn muốn ${actionWord} bài viết này?`);
+    if (!confirmed) return;
+
+    try {
+      const resultAction = await dispatch(hidePost(_id));
+      if (hidePost.fulfilled.match(resultAction)) {
+        const nextIsHidden = resultAction.payload.isHidden;
+        
+        if (isDetail && nextIsHidden) {
+          navigate('/dashboard');
+        }
+        
+        const ToastWithUndo = ({ closeToast }) => (
+          <div className="flex items-center justify-between gap-2 w-full">
+            <span>{nextIsHidden ? 'Đã ẩn bài viết khỏi bảng tin.' : 'Đã hiện lại bài viết.'}</span>
+            <button 
+              onClick={async (event) => {
+                event.stopPropagation();
+                await dispatch(hidePost(_id));
+                closeToast();
+                toast.success(nextIsHidden ? 'Đã hiện lại bài viết!' : 'Đã ẩn bài viết!');
+              }}
+              className="text-xs font-bold text-blue-600 hover:text-blue-800 underline bg-transparent border-none cursor-pointer pl-2 whitespace-nowrap"
+            >
+              Hoàn tác
+            </button>
+          </div>
+        );
+        toast.info(<ToastWithUndo />, { autoClose: 5000 });
+      } else {
+        toast.error(resultAction.payload || `Không thể ${actionWord} bài viết`);
+      }
+    } catch (err) {
+      toast.error(`Lỗi khi ${actionWord} bài viết`);
+    }
   };
 
-  const handleSavePost = (e) => {
+  const handleSavePost = async (e) => {
     e.preventDefault();
     e.stopPropagation();
-    dispatch(savePost(_id));
+
+    if (isSaved) {
+      const confirmed = window.confirm('Bạn có chắc chắn muốn bỏ lưu bài viết này?');
+      if (!confirmed) return;
+
+      try {
+        const resultAction = await dispatch(savePost(_id));
+        if (savePost.fulfilled.match(resultAction)) {
+          const ToastWithRedo = ({ closeToast }) => (
+            <div className="flex items-center justify-between gap-2 w-full">
+              <span>Đã bỏ lưu bài viết.</span>
+              <button 
+                onClick={async (event) => {
+                  event.stopPropagation();
+                  await dispatch(savePost(_id));
+                  closeToast();
+                  toast.success('Đã lưu lại bài viết!');
+                }}
+                className="text-xs font-bold text-blue-600 hover:text-blue-800 underline bg-transparent border-none cursor-pointer pl-2 whitespace-nowrap"
+              >
+                Lưu lại
+              </button>
+            </div>
+          );
+          toast.info(<ToastWithRedo />, { autoClose: 5000 });
+        } else {
+          toast.error(resultAction.payload || 'Không thể bỏ lưu bài viết');
+        }
+      } catch (err) {
+        toast.error('Lỗi khi bỏ lưu bài viết');
+      }
+    } else {
+      try {
+        const resultAction = await dispatch(savePost(_id));
+        if (savePost.fulfilled.match(resultAction)) {
+          toast.success('Đã lưu bài viết thành công!');
+        } else {
+          toast.error(resultAction.payload || 'Không thể lưu bài viết');
+        }
+      } catch (err) {
+        toast.error('Lỗi khi lưu bài viết');
+      }
+    }
   };
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (!editText.trim()) return;
     setIsSubmitting(true);
-    await dispatch(updatePost({ id: _id, formData: { text: editText, isQuestion: editIsQuestion, visibility: editVisibility } }));
-    setIsSubmitting(false);
-    setIsEditing(false);
+    try {
+      const resultAction = await dispatch(updatePost({ id: _id, formData: { text: editText, isQuestion: editIsQuestion, visibility: editVisibility } }));
+      if (updatePost.fulfilled.match(resultAction)) {
+        toast.success('Cập nhật bài viết thành công!');
+        onPostUpdate?.(resultAction.payload);
+      } else {
+        toast.error(resultAction.payload || 'Không thể cập nhật bài viết');
+      }
+    } catch (err) {
+      toast.error('Lỗi khi cập nhật bài viết');
+    } finally {
+      setIsSubmitting(false);
+      setIsEditing(false);
+    }
   };
 
-  const handleDelete = (e) => {
+  const handleDelete = async (e) => {
     e.preventDefault();
     if (window.confirm('Bạn có chắc chắn muốn xóa bài viết này?')) {
-      dispatch(deletePost(_id));
+      try {
+        const resultAction = await dispatch(deletePost(_id));
+        if (deletePost.fulfilled.match(resultAction)) {
+          toast.success('Xóa bài viết thành công!');
+          if (isDetail) {
+            navigate('/dashboard');
+          }
+        } else {
+          toast.error(resultAction.payload || 'Không thể xóa bài viết');
+        }
+      } catch (err) {
+        toast.error('Lỗi khi xóa bài viết');
+      }
     }
   };
   // Format ngày tháng theo tiếng Việt
@@ -106,6 +208,51 @@ const PostItem = ({ post }) => {
     month: 'short',
     day: 'numeric',
   });
+
+  const postBodyContent = (
+    <>
+      <div className="mb-2">
+         {isQuestion && (
+           <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800 mr-2">
+             <HelpCircle className="w-3 h-3 mr-1" /> Câu hỏi
+           </span>
+         )}
+         {isQuestion && acceptedAnswer && (
+           <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 mr-2">
+             <CheckCircle className="w-3 h-3 mr-1" /> Đã giải quyết
+           </span>
+         )}
+      </div>
+      <div className="text-slate-800 text-sm leading-relaxed mb-3 hover:text-gray-900 transition-colors">
+        <div className="prose prose-slate prose-sm text-slate-800 max-w-none prose-p:my-1 prose-pre:my-2 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1">
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+              code({node, inline, className, children, ...props}) {
+                const match = /language-(\w+)/.exec(className || '')
+                return !inline && match ? (
+                  <SyntaxHighlighter
+                    {...props}
+                    children={String(children).replace(/\n$/, '')}
+                    style={vscDarkPlus}
+                    language={match[1]}
+                    PreTag="div"
+                    className="rounded-md my-2"
+                  />
+                ) : (
+                  <code {...props} className={`${className || ''} bg-gray-100 text-red-500 px-1 py-0.5 rounded text-xs font-mono`}>
+                    {children}
+                  </code>
+                )
+              }
+            }}
+          >
+            {text}
+          </ReactMarkdown>
+        </div>
+      </div>
+    </>
+  );
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 overflow-hidden group">
@@ -211,48 +358,13 @@ const PostItem = ({ post }) => {
               </div>
             </div>
           </div>
+        ) : isDetail ? (
+          <div className="block">
+            {postBodyContent}
+          </div>
         ) : (
           <Link to={`/post/${_id}`} className="block">
-            <div className="mb-2">
-               {isQuestion && (
-                 <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800 mr-2">
-                   <HelpCircle className="w-3 h-3 mr-1" /> Câu hỏi
-                 </span>
-               )}
-               {isQuestion && acceptedAnswer && (
-                 <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 mr-2">
-                   <CheckCircle className="w-3 h-3 mr-1" /> Đã giải quyết
-                 </span>
-               )}
-            </div>
-            <div className="text-slate-800 text-sm leading-relaxed mb-3 hover:text-gray-900 transition-colors">
-              <div className="prose prose-slate prose-sm text-slate-800 max-w-none prose-p:my-1 prose-pre:my-2 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1">
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  components={{
-                    code({node, inline, className, children, ...props}) {
-                      const match = /language-(\w+)/.exec(className || '')
-                      return !inline && match ? (
-                        <SyntaxHighlighter
-                          {...props}
-                          children={String(children).replace(/\n$/, '')}
-                          style={vscDarkPlus}
-                          language={match[1]}
-                          PreTag="div"
-                          className="rounded-md my-2"
-                        />
-                      ) : (
-                        <code {...props} className={`${className || ''} bg-gray-100 text-red-500 px-1 py-0.5 rounded text-xs font-mono`}>
-                          {children}
-                        </code>
-                      )
-                    }
-                  }}
-                >
-                  {text}
-                </ReactMarkdown>
-              </div>
-            </div>
+            {postBodyContent}
           </Link>
         )}
 
@@ -307,12 +419,14 @@ const PostItem = ({ post }) => {
             {isSaved ? 'Đã lưu' : 'Lưu'}
           </button>
 
-          <Link
-            to={`/post/${_id}`}
-            className="text-xs font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-all duration-200"
-          >
-            Xem thêm →
-          </Link>
+          {!isDetail && (
+            <Link
+              to={`/post/${_id}`}
+              className="text-xs font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-all duration-200"
+            >
+              Xem thêm →
+            </Link>
+          )}
         </div>
       </div>
       </div>

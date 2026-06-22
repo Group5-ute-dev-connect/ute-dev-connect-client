@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Loader2, Send, Edit2, Eye } from 'lucide-react';
+import { toast } from 'react-toastify';
 import { postApi } from '../../services/api/postApi';
 import groupApi from '../../services/api/groupApi';
 import ReactMarkdown from 'react-markdown';
@@ -59,6 +60,7 @@ const CommentForm = ({ postId, post, onCommentCreated }) => {
       setCodeSnippet('');
       setShowCodeSnippet(false);
       setIsPreview(false);
+      toast.success('Bình luận thành công!');
     } catch (err) {
       console.error('Lỗi khi gửi bình luận:', err);
 
