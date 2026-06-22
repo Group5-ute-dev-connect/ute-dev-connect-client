@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { useSelector, useDispatch } from 'react-redux';
 import { User, Calendar, MessageSquare, ThumbsUp, Tag, Bookmark, HelpCircle, CheckCircle, Edit2, Trash2, Eye, EyeOff, Globe, Lock, Users, UserCheck } from 'lucide-react';
@@ -17,6 +17,7 @@ import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 const PostItem = ({ post, isDetail = false, onPostUpdate }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const { token } = useSelector((state) => state.auth);
   
   const parseJwt = (t) => { try { return JSON.parse(atob(t.split('.')[1])); } catch { return null; } };
@@ -247,7 +248,7 @@ const PostItem = ({ post, isDetail = false, onPostUpdate }) => {
         commentInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     } else {
-      navigate(`/post/${_id}?focusComment=true`);
+      navigate(`/post/${_id}?focusComment=true`, { state: { backgroundLocation: location } });
     }
   };
 
@@ -412,7 +413,7 @@ const PostItem = ({ post, isDetail = false, onPostUpdate }) => {
             {postBodyContent}
           </div>
         ) : (
-          <Link to={`/post/${_id}`} className="block">
+          <Link to={`/post/${_id}`} state={{ backgroundLocation: location }} className="block">
             {postBodyContent}
           </Link>
         )}
@@ -487,6 +488,7 @@ const PostItem = ({ post, isDetail = false, onPostUpdate }) => {
           {!isDetail && (
             <Link
               to={`/post/${_id}`}
+              state={{ backgroundLocation: location }}
               className="text-xs font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-all duration-200"
             >
               Xem thêm →

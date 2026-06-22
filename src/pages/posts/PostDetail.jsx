@@ -1,17 +1,31 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { postApi } from '../../services/api/postApi';
 import Spinner from '../../components/common/Spinner';
 import Alert from '../../components/common/Alert';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, X } from 'lucide-react';
 import PostItem from '../../components/posts/PostItem';
 import PostInteractions from '../../components/interactions/PostInteractions';
 
-const PostDetail = () => {
+const PostDetail = ({ isModal = false }) => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  const handleClose = () => {
+    navigate(-1);
+  };
+
+  useEffect(() => {
+    if (isModal) {
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = '';
+      };
+    }
+  }, [isModal]);
 
   useEffect(() => {
     const fetchPost = async () => {
@@ -41,6 +55,28 @@ const PostDetail = () => {
   };
 
   if (loading) {
+    if (isModal) {
+      return (
+        <div 
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={handleClose}
+        >
+          <div 
+            className="bg-white rounded-3xl max-w-3xl w-full min-h-[300px] flex items-center justify-center shadow-2xl relative p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button 
+              onClick={handleClose}
+              className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all"
+              title="Đóng"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <Spinner size="lg" />
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="flex justify-center items-center min-h-screen">
         <Spinner size="lg" />
@@ -49,6 +85,28 @@ const PostDetail = () => {
   }
 
   if (error) {
+    if (isModal) {
+      return (
+        <div 
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={handleClose}
+        >
+          <div 
+            className="bg-white rounded-3xl max-w-3xl w-full shadow-2xl relative p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button 
+              onClick={handleClose}
+              className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all"
+              title="Đóng"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <Alert type="error" message={error} />
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="max-w-3xl mx-auto mt-10 px-4">
         <Alert type="error" message={error} />
@@ -61,6 +119,34 @@ const PostDetail = () => {
 
   if (!post) {
     return null;
+  }
+
+  if (isModal) {
+    return (
+      <div 
+        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto"
+        onClick={handleClose}
+      >
+        <div 
+          className="bg-gray-50 rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl relative p-6 sm:p-8 my-8"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Close Button */}
+          <button 
+            onClick={handleClose}
+            className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-150 rounded-full transition-all"
+            title="Đóng"
+          >
+            <X className="w-5 h-5" />
+          </button>
+
+          <div className="mt-2">
+            <PostItem post={post} isDetail={true} onPostUpdate={handlePostUpdate} />
+            <PostInteractions post={post} setPost={setPost} />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
