@@ -47,7 +47,7 @@ const CommentSection = ({ postId, post, comments = [], onCommentsChange }) => {
         </div>
       </div>
 
-      <CommentForm postId={postId} onCommentCreated={handleCommentCreated} />
+      <CommentForm postId={postId} post={post} onCommentCreated={handleCommentCreated} />
       <CommentList post={post} comments={comments} onCommentsChange={onCommentsChange} />
     </section>
   );

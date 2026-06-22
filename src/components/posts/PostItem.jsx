@@ -22,7 +22,9 @@ const PostItem = ({ post }) => {
   const { _id, text, name, avatar, user, likes, comments, tags, date, isSaved, isQuestion, acceptedAnswer } = post || {};
   
   const currentUserId = token ? parseJwt(token)?.user?.id || parseJwt(token)?.id : null;
-  const isPostAuthor = currentUserId && user === currentUserId;
+  const authorId = user?._id || user;
+  const authorReputation = typeof user === 'object' ? user?.reputation : undefined;
+  const isPostAuthor = currentUserId && authorId?.toString() === currentUserId?.toString();
 
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(text);
@@ -64,7 +66,7 @@ const PostItem = ({ post }) => {
         <div className="flex items-center space-x-3 mb-3">
           {/* Avatar */}
           <Link 
-            to={`/profile/${user}`} 
+            to={`/profile/${authorId}`} 
             className="flex-shrink-0"
           >
             <div className="h-11 w-11 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center overflow-hidden ring-2 ring-white shadow-sm group-hover:ring-blue-200 transition-all duration-300">
@@ -80,12 +82,19 @@ const PostItem = ({ post }) => {
           
           <div className="flex-1 min-w-0">
             {/* Tên tác giả */}
-            <Link 
-              to={`/profile/${user}`} 
-              className="text-sm font-semibold text-gray-900 hover:text-blue-600 transition-colors truncate block"
-            >
-              {name || 'Người dùng ẩn danh'}
-            </Link>
+            <div className="flex items-center gap-1.5 truncate">
+              <Link 
+                to={`/profile/${authorId}`} 
+                className="text-sm font-semibold text-gray-900 hover:text-blue-600 transition-colors truncate block"
+              >
+                {name || 'Người dùng ẩn danh'}
+              </Link>
+              {authorReputation !== undefined && (
+                <span className="inline-flex items-center px-1.5 py-0.2 rounded-full text-3xs font-bold bg-amber-50 text-amber-700 border border-amber-100 shadow-3xs" title="Điểm uy tín">
+                  ★ {authorReputation}
+                </span>
+              )}
+            </div>
             {/* Ngày đăng */}
             <div className="flex items-center text-xs text-gray-400 mt-0.5">
               <Calendar className="w-3 h-3 mr-1" />

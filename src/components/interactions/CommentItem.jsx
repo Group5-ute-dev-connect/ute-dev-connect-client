@@ -41,7 +41,8 @@ const CommentItem = ({ comment, post, onCommentsChange }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(comment?.text || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const isCommentAuthor = currentUserId && comment?.user === currentUserId;
+  const commentAuthorId = comment?.user?._id || comment?.user;
+  const isCommentAuthor = currentUserId && commentAuthorId?.toString() === currentUserId?.toString();
 
   const name = comment?.name || comment?.user?.name || 'Người dùng ẩn danh';
   const avatar = comment?.avatar || comment?.user?.avatar || '';
@@ -128,7 +129,8 @@ const CommentItem = ({ comment, post, onCommentsChange }) => {
     }
   };
 
-  const isPostAuthor = currentUserId && post?.user === currentUserId;
+  const postAuthorId = post?.user?._id || post?.user;
+  const isPostAuthor = currentUserId && postAuthorId?.toString() === currentUserId?.toString();
 
   return (
     <div className={`flex gap-4 rounded-2xl border ${isAccepted ? 'border-green-300 bg-green-50 shadow-md' : isTopVoted ? 'border-amber-250 bg-amber-50/20 shadow-sm' : 'border-gray-100 bg-white shadow-sm'} p-4 transition-all duration-300 relative`}>
@@ -178,7 +180,14 @@ const CommentItem = ({ comment, post, onCommentsChange }) => {
         <div className="min-w-0 flex-1 mt-1">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2">
-              <h4 className="font-semibold text-gray-800">{name}</h4>
+              <div className="flex items-center gap-1.5">
+                <h4 className="font-semibold text-gray-800">{name}</h4>
+                {comment?.user?.reputation !== undefined && (
+                  <span className="inline-flex items-center px-1.5 py-0.2 rounded-full text-3xs font-bold bg-amber-50 text-amber-700 border border-amber-100 shadow-3xs" title="Điểm uy tín">
+                    ★ {comment.user.reputation}
+                  </span>
+                )}
+              </div>
               {date && (
                 <span className="text-xs text-gray-400">{formatDate(date)}</span>
               )}

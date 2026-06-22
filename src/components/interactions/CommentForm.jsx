@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Loader2, Send, Edit2, Eye } from 'lucide-react';
 import { postApi } from '../../services/api/postApi';
+import groupApi from '../../services/api/groupApi';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -10,7 +11,7 @@ const getDataFromResponse = (response) => {
   return response?.data?.data || response?.data || response;
 };
 
-const CommentForm = ({ postId, onCommentCreated }) => {
+const CommentForm = ({ postId, post, onCommentCreated }) => {
   const [text, setText] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -33,12 +34,24 @@ const CommentForm = ({ postId, onCommentCreated }) => {
       setLoading(true);
       setError('');
 
-      const response = await postApi.addComment(
-        postId, 
-        normalizedText,
-        showCodeSnippet ? codeSnippet : '',
-        showCodeSnippet ? codeLanguage : 'javascript'
-      );
+      let response;
+      const groupId = post?.group?._id || post?.group;
+      if (groupId) {
+        response = await groupApi.addGroupComment(
+          groupId,
+          postId,
+          normalizedText,
+          showCodeSnippet ? codeSnippet : '',
+          showCodeSnippet ? codeLanguage : 'javascript'
+        );
+      } else {
+        response = await postApi.addComment(
+          postId,
+          normalizedText,
+          showCodeSnippet ? codeSnippet : '',
+          showCodeSnippet ? codeLanguage : 'javascript'
+        );
+      }
       const data = getDataFromResponse(response);
 
       onCommentCreated?.(data);

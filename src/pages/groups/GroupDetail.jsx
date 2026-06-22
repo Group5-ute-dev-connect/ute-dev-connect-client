@@ -7,8 +7,14 @@ import groupApi from '../../services/api/groupApi';
 import { postApi } from '../../services/api/postApi';
 import { 
   Users, ArrowLeft, Loader2, MessageSquare, ThumbsUp, 
-  Send, Shield, Calendar, SendHorizontal, AlertCircle, LogOut, Lock
+  Send, Shield, Calendar, SendHorizontal, AlertCircle, LogOut, Lock,
+  HelpCircle, MessageSquarePlus, Eye, Edit2, CheckCircle
 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import CommentSection from '../../components/interactions/CommentSection';
 
 // Helper to decode token
 const parseJwt = (token) => {
@@ -38,8 +44,11 @@ const GroupDetail = () => {
   const [newPostText, setNewPostText] = useState('');
   const [submittingPost, setSubmittingPost] = useState(false);
   const [expandedComments, setExpandedComments] = useState({}); // { [postId]: boolean }
-  const [commentTexts, setCommentTexts] = useState({}); // { [postId]: string }
-  const [submittingComment, setSubmittingComment] = useState({}); // { [postId]: boolean }
+  const [isQuestion, setIsQuestion] = useState(false);
+  const [showCodeSnippet, setShowCodeSnippet] = useState(false);
+  const [codeSnippet, setCodeSnippet] = useState('');
+  const [codeLanguage, setCodeLanguage] = useState('javascript');
+  const [isPreview, setIsPreview] = useState(false);
 
   // Tabs
   const [activeTab, setActiveTab] = useState('feed'); // 'feed' or 'members' or 'pending'
@@ -207,10 +216,20 @@ const GroupDetail = () => {
     }
     setSubmittingPost(true);
     try {
-      const response = await groupApi.createGroupPost(id, newPostText.trim());
+      const response = await groupApi.createGroupPost(
+        id,
+        newPostText.trim(),
+        isQuestion,
+        showCodeSnippet ? codeSnippet : '',
+        showCodeSnippet ? codeLanguage : 'javascript'
+      );
       if (response.success || response.data) {
         toast.success('Đăng bài thành công!');
         setNewPostText('');
+        setCodeSnippet('');
+        setShowCodeSnippet(false);
+        setIsQuestion(false);
+        setIsPreview(false);
         fetchFeed();
       }
     } catch (err) {
@@ -254,45 +273,6 @@ const GroupDetail = () => {
       ...prev,
       [postId]: !prev[postId]
     }));
-  };
-
-  // Handle Comment Submit
-  const handleCommentSubmit = async (e, postId) => {
-    e.preventDefault();
-    const commentText = commentTexts[postId] || '';
-    if (!commentText.trim()) return;
-
-    setSubmittingComment(prev => ({ ...prev, [postId]: true }));
-    try {
-      const response = await groupApi.addGroupComment(id, postId, commentText.trim());
-      const comments = response.data?.data || response.data || [];
-      
-      // Update local posts state with new comments
-      setPosts(prevPosts => 
-        prevPosts.map(post => {
-          if (post._id === postId) {
-            return {
-              ...post,
-              comments: comments
-            };
-          }
-          return post;
-        })
-      );
-
-      // Clear input
-      setCommentTexts(prev => ({ ...prev, [postId]: '' }));
-      toast.success('Đã gửi bình luận');
-    } catch (err) {
-      console.error('Lỗi khi gửi bình luận:', err);
-      toast.error('Bình luận thất bại.');
-    } finally {
-      setSubmittingComment(prev => ({ ...prev, [postId]: false }));
-    }
-  };
-
-  const handleCommentTextChange = (postId, text) => {
-    setCommentTexts(prev => ({ ...prev, [postId]: text }));
   };
 
   if (loading) {
@@ -481,19 +461,153 @@ const GroupDetail = () => {
                   {activeTab === 'feed' && (
                     <>
                       {/* Create Post Form */}
-                      <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm mb-6">
-                        <h3 className="text-sm font-bold text-gray-900 mb-3 uppercase tracking-wider">
-                          Đăng bài viết mới
-                        </h3>
-                        <form onSubmit={handleCreatePost}>
-                          <textarea
-                            placeholder="Thảo luận code, tài liệu môn học, tìm thành viên..."
-                            value={newPostText}
-                            onChange={(e) => setNewPostText(e.target.value)}
-                            rows={3}
-                            className="block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-950 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors resize-none"
-                          />
-                          <div className="flex justify-end mt-3">
+                      <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm mb-6">
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
+                          <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center">
+                            {isQuestion ? (
+                              <HelpCircle className="w-4 h-4 mr-1.5 text-indigo-600 animate-pulse" />
+                            ) : (
+                              <MessageSquarePlus className="w-4 h-4 mr-1.5 text-blue-600" />
+                            )}
+                            {isQuestion ? 'Đặt câu hỏi thảo luận' : 'Đăng bài viết mới'}
+                          </h3>
+                          <div className="flex items-center gap-4">
+                            <label className="flex items-center cursor-pointer">
+                              <div className="relative">
+                                <input
+                                  type="checkbox"
+                                  className="sr-only"
+                                  checked={isQuestion}
+                                  onChange={() => setIsQuestion(!isQuestion)}
+                                />
+                                <div className={`block w-8 h-5 rounded-full transition-colors ${isQuestion ? 'bg-indigo-600' : 'bg-gray-300'}`}></div>
+                                <div className={`dot absolute left-0.5 top-0.5 bg-white w-4 h-4 rounded-full transition-transform ${isQuestion ? 'transform translate-x-3' : ''}`}></div>
+                              </div>
+                              <div className="ml-2 text-xs font-semibold text-gray-600">Câu hỏi Q&A</div>
+                            </label>
+
+                            <label className="flex items-center cursor-pointer">
+                              <div className="relative">
+                                <input
+                                  type="checkbox"
+                                  className="sr-only"
+                                  checked={showCodeSnippet}
+                                  onChange={() => setShowCodeSnippet(!showCodeSnippet)}
+                                />
+                                <div className={`block w-8 h-5 rounded-full transition-colors ${showCodeSnippet ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
+                                <div className={`dot absolute left-0.5 top-0.5 bg-white w-4 h-4 rounded-full transition-transform ${showCodeSnippet ? 'transform translate-x-3' : ''}`}></div>
+                              </div>
+                              <div className="ml-2 text-xs font-semibold text-gray-600">Mã nguồn (Code)</div>
+                            </label>
+                          </div>
+                        </div>
+
+                        <div className="flex space-x-2 mb-3 border-b border-gray-50 pb-2">
+                          <button
+                            type="button"
+                            onClick={() => setIsPreview(false)}
+                            className={`px-2.5 py-1 text-xs font-medium rounded-lg flex items-center transition-colors ${!isPreview ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}
+                          >
+                            <Edit2 className="w-3.5 h-3.5 mr-1" /> Viết bài
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setIsPreview(true)}
+                            className={`px-2.5 py-1 text-xs font-medium rounded-lg flex items-center transition-colors ${isPreview ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}
+                          >
+                            <Eye className="w-3.5 h-3.5 mr-1" /> Xem trước
+                          </button>
+                        </div>
+
+                        <form onSubmit={handleCreatePost} className="space-y-3">
+                          {!isPreview ? (
+                            <>
+                              <textarea
+                                placeholder={isQuestion ? "Miêu tả chi tiết câu hỏi/vấn đề code bạn đang gặp phải..." : "Thảo luận code, tài liệu môn học, tìm thành viên..."}
+                                value={newPostText}
+                                onChange={(e) => setNewPostText(e.target.value)}
+                                rows={3}
+                                className="block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-950 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors resize-none"
+                              />
+
+                              {showCodeSnippet && (
+                                <div className="p-4 border border-blue-100 rounded-xl bg-slate-50">
+                                  <div className="flex justify-between items-center mb-2">
+                                    <span className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center">
+                                      <span className="font-mono mr-1">&lt;/&gt;</span> Mã nguồn chèn
+                                    </span>
+                                    <select
+                                      value={codeLanguage}
+                                      onChange={(e) => setCodeLanguage(e.target.value)}
+                                      className="text-xs px-2 py-1 bg-white border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium"
+                                    >
+                                      <option value="javascript">JavaScript</option>
+                                      <option value="python">Python</option>
+                                      <option value="cpp">C++</option>
+                                      <option value="html">HTML</option>
+                                      <option value="css">CSS</option>
+                                      <option value="java">Java</option>
+                                      <option value="go">Go</option>
+                                    </select>
+                                  </div>
+                                  <textarea
+                                    value={codeSnippet}
+                                    onChange={(e) => setCodeSnippet(e.target.value)}
+                                    placeholder="Viết hoặc dán code của bạn ở đây..."
+                                    rows={5}
+                                    className="w-full font-mono text-xs px-3 py-2 bg-slate-900 text-slate-100 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-y"
+                                  />
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <div className="p-4 border rounded-xl bg-gray-50 min-h-[96px] text-sm text-slate-800 prose prose-slate prose-sm max-w-none prose-p:my-1 prose-pre:my-2 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1">
+                              {newPostText ? (
+                                <ReactMarkdown
+                                  remarkPlugins={[remarkGfm]}
+                                  components={{
+                                    code({node, inline, className, children, ...props}) {
+                                      const match = /language-(\w+)/.exec(className || '')
+                                      return !inline && match ? (
+                                        <SyntaxHighlighter
+                                          {...props}
+                                          children={String(children).replace(/\n$/, '')}
+                                          style={vscDarkPlus}
+                                          language={match[1]}
+                                          PreTag="div"
+                                          className="rounded-md my-2"
+                                        />
+                                      ) : (
+                                        <code {...props} className={`${className} bg-gray-150 text-red-500 px-1 py-0.5 rounded text-xs font-mono`}>
+                                          {children}
+                                        </code>
+                                      )
+                                    }
+                                  }}
+                                >
+                                  {newPostText}
+                                </ReactMarkdown>
+                              ) : (
+                                <span className="text-gray-400 italic">Chưa có nội dung xem trước...</span>
+                              )}
+
+                              {showCodeSnippet && codeSnippet && (
+                                <div className="mt-3 border-t border-gray-200 pt-3">
+                                  <span className="text-xs font-bold text-slate-500 block mb-1">Mã nguồn ({codeLanguage}):</span>
+                                  <SyntaxHighlighter
+                                    children={codeSnippet}
+                                    style={vscDarkPlus}
+                                    language={codeLanguage}
+                                    PreTag="div"
+                                    className="rounded-md my-2 text-xs"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          <div className="flex justify-between items-center pt-2">
+                            <div className="text-2xs text-gray-400 font-medium">Hỗ trợ Markdown (ví dụ: `code`, **in đậm**)</div>
                             <button
                               type="submit"
                               disabled={submittingPost}
@@ -504,7 +618,7 @@ const GroupDetail = () => {
                               ) : (
                                 <SendHorizontal className="w-3.5 h-3.5 mr-1.5" />
                               )}
-                              Đăng bài
+                              {isQuestion ? 'Đăng câu hỏi' : 'Đăng bài'}
                             </button>
                           </div>
                         </form>
@@ -558,7 +672,14 @@ const GroupDetail = () => {
                                     />
                                   </div>
                                   <div>
-                                    <h4 className="text-sm font-bold text-gray-900">{post.name || 'Thành viên'}</h4>
+                                    <div className="flex items-center gap-1.5">
+                                      <h4 className="text-sm font-bold text-gray-900">{post.name || 'Thành viên'}</h4>
+                                      {post.user?.reputation !== undefined && (
+                                        <span className="inline-flex items-center px-1.5 py-0.2 rounded-full text-3xs font-bold bg-amber-50 text-amber-700 border border-amber-100 shadow-3xs" title="Điểm uy tín">
+                                          ★ {post.user.reputation}
+                                        </span>
+                                      )}
+                                    </div>
                                     <div className="flex items-center text-xs text-gray-400 mt-0.5">
                                       <Calendar className="w-3.5 h-3.5 mr-1" />
                                       <span>{postDate}</span>
@@ -567,10 +688,59 @@ const GroupDetail = () => {
                                 </div>
 
                                 {/* Post Body */}
-                                <div className="p-5">
-                                  <p className="text-gray-800 text-sm leading-relaxed whitespace-pre-wrap">
-                                    {post.text}
-                                  </p>
+                                <div className="p-5 space-y-3">
+                                  <div className="flex flex-wrap gap-1.5 mb-1">
+                                    {post.isQuestion && (
+                                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-150">
+                                        <HelpCircle className="w-3.5 h-3.5 mr-1 text-indigo-600" /> Câu hỏi
+                                      </span>
+                                    )}
+                                    {post.isQuestion && post.acceptedAnswer && (
+                                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-green-50 text-green-700 border border-green-150">
+                                        <CheckCircle className="w-3.5 h-3.5 mr-1 text-green-600" /> Đã giải quyết
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <div className="text-gray-800 text-sm leading-relaxed prose prose-slate prose-sm max-w-none prose-p:my-1 prose-pre:my-2 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1">
+                                    <ReactMarkdown
+                                      remarkPlugins={[remarkGfm]}
+                                      components={{
+                                        code({node, inline, className, children, ...props}) {
+                                          const match = /language-(\w+)/.exec(className || '')
+                                          return !inline && match ? (
+                                            <SyntaxHighlighter
+                                              {...props}
+                                              children={String(children).replace(/\n$/, '')}
+                                              style={vscDarkPlus}
+                                              language={match[1]}
+                                              PreTag="div"
+                                              className="rounded-md"
+                                            />
+                                          ) : (
+                                            <code {...props} className={`${className || ''} bg-gray-150 text-red-500 px-1 py-0.5 rounded text-xs font-mono`}>
+                                              {children}
+                                            </code>
+                                          )
+                                        }
+                                      }}
+                                    >
+                                      {post.text}
+                                    </ReactMarkdown>
+                                  </div>
+
+                                  {post.codeSnippet && (
+                                    <div className="mt-3 border-t border-gray-100 pt-3">
+                                      <span className="text-xs font-bold text-slate-500 block mb-1 uppercase tracking-wider">Mã nguồn ({post.codeLanguage || 'javascript'}):</span>
+                                      <SyntaxHighlighter
+                                        children={post.codeSnippet}
+                                        style={vscDarkPlus}
+                                        language={post.codeLanguage || 'javascript'}
+                                        PreTag="div"
+                                        className="rounded-lg shadow-sm overflow-hidden text-xs"
+                                      />
+                                    </div>
+                                  )}
                                 </div>
 
                                 {/* Post Interactions Footer */}
@@ -606,71 +776,19 @@ const GroupDetail = () => {
 
                                 {/* Comments Section (Expanded Inline) */}
                                 {expandedComments[post._id] && (
-                                  <div className="bg-gray-50 border-t border-gray-100 p-5 space-y-4">
-                                    
-                                    {/* Comments List */}
-                                    <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
-                                      {post.comments?.length === 0 ? (
-                                        <p className="text-xs text-gray-500 text-center py-2">
-                                          Chưa có bình luận nào. Hãy gửi phản hồi đầu tiên!
-                                        </p>
-                                      ) : (
-                                        post.comments.map((comment) => {
-                                          const commentDate = new Date(comment.date).toLocaleDateString('vi-VN', {
-                                            month: 'short',
-                                            day: 'numeric',
-                                            hour: '2-digit',
-                                            minute: '2-digit'
-                                          });
-                                          return (
-                                            <div key={comment._id} className="flex items-start space-x-2.5">
-                                              <div className="h-8 w-8 bg-gray-200 rounded-full flex-shrink-0 flex items-center justify-center overflow-hidden">
-                                                 <img 
-                                                   src={comment.avatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} 
-                                                   alt={comment.name} 
-                                                   className="w-full h-full object-cover" 
-                                                   onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
-                                                 />
-                                              </div>
-                                              <div className="flex-1 bg-white p-3 rounded-xl border border-gray-100 text-xs">
-                                                <div className="flex items-center justify-between mb-1">
-                                                  <strong className="font-bold text-gray-900">{comment.name}</strong>
-                                                  <span className="text-3xs text-gray-400">{commentDate}</span>
-                                                </div>
-                                                <p className="text-gray-700 leading-normal whitespace-pre-wrap">
-                                                  {comment.text}
-                                                </p>
-                                              </div>
-                                            </div>
-                                          );
-                                        })
-                                      )}
-                                    </div>
-
-                                    {/* Write Comment Form */}
-                                    <form 
-                                      onSubmit={(e) => handleCommentSubmit(e, post._id)}
-                                      className="flex items-center gap-2 pt-2 border-t border-gray-100"
-                                    >
-                                      <input
-                                        type="text"
-                                        placeholder="Viết bình luận..."
-                                        value={commentTexts[post._id] || ''}
-                                        onChange={(e) => handleCommentTextChange(post._id, e.target.value)}
-                                        className="flex-grow px-3.5 py-2 bg-white border border-gray-200 rounded-xl text-xs text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
-                                      />
-                                      <button
-                                        type="submit"
-                                        disabled={submittingComment[post._id] || !(commentTexts[post._id] || '').trim()}
-                                        className="p-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:bg-gray-300 transition-colors flex items-center justify-center"
-                                      >
-                                        {submittingComment[post._id] ? (
-                                          <Loader2 className="w-4 h-4 animate-spin" />
-                                        ) : (
-                                          <Send className="w-4 h-4" />
-                                        )}
-                                      </button>
-                                    </form>
+                                  <div className="bg-gray-50 border-t border-gray-150 px-5 py-4">
+                                    <CommentSection
+                                      postId={post._id}
+                                      post={post}
+                                      comments={post.comments || []}
+                                      onCommentsChange={(nextComments) => {
+                                        setPosts((prevPosts) =>
+                                          prevPosts.map((p) =>
+                                            p._id === post._id ? { ...p, comments: nextComments } : p
+                                          )
+                                        );
+                                      }}
+                                    />
                                   </div>
                                 )}
 
@@ -719,7 +837,14 @@ const GroupDetail = () => {
                                     />
                                   </div>
                                   <div>
-                                    <h4 className="text-sm font-bold text-gray-900">{post.name || 'Thành viên'}</h4>
+                                    <div className="flex items-center gap-1.5">
+                                      <h4 className="text-sm font-bold text-gray-900">{post.name || 'Thành viên'}</h4>
+                                      {post.user?.reputation !== undefined && (
+                                        <span className="inline-flex items-center px-1.5 py-0.2 rounded-full text-3xs font-bold bg-amber-50 text-amber-700 border border-amber-100 shadow-3xs" title="Điểm uy tín">
+                                          ★ {post.user.reputation}
+                                        </span>
+                                      )}
+                                    </div>
                                     <span className="text-xs text-gray-400 block mt-0.5">{postDate}</span>
                                   </div>
                                 </div>
@@ -740,10 +865,52 @@ const GroupDetail = () => {
                                 </div>
                               </div>
 
-                              <div className="p-5">
-                                <p className="text-gray-800 text-sm leading-relaxed whitespace-pre-wrap">
-                                  {post.text}
-                                </p>
+                              <div className="p-5 space-y-3">
+                                <div className="flex flex-wrap gap-1.5 mb-1">
+                                  {post.isQuestion && (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-150">
+                                      <HelpCircle className="w-3.5 h-3.5 mr-1 text-indigo-600" /> Câu hỏi chờ duyệt
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-gray-800 text-sm leading-relaxed prose prose-slate prose-sm max-w-none prose-p:my-1 prose-pre:my-2 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1">
+                                  <ReactMarkdown
+                                    remarkPlugins={[remarkGfm]}
+                                    components={{
+                                      code({node, inline, className, children, ...props}) {
+                                        const match = /language-(\w+)/.exec(className || '')
+                                        return !inline && match ? (
+                                          <SyntaxHighlighter
+                                            {...props}
+                                            children={String(children).replace(/\n$/, '')}
+                                            style={vscDarkPlus}
+                                            language={match[1]}
+                                            PreTag="div"
+                                            className="rounded-md"
+                                          />
+                                        ) : (
+                                          <code {...props} className={`${className || ''} bg-gray-150 text-red-500 px-1 py-0.5 rounded text-xs font-mono`}>
+                                            {children}
+                                          </code>
+                                        )
+                                      }
+                                    }}
+                                  >
+                                    {post.text}
+                                  </ReactMarkdown>
+                                </div>
+                                {post.codeSnippet && (
+                                  <div className="mt-3 border-t border-gray-100 pt-3">
+                                    <span className="text-xs font-bold text-slate-500 block mb-1 uppercase tracking-wider">Mã nguồn ({post.codeLanguage || 'javascript'}):</span>
+                                    <SyntaxHighlighter
+                                      children={post.codeSnippet}
+                                      style={vscDarkPlus}
+                                      language={post.codeLanguage || 'javascript'}
+                                      PreTag="div"
+                                      className="rounded-lg shadow-sm overflow-hidden text-xs"
+                                    />
+                                  </div>
+                                )}
                               </div>
                             </div>
                           );

@@ -90,7 +90,14 @@ const PostDetail = () => {
               />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-gray-900">{post.name || 'Người dùng ẩn danh'}</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-bold text-gray-900">{post.name || 'Người dùng ẩn danh'}</h2>
+                {post.user?.reputation !== undefined && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-2xs font-semibold bg-amber-50 text-amber-700 border border-amber-100 shadow-3xs" title="Điểm uy tín">
+                    ★ {post.user.reputation}
+                  </span>
+                )}
+              </div>
               <div className="flex items-center text-sm text-gray-500 mt-1">
                 <Calendar className="w-4 h-4 mr-1" />
                 <span>{formattedDate}</span>
