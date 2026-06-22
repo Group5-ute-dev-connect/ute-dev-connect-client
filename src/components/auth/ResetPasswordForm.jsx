@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { KeyRound, Lock, Eye, EyeOff } from 'lucide-react';
-import { toast } from 'react-toastify';
 import Input from '../common/Input';
 import Button from '../common/Button';
+import Alert from '../common/Alert';
 import { authApi } from '../../services/api/authApi';
-import { resetAuth } from '../../store/slices/authSlice';
+import { resetAuth } from '../../store/authSlice';
 
 const ResetPasswordForm = () => {
   const email = useSelector((state) => state.auth.email);
@@ -17,6 +17,7 @@ const ResetPasswordForm = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errors, setErrors] = useState({});
+  const [alertInfo, setAlertInfo] = useState({ type: '', message: '' });
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -38,18 +39,20 @@ const ResetPasswordForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setAlertInfo({ type: '', message: '' });
+    
     if (!validate()) return;
 
     try {
       setIsLoading(true);
       await authApi.resetPassword(email, otp, newPassword);
-      toast.success('Đặt lại mật khẩu thành công!');
-      dispatch(resetAuth());
-      // Chuyển hướng đến trang đăng nhập
-      // navigate('/auth/login'); 
-      toast.info('Tính năng login đang được xây dựng...');
+      setAlertInfo({ type: 'success', message: 'Đặt lại mật khẩu thành công! Tính năng login đang được xây dựng...' });
+      
+      setTimeout(() => {
+        dispatch(resetAuth());
+      }, 2000);
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Mã OTP không đúng hoặc đã hết hạn.');
+      setAlertInfo({ type: 'error', message: err.response?.data?.message || 'Mã OTP không đúng hoặc đã hết hạn.' });
     } finally {
       setIsLoading(false);
     }
@@ -58,10 +61,16 @@ const ResetPasswordForm = () => {
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       <div>
-        <p className="text-sm text-gray-600 mb-6 text-center">
+        <p className="text-sm text-gray-600 mb-4 text-center">
           Mã xác nhận gồm 6 số đã được gửi tới email <br/>
           <strong className="text-gray-900">{email}</strong>
         </p>
+        
+        {alertInfo.message && (
+          <div className="mb-4">
+            <Alert type={alertInfo.type} message={alertInfo.message} />
+          </div>
+        )}
         
         <Input
           label="Mã OTP"
@@ -72,6 +81,7 @@ const ResetPasswordForm = () => {
           onChange={(e) => {
             setOtp(e.target.value.replace(/\D/g, '').slice(0, 6));
             if (errors.otp) setErrors({ ...errors, otp: '' });
+            if (alertInfo.message) setAlertInfo({ type: '', message: '' });
           }}
           error={errors.otp}
           maxLength={6}
@@ -88,6 +98,7 @@ const ResetPasswordForm = () => {
             onChange={(e) => {
               setNewPassword(e.target.value);
               if (errors.newPassword) setErrors({ ...errors, newPassword: '' });
+              if (alertInfo.message) setAlertInfo({ type: '', message: '' });
             }}
             error={errors.newPassword}
             required
@@ -110,6 +121,7 @@ const ResetPasswordForm = () => {
           onChange={(e) => {
             setConfirmPassword(e.target.value);
             if (errors.confirmPassword) setErrors({ ...errors, confirmPassword: '' });
+            if (alertInfo.message) setAlertInfo({ type: '', message: '' });
           }}
           error={errors.confirmPassword}
           required

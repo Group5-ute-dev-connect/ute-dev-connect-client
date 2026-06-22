@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const apiUrl = import.meta.env.VITE_API_URL;
-let baseURL = apiUrl;
+let baseURL = apiUrl || '/api';
 
 // Ở môi trường dev, lấy phần pathname (VD: '/api') để request đi qua proxy của Vite nhằm tránh CORS
 if (import.meta.env.DEV && apiUrl && apiUrl.startsWith('http')) {
@@ -18,5 +18,18 @@ const axiosClient = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+axiosClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
 export default axiosClient;

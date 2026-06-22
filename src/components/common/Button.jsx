@@ -1,7 +1,14 @@
-import React from 'react';
-import { Loader2 } from 'lucide-react';
+import React from "react";
+import { Loader2 } from "lucide-react";
 
-const Button = ({ children, isLoading, onClick, type = 'button', className = '', ...props }) => {
+const Button = ({
+  children,
+  isLoading,
+  onClick,
+  type = "button",
+  className = "",
+  ...props
+}) => {
   return (
     <button
       type={type}

@@ -1,7 +1,13 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import Navbar from './components/layout/Navbar';
+import PostForm from './components/posts/PostForm';
+
+import { useSelector } from 'react-redux';
 
 const Home = () => {
+  const { token } = useSelector((state) => state.auth);
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Navbar />
@@ -16,12 +22,26 @@ const Home = () => {
             Mạng xã hội dành riêng cho sinh viên trường Đại học Sư phạm Kỹ thuật TP.HCM. Nơi kết nối, chia sẻ kiến thức và cùng nhau phát triển.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button 
-              onClick={() => alert("Chức năng đăng nhập đang được xây dựng")}
-              className="px-8 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 md:py-4 md:text-lg md:px-10 shadow-lg shadow-blue-600/30 transition-all hover:scale-105"
-            >
-              Khám phá ngay
-            </button>
+            {token ? (
+              <div className="w-full max-w-2xl text-left">
+                <PostForm />
+                <div className="flex justify-center mt-6">
+                  <Link 
+                    to="/edit-profile"
+                    className="px-8 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 md:py-4 md:text-lg md:px-10 shadow-lg shadow-indigo-600/30 transition-all hover:scale-105"
+                  >
+                    Chỉnh sửa hồ sơ của tôi
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <Link 
+                to="/login"
+                className="px-8 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 md:py-4 md:text-lg md:px-10 shadow-lg shadow-blue-600/30 transition-all hover:scale-105"
+              >
+                Khám phá ngay
+              </Link>
+            )}
           </div>
         </div>
       </main>
