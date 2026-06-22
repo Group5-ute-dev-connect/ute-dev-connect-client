@@ -133,6 +133,21 @@ export const hidePost = createAsyncThunk(
   }
 );
 
+// Async thunk: Like / Unlike bài viết
+export const likePost = createAsyncThunk(
+  "post/likePost",
+  async (id, { rejectWithValue }) => {
+    try {
+      const response = await axiosClient.put(`/posts/like/${id}`);
+      return { postId: id, ...response.data };
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || error.message || "Lỗi khi thích/bỏ thích bài viết"
+      );
+    }
+  }
+);
+
 // Async thunk: Lấy danh sách bài viết đã ẩn
 export const getHiddenPosts = createAsyncThunk(
   "post/getHiddenPosts",
@@ -328,6 +343,32 @@ const postSlice = createSlice({
       })
       .addCase(getHiddenPosts.rejected, (state, action) => {
         state.loading = false;
+        state.error = action.payload;
+      })
+      // LIKE / UNLIKE POST
+      .addCase(likePost.pending, (state) => {
+        state.error = null;
+      })
+      .addCase(likePost.fulfilled, (state, action) => {
+        const { postId, likes } = action.payload;
+
+        state.posts = state.posts.map((post) =>
+          post._id === postId ? { ...post, likes } : post
+        );
+
+        if (state.post && state.post._id === postId) {
+          state.post.likes = likes;
+        }
+
+        state.savedPosts = state.savedPosts.map((post) =>
+          post._id === postId ? { ...post, likes } : post
+        );
+
+        state.hiddenPosts = state.hiddenPosts.map((post) =>
+          post._id === postId ? { ...post, likes } : post
+        );
+      })
+      .addCase(likePost.rejected, (state, action) => {
         state.error = action.payload;
       });
   },

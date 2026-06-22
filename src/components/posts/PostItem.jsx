@@ -2,7 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { useSelector, useDispatch } from 'react-redux';
 import { User, Calendar, MessageSquare, ThumbsUp, Tag, Bookmark, HelpCircle, CheckCircle, Edit2, Trash2, Eye, EyeOff, Globe, Lock, Users, UserCheck } from 'lucide-react';
-import { savePost, deletePost, updatePost, hidePost } from '../../store/postSlice';
+import { savePost, deletePost, updatePost, hidePost, likePost } from '../../store/postSlice';
 import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -24,6 +24,10 @@ const PostItem = ({ post, isDetail = false, onPostUpdate }) => {
   const { _id, text, name, avatar, user, likes, comments, tags, date, isSaved, isQuestion, acceptedAnswer, visibility, isHidden } = post || {};
   
   const currentUserId = token ? parseJwt(token)?.user?.id || parseJwt(token)?.id : null;
+  const isLiked = Array.isArray(likes) && currentUserId && likes.some(like => {
+    const likeUserId = like?.user?._id || like?.user || like?._id || like;
+    return likeUserId?.toString() === currentUserId?.toString();
+  });
   const authorId = user?._id || user;
   const authorReputation = typeof user === 'object' ? user?.reputation : undefined;
   const isPostAuthor = currentUserId && authorId?.toString() === currentUserId?.toString();
@@ -202,6 +206,51 @@ const PostItem = ({ post, isDetail = false, onPostUpdate }) => {
       }
     }
   };
+
+  const handleLikeToggle = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!currentUserId) {
+      toast.error('Bạn cần đăng nhập để thực hiện chức năng này!');
+      return;
+    }
+    try {
+      const resultAction = await dispatch(likePost(_id));
+      if (likePost.fulfilled.match(resultAction)) {
+        const payload = resultAction.payload;
+        if (payload.liked) {
+          toast.success('Đã thích bài viết!');
+        } else {
+          toast.success('Đã bỏ thích bài viết!');
+        }
+        if (onPostUpdate && payload.likes) {
+          onPostUpdate({
+            ...post,
+            likes: payload.likes
+          });
+        }
+      } else {
+        toast.error(resultAction.payload || 'Không thể thực hiện thích bài viết');
+      }
+    } catch (err) {
+      toast.error('Lỗi khi thích bài viết');
+    }
+  };
+
+  const handleCommentClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isDetail) {
+      const commentInput = document.getElementById('comment') || document.querySelector('.comment-form textarea');
+      if (commentInput) {
+        commentInput.focus();
+        commentInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    } else {
+      navigate(`/post/${_id}?focusComment=true`);
+    }
+  };
+
   // Format ngày tháng theo tiếng Việt
   const formattedDate = new Date(date).toLocaleDateString('vi-VN', {
     year: 'numeric',
@@ -384,21 +433,37 @@ const PostItem = ({ post, isDetail = false, onPostUpdate }) => {
         )}
 
        {/* Footer: Likes + Comments + Bookmark */}
-      <div className="flex items-center justify-between pt-3 border-t border-gray-50">
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center text-gray-400 text-xs">
-            <ThumbsUp className="w-3.5 h-3.5 mr-1" />
+      <div className="flex items-center justify-between pt-3 border-t border-gray-555">
+        <div className="flex items-center space-x-2">
+          <button
+            type="button"
+            onClick={handleLikeToggle}
+            className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-all duration-200 ${
+              isLiked
+                ? 'text-blue-600 bg-blue-50 hover:bg-blue-100'
+                : 'text-gray-500 hover:text-blue-600 hover:bg-blue-50'
+            }`}
+          >
+            <ThumbsUp
+              className={`w-3.5 h-3.5 transition-transform duration-200 active:scale-125 ${
+                isLiked ? 'fill-blue-500 text-blue-500' : ''
+              }`}
+            />
             <span className="font-medium text-gray-600">
               {likes?.length || 0}
             </span>
-          </div>
+          </button>
 
-          <div className="flex items-center text-gray-400 text-xs">
-            <MessageSquare className="w-3.5 h-3.5 mr-1" />
+          <button
+            type="button"
+            onClick={handleCommentClick}
+            className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
+          >
+            <MessageSquare className="w-3.5 h-3.5" />
             <span className="font-medium text-gray-600">
               {comments?.length || 0}
             </span>
-          </div>
+          </button>
         </div>
 
         <div className="flex items-center gap-2">
