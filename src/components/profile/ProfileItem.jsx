@@ -16,7 +16,14 @@ const ProfileItem = ({ profile }) => {
       </div>
       
       <div className="flex-grow text-center md:text-left">
-        <h3 className="text-xl font-bold text-gray-900 mb-1">{user?.name}</h3>
+        <div className="flex items-center justify-center md:justify-start gap-2 flex-wrap mb-1">
+          <h3 className="text-xl font-bold text-gray-900">{user?.name}</h3>
+          {user?.reputation !== undefined && (
+            <span className="inline-flex items-center px-1.5 py-0.2 rounded-full text-3xs font-bold bg-amber-50 text-amber-700 border border-amber-100 shadow-3xs" title="Điểm uy tín tích lũy">
+              ★ {user.reputation} uy tín
+            </span>
+          )}
+        </div>
         <p className="text-gray-600 flex items-center justify-center md:justify-start gap-2 mb-2">
           <Briefcase size={16} className="text-blue-500" />
           {status} {company && <span>tại {company}</span>}

@@ -191,7 +191,14 @@ const Profile = () => {
           </div>
           
           <div className="text-center md:text-left">
-            <h1 className="text-3xl font-extrabold text-gray-900">{user?.name}</h1>
+            <div className="flex flex-col md:flex-row items-center md:items-baseline gap-2.5 justify-center md:justify-start">
+              <h1 className="text-3xl font-extrabold text-gray-900">{user?.name}</h1>
+              {user?.reputation !== undefined && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-100 shadow-3xs" title="Điểm uy tín tích lũy">
+                  ★ {user.reputation} uy tín
+                </span>
+              )}
+            </div>
             <p className="text-xl text-gray-600 mt-1 font-medium">{status} {company && `tại ${company}`}</p>
             
             <div className="flex justify-center md:justify-start gap-4 mt-3">
