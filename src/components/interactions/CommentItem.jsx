@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { User, CheckCircle, Loader2, Edit, Trash2, X, Save, ChevronUp, Star } from 'lucide-react';
 import { useSelector } from 'react-redux';
-import { toast } from 'react-toastify';
 import { postApi } from '../../services/api/postApi';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -67,7 +66,7 @@ const CommentItem = ({ comment, post, onCommentsChange }) => {
 
   const handleApprove = async () => {
     if (!token) {
-      toast.warning('Vui lòng đăng nhập để thực hiện phê duyệt.');
+      alert('Vui lòng đăng nhập để thực hiện phê duyệt.');
       return;
     }
     try {
@@ -75,16 +74,10 @@ const CommentItem = ({ comment, post, onCommentsChange }) => {
       const res = await postApi.approveComment(post._id, comment._id);
       if (res.data && res.data.data) {
         onCommentsChange?.(res.data.data);
-        const updatedComments = res.data.data;
-        const updatedComment = updatedComments.find(c => c._id === comment._id);
-        const nextHasApproved = updatedComment?.approvals?.some(
-          (app) => (app.user?._id || app.user || '').toString() === currentUserId?.toString()
-        );
-        toast.success(nextHasApproved ? 'Đã duyệt bình luận!' : 'Đã bỏ duyệt bình luận!');
       }
     } catch (err) {
       console.error(err);
-      toast.error(err.response?.data?.message || 'Không thể phê duyệt bình luận');
+      alert(err.response?.data?.message || 'Không thể phê duyệt bình luận');
     } finally {
       setIsApproving(false);
     }
@@ -96,13 +89,10 @@ const CommentItem = ({ comment, post, onCommentsChange }) => {
       const res = await postApi.acceptAnswer(post._id, comment._id);
       if (res.data && res.data.data) {
         onCommentsChange?.(res.data.data);
-        const updatedComments = res.data.data;
-        const updatedComment = updatedComments.find(c => c._id === comment._id);
-        toast.success(updatedComment?.isAccepted ? 'Đã chấp nhận câu trả lời!' : 'Đã bỏ chấp nhận câu trả lời!');
       }
     } catch (err) {
       console.error(err);
-      toast.error('Không thể cập nhật trạng thái câu trả lời');
+      alert('Không thể cập nhật trạng thái câu trả lời');
     } finally {
       setIsAccepting(false);
     }
@@ -116,10 +106,9 @@ const CommentItem = ({ comment, post, onCommentsChange }) => {
       if (res.data && res.data.data) {
         onCommentsChange?.(res.data.data);
         setIsEditing(false);
-        toast.success('Cập nhật bình luận thành công!');
       }
     } catch (err) {
-      toast.error('Không thể cập nhật bình luận');
+      alert('Không thể cập nhật bình luận');
     } finally {
       setIsSubmitting(false);
     }
@@ -132,10 +121,9 @@ const CommentItem = ({ comment, post, onCommentsChange }) => {
       const res = await postApi.deleteComment(post._id, comment._id);
       if (res.data && res.data.data) {
         onCommentsChange?.(res.data.data);
-        toast.success('Xóa bình luận thành công!');
       }
     } catch (err) {
-      toast.error('Không thể xóa bình luận');
+      alert('Không thể xóa bình luận');
     } finally {
       setIsSubmitting(false);
     }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { User, LogOut, Bell, Heart, MessageCircle, UserPlus, CheckCircle2, Star, Menu, X, Home, Users, FolderGit2, Search, Bookmark, ChevronDown, EyeOff } from 'lucide-react';
+import { User, LogOut, Bell, Heart, MessageCircle, UserPlus, CheckCircle2, Star, Menu, X, Home, Users, FolderGit2, Search, Bookmark } from 'lucide-react';
 import { logout } from '../../store/authSlice';
 import { getNotifications, getUnreadCount, markAsRead, markAllAsRead } from '../../store/notificationSlice';
 import { profileApi } from '../../services/api/profileApi';
@@ -22,13 +22,9 @@ const Navbar = () => {
   const { notifications, unreadCount } = useSelector((state) => state.notification);
 
   const [showNotifications, setShowNotifications] = useState(false);
-  const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [reputation, setReputation] = useState(0);
-  const [userInfo, setUserInfo] = useState(null);
-  
   const notificationRef = useRef(null);
-  const userDropdownRef = useRef(null);
 
   const userPayload = token ? parseJwt(token) : null;
   const userId = userPayload ? userPayload.id : null;
@@ -40,7 +36,6 @@ const Navbar = () => {
       profileApi.getProfile().then(res => {
          const profileData = res.data?.data || res.data;
          if (profileData && profileData.user) {
-            setUserInfo(profileData.user);
             setReputation(profileData.user.reputation || 0);
          }
       }).catch(err => console.error(err));
@@ -52,9 +47,6 @@ const Navbar = () => {
     const handleClickOutside = (event) => {
       if (notificationRef.current && !notificationRef.current.contains(event.target)) {
         setShowNotifications(false);
-      }
-      if (userDropdownRef.current && !userDropdownRef.current.contains(event.target)) {
-        setShowUserDropdown(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -133,37 +125,45 @@ const Navbar = () => {
             <div className="hidden md:flex items-center space-x-1">
               <Link 
                 to="/dashboard" 
-                className="text-gray-600 hover:text-blue-600 hover:bg-gray-50 px-3 py-2 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap"
+                className="text-gray-600 hover:text-blue-600 hover:bg-gray-50 px-3 py-2 rounded-lg text-sm font-semibold transition-colors"
               >
                 Bảng tin
               </Link>
               <Link 
                 to="/profiles" 
-                className="text-gray-600 hover:text-blue-600 hover:bg-gray-50 px-3 py-2 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap"
+                className="text-gray-600 hover:text-blue-600 hover:bg-gray-50 px-3 py-2 rounded-lg text-sm font-semibold transition-colors"
               >
                 Cộng đồng
               </Link>
               <Link 
                 to="/groups" 
-                className="text-gray-600 hover:text-blue-600 hover:bg-gray-50 px-3 py-2 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap"
+                className="text-gray-600 hover:text-blue-600 hover:bg-gray-50 px-3 py-2 rounded-lg text-sm font-semibold transition-colors"
               >
                 Nhóm học tập
               </Link>
               <Link 
-                to="/search" 
-                className="text-gray-600 hover:text-blue-600 hover:bg-gray-50 px-3 py-2 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap"
+              to="/search" 
+              className="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+            >
+              Tìm kiếm
+            </Link>
+            {role === 'admin' && (
+              <Link 
+                to="/admin/filters" 
+                className="text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100/70 px-3 py-2 rounded-md text-sm font-bold transition-all border border-rose-200"
               >
-                Tìm kiếm
+                Quản lý Bộ Lọc
               </Link>
+            )}
             </div>
           </div>
           
           <div className="flex items-center space-x-2 sm:space-x-3">
             {token ? (
               <>
-                <Link to="/chat" className="hidden md:flex items-center gap-2 text-gray-600 hover:text-blue-600 hover:bg-gray-50 px-3 py-2 rounded-lg text-sm font-semibold transition-all" title="Tin nhắn">
+                <Link to="/chat" className="hidden md:flex items-center gap-2 text-gray-600 hover:text-blue-600 hover:bg-gray-50 px-3 py-2 rounded-lg text-sm font-semibold transition-all">
                   <MessageCircle size={18} />
-                  <span className="hidden lg:inline whitespace-nowrap">Tin nhắn</span>
+                  <span>Tin nhắn</span>
                 </Link>
                 
                 <div className="flex items-center gap-1.5 px-3 py-1.5 mx-1 rounded-full bg-indigo-50 border border-indigo-100 text-sm font-bold text-indigo-700 transition-all cursor-default" title="Điểm Uy Tín (Reputation)">
@@ -176,10 +176,9 @@ const Navbar = () => {
                   <button 
                     onClick={() => setShowNotifications(!showNotifications)}
                     className="flex items-center gap-2 text-gray-600 hover:text-blue-600 hover:bg-gray-50 px-3 py-2 rounded-lg text-sm font-semibold transition-all relative"
-                    title="Thông báo"
                   >
                     <Bell size={18} />
-                    <span className="hidden lg:inline whitespace-nowrap">Thông báo</span>
+                    <span className="hidden md:inline">Thông báo</span>
                     {unreadCount > 0 && (
                       <span className="absolute top-1 right-2 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full md:hidden">
                         {unreadCount > 99 ? '99+' : unreadCount}
@@ -217,12 +216,7 @@ const Navbar = () => {
                             >
                               <div className="relative flex-shrink-0 mt-1">
                                 {notif.sender?.avatar ? (
-                                  <img 
-                                    src={notif.sender.avatar} 
-                                    alt="Avatar" 
-                                    className="w-10 h-10 rounded-full object-cover border border-gray-200"
-                                    onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
-                                  />
+                                  <img src={notif.sender.avatar} alt="Avatar" className="w-10 h-10 rounded-full object-cover border border-gray-200" />
                                 ) : (
                                   <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center border border-gray-300">
                                     <User size={16} className="text-gray-500" />
@@ -266,91 +260,29 @@ const Navbar = () => {
                   )}
                 </div>
                 
-                {/* User Dropdown */}
-                <div className="relative" ref={userDropdownRef}>
-                  <button
-                    onClick={() => setShowUserDropdown(!showUserDropdown)}
-                    className="hidden md:flex items-center gap-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 pl-2 pr-3 py-1.5 rounded-xl text-sm font-semibold transition-all border border-gray-100 bg-gray-50/50"
-                  >
-                    {userInfo?.avatar ? (
-                      <img
-                        src={userInfo.avatar}
-                        alt={userInfo.name}
-                        className="w-7 h-7 rounded-full object-cover border border-gray-200 shadow-3xs"
-                        onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
-                      />
-                    ) : (
-                      <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center border border-blue-200 shadow-3xs">
-                        <User size={14} />
-                      </div>
-                    )}
-                    <span className="max-w-[100px] truncate">{userInfo?.name || 'Cá nhân'}</span>
-                    <ChevronDown size={14} className={`text-gray-400 transition-transform duration-200 ${showUserDropdown ? 'rotate-180' : ''}`} />
-                  </button>
+                <Link 
+                  to={userId ? `/profile/${userId}` : `/edit-profile`} 
+                  className="hidden md:flex items-center gap-2 text-gray-600 hover:text-blue-600 hover:bg-gray-50 px-3 py-2 rounded-lg text-sm font-semibold transition-all"
+                >
+                  <User size={18} />
+                  <span>Hồ sơ của tôi</span>
+                </Link>
 
-                  {showUserDropdown && (
-                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden transform transition-all py-1.5">
-                      <div className="px-4 py-2 border-b border-gray-50 mb-1">
-                        <p className="text-xs text-gray-400 font-medium">Tài khoản</p>
-                        <p className="text-sm font-bold text-gray-800 truncate">{userInfo?.name || 'Thành viên'}</p>
-                        {userInfo?.email && (
-                          <p className="text-xs text-gray-500 truncate font-normal mt-0.5">{userInfo.email}</p>
-                        )}
-                      </div>
+                <Link
+                  to="/saved-posts"
+                  className="hidden md:flex items-center gap-2 text-gray-600 hover:text-blue-600 hover:bg-gray-50 px-3 py-2 rounded-lg text-sm font-semibold transition-all"
+                >
+                  <Bookmark size={18} />
+                  <span>Bài viết đã lưu</span>
+                </Link>
 
-                      <Link
-                        to={userId ? `/profile/${userId}` : `/edit-profile`}
-                        onClick={() => setShowUserDropdown(false)}
-                        className="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-blue-50/50 hover:text-blue-600 font-medium transition-colors"
-                      >
-                        <User size={16} className="text-gray-400" />
-                        <span>Hồ sơ của tôi</span>
-                      </Link>
-
-                      <Link
-                        to="/saved-posts"
-                        onClick={() => setShowUserDropdown(false)}
-                        className="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-blue-50/50 hover:text-blue-600 font-medium transition-colors"
-                      >
-                        <Bookmark size={16} className="text-gray-400" />
-                        <span>Bài viết đã lưu</span>
-                      </Link>
-
-                      <Link
-                        to="/hidden-posts"
-                        onClick={() => setShowUserDropdown(false)}
-                        className="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-blue-50/50 hover:text-blue-600 font-medium transition-colors"
-                      >
-                        <EyeOff size={16} className="text-gray-400" />
-                        <span>Bài viết đã ẩn</span>
-                      </Link>
-
-                      {role === 'admin' && (
-                        <Link
-                          to="/admin/filters"
-                          onClick={() => setShowUserDropdown(false)}
-                          className="flex items-center gap-2.5 px-4 py-2 text-sm text-rose-600 hover:bg-rose-50/50 font-medium transition-colors"
-                        >
-                          <FolderGit2 size={16} className="text-rose-400" />
-                          <span>Quản lý Bộ Lọc</span>
-                        </Link>
-                      )}
-
-                      <div className="border-t border-gray-100 my-1"></div>
-
-                      <button
-                        onClick={() => {
-                          setShowUserDropdown(false);
-                          handleLogout();
-                        }}
-                        className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-red-600 hover:bg-red-50/60 font-semibold transition-colors text-left"
-                      >
-                        <LogOut size={16} />
-                        <span>Đăng xuất</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
+                <button 
+                  onClick={handleLogout}
+                  className="hidden md:flex items-center gap-2 text-red-600 hover:bg-red-50 px-3 py-2 rounded-lg text-sm font-semibold transition-all"
+                >
+                  <LogOut size={18} />
+                  <span>Đăng xuất</span>
+                </button>
               </>
             ) : (
               <>
@@ -402,28 +334,7 @@ const Navbar = () => {
           >
             {/* Header Drawer */}
             <div className="flex items-center justify-between pb-4 border-b border-gray-100">
-              {token && userInfo ? (
-                <div className="flex items-center gap-2">
-                  {userInfo.avatar ? (
-                    <img 
-                      src={userInfo.avatar} 
-                      alt="Avatar" 
-                      className="w-8 h-8 rounded-full object-cover border border-gray-200"
-                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
-                    />
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center border border-blue-200">
-                      <User size={14} />
-                    </div>
-                  )}
-                  <div className="flex flex-col">
-                    <span className="font-bold text-sm text-gray-900 leading-tight">{userInfo.name}</span>
-                    <span className="text-xs text-gray-400 font-medium">★ {reputation} uy tín</span>
-                  </div>
-                </div>
-              ) : (
-                <span className="font-bold text-lg text-gray-900">Danh mục</span>
-              )}
+              <span className="font-bold text-lg text-gray-900">Danh mục</span>
               <button onClick={() => setMobileMenuOpen(false)} className="p-1 rounded-lg hover:bg-gray-50 text-gray-500">
                 <X size={20} />
               </button>
@@ -490,24 +401,6 @@ const Navbar = () => {
                     <Bookmark size={18} />
                     Bài viết đã lưu
                   </Link>
-                  <Link 
-                    to="/hidden-posts" 
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-3 text-gray-700 hover:text-blue-600 hover:bg-gray-50 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors"
-                  >
-                    <EyeOff size={18} />
-                    Bài viết đã ẩn
-                  </Link>
-                  {role === 'admin' && (
-                    <Link 
-                      to="/admin/filters" 
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center gap-3 text-rose-600 hover:bg-rose-50 px-3 py-2.5 rounded-lg text-sm font-bold transition-colors"
-                    >
-                      <FolderGit2 size={18} className="text-rose-500" />
-                      Quản lý Bộ Lọc
-                    </Link>
-                  )}
                   
                   <div className="pt-4 mt-4 border-t border-gray-100">
                     <button 

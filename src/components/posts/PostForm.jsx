@@ -21,7 +21,6 @@ const PostForm = () => {
   const [codeSnippet, setCodeSnippet] = useState('');
   const [codeLanguage, setCodeLanguage] = useState('javascript');
   const [showCodeSnippet, setShowCodeSnippet] = useState(false);
-  const [visibility, setVisibility] = useState('public');
   const navigate = useNavigate();
 
   const validateForm = () => {
@@ -51,15 +50,13 @@ const PostForm = () => {
         isQuestion, 
         null, 
         showCodeSnippet ? codeSnippet : '', 
-        showCodeSnippet ? codeLanguage : 'javascript',
-        visibility
+        showCodeSnippet ? codeLanguage : 'javascript'
       );
       if (response.success || response.status === 201 || (response.data && response.data.success)) {
         setApiSuccess('Đăng bài thành công!');
         setText('');
         setCodeSnippet('');
         setShowCodeSnippet(false);
-        setVisibility('public');
         
         // Chuyển hướng đến trang chi tiết bài viết (nếu cần)
         const newPostId = response.data?._id || (response.data?.data?._id);
@@ -207,20 +204,8 @@ const PostForm = () => {
             )}
           </div>
         )}
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mt-4 gap-4">
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-medium text-gray-700">Quyền riêng tư:</span>
-            <select
-              value={visibility}
-              onChange={(e) => setVisibility(e.target.value)}
-              className="text-sm px-3 py-1.5 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium"
-            >
-              <option value="public">🌐 Công khai</option>
-              <option value="personal">🔒 Chỉ mình tôi</option>
-              <option value="followers">👥 Người theo dõi</option>
-              <option value="friends">🤝 Bạn bè (Theo dõi chéo)</option>
-            </select>
-          </div>
+        <div className="flex justify-between items-center mt-4">
+          <div className="text-xs text-gray-500 hidden sm:block">Hỗ trợ Markdown (ví dụ: `code`, **đậm**)</div>
           <Button type="submit" isLoading={isLoading} className={isQuestion ? 'bg-indigo-600 hover:bg-indigo-700 w-full sm:w-auto px-6' : 'w-full sm:w-auto px-6'}>
             {isQuestion ? 'Đăng câu hỏi' : 'Đăng bài'}
           </Button>

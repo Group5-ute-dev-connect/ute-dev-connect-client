@@ -834,7 +834,6 @@ const GroupDetail = () => {
                                       src={post.avatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} 
                                       alt={post.name} 
                                       className="w-full h-full object-cover" 
-                                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
                                     />
                                   </div>
                                   <div>
@@ -943,7 +942,6 @@ const GroupDetail = () => {
                                     src={memberUser.avatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} 
                                     alt={memberUser.name} 
                                     className="w-full h-full object-cover" 
-                                    onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
                                   />
                                 </div>
                                 <Link 

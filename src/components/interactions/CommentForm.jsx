@@ -1,7 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import React, { useState } from 'react';
 import { Loader2, Send, Edit2, Eye } from 'lucide-react';
-import { toast } from 'react-toastify';
 import { postApi } from '../../services/api/postApi';
 import groupApi from '../../services/api/groupApi';
 import ReactMarkdown from 'react-markdown';
@@ -14,9 +12,6 @@ const getDataFromResponse = (response) => {
 };
 
 const CommentForm = ({ postId, post, onCommentCreated }) => {
-  const location = useLocation();
-  const textareaRef = useRef(null);
-
   const [text, setText] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -24,14 +19,6 @@ const CommentForm = ({ postId, post, onCommentCreated }) => {
   const [codeSnippet, setCodeSnippet] = useState('');
   const [codeLanguage, setCodeLanguage] = useState('javascript');
   const [showCodeSnippet, setShowCodeSnippet] = useState(false);
-
-  useEffect(() => {
-    const searchParams = new URLSearchParams(location.search);
-    if (searchParams.get('focusComment') === 'true' && textareaRef.current) {
-      textareaRef.current.focus();
-      textareaRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  }, [location]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -72,7 +59,6 @@ const CommentForm = ({ postId, post, onCommentCreated }) => {
       setCodeSnippet('');
       setShowCodeSnippet(false);
       setIsPreview(false);
-      toast.success('Bình luận thành công!');
     } catch (err) {
       console.error('Lỗi khi gửi bình luận:', err);
 
@@ -113,7 +99,6 @@ const CommentForm = ({ postId, post, onCommentCreated }) => {
             <>
               <textarea
                 id="comment"
-                ref={textareaRef}
                 value={text}
                 onChange={(event) => {
                   setText(event.target.value);

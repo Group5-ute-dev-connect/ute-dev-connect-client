@@ -744,12 +744,7 @@ const Chat = () => {
                     onClick={() => handleSelectConversation(conv._id)}
                   >
                     <div className="avatar-container">
-                      <img 
-                        src={participant?.avatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} 
-                        alt="Avatar" 
-                        className="avatar" 
-                        onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
-                      />
+                      <img src={participant?.avatar || 'https://via.placeholder.com/50'} alt="Avatar" className="avatar" />
                       {isOnline && <span className="status-online-dot"></span>}
                     </div>
                     <div className="conversation-info">
@@ -777,12 +772,7 @@ const Chat = () => {
             <>
               <div className="chat-main-header">
                 <div className="avatar-container">
-                  <img 
-                    src={otherUser.avatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} 
-                    alt="Avatar" 
-                    className="avatar" 
-                    onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
-                  />
+                  <img src={otherUser.avatar || 'https://via.placeholder.com/50'} alt="Avatar" className="avatar" />
                   {onlineUsers.includes(otherUser._id) && <span className="status-online-dot"></span>}
                 </div>
                 <div className="chat-main-info" style={{ flex: 1 }}>
@@ -821,10 +811,9 @@ const Chat = () => {
                         <div className={`message-row ${isMe ? 'row-sent' : 'row-received'}`}>
                           {!isMe && (
                             <img 
-                              src={otherUser?.avatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} 
+                              src={otherUser?.avatar || 'https://via.placeholder.com/50'} 
                               alt="Avatar" 
                               className="message-avatar-mini" 
-                              onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
                             />
                           )}
                           
@@ -894,10 +883,9 @@ const Chat = () => {
                 {isOtherUserTyping && (
                   <div className="message-row row-received animate-fade-in">
                     <img 
-                      src={otherUser?.avatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} 
+                      src={otherUser?.avatar || 'https://via.placeholder.com/50'} 
                       alt="Avatar" 
                       className="message-avatar-mini" 
-                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
                     />
                     <div className="typing-indicator-bubble">
                       <span className="typing-dot"></span>
@@ -1020,12 +1008,7 @@ const Chat = () => {
           {callState === 'ringing' && (
             <div className="call-ringing-panel animate-fade-in">
               <div className="call-avatar-pulsing">
-                <img 
-                  src={callerInfo?.callerAvatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} 
-                  alt="Caller Avatar" 
-                  className="large-avatar" 
-                  onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
-                />
+                <img src={callerInfo?.callerAvatar || 'https://via.placeholder.com/150'} alt="Caller Avatar" className="large-avatar" />
                 <div className="pulse-ring ring1"></div>
                 <div className="pulse-ring ring2"></div>
               </div>
@@ -1045,12 +1028,7 @@ const Chat = () => {
           {callState === 'calling' && (
             <div className="call-ringing-panel animate-fade-in">
               <div className="call-avatar-pulsing">
-                <img 
-                  src={recipientInfo?.avatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} 
-                  alt="Recipient Avatar" 
-                  className="large-avatar" 
-                  onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
-                />
+                <img src={recipientInfo?.avatar || 'https://via.placeholder.com/150'} alt="Recipient Avatar" className="large-avatar" />
                 <div className="pulse-ring ring1"></div>
                 <div className="pulse-ring ring2"></div>
               </div>
@@ -1081,12 +1059,7 @@ const Chat = () => {
                         <video ref={remoteVideoRef} autoPlay playsInline className="remote-video" />
                       ) : (
                         <div className="stream-loading">
-                          <img 
-                            src={recipientInfo?.avatar || callerInfo?.callerAvatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} 
-                            alt="Loading" 
-                            className="large-avatar pulse" 
-                            onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
-                          />
+                          <img src={recipientInfo?.avatar || callerInfo?.callerAvatar || 'https://via.placeholder.com/150'} alt="Loading" className="large-avatar pulse" />
                           <span>Đang kết nối luồng camera...</span>
                         </div>
                       )}
@@ -1103,21 +1076,11 @@ const Chat = () => {
                   <div className="voice-only-container">
                     <div className="voice-avatars">
                       <div className="voice-avatar-item">
-                        <img 
-                          src={currentUserAvatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} 
-                          alt="My Avatar" 
-                          className="large-avatar" 
-                          onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
-                        />
+                        <img src={currentUserAvatar || 'https://via.placeholder.com/150'} alt="My Avatar" className="large-avatar" />
                         <span>Bạn</span>
                       </div>
                       <div className="voice-avatar-item pulse-avatar">
-                        <img 
-                          src={recipientInfo?.avatar || callerInfo?.callerAvatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} 
-                          alt="Other Avatar" 
-                          className="large-avatar" 
-                          onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
-                        />
+                        <img src={recipientInfo?.avatar || callerInfo?.callerAvatar || 'https://via.placeholder.com/150'} alt="Other Avatar" className="large-avatar" />
                         <span>{recipientInfo?.name || callerInfo?.callerName || 'Đối phương'}</span>
                       </div>
                     </div>
