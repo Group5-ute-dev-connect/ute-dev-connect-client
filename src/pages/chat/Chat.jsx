@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { io } from 'socket.io-client';
+import { getSocket } from '../../services/socketService';
 import './Chat.css';
 import { Send, MoreVertical, Phone, Video, Mic, MicOff, VideoOff, PhoneOff, ArrowLeft, MessageCircle, Image, Paperclip, Code } from 'lucide-react';
 import { getConversations, getMessages, setActiveConversation, addMessage, markMessagesAsRead } from '../../store/chatSlice';
@@ -268,7 +268,14 @@ const Chat = () => {
   useEffect(() => {
     dispatch(getConversations());
 
-    socketRef.current = io(SOCKET_URL);
+    socketRef.current = getSocket();
+    if (!socketRef.current.connected) {
+      socketRef.current.connect();
+    } else {
+      if (currentUserId) {
+        socketRef.current.emit('setup', currentUserId);
+      }
+    }
 
     socketRef.current.on('connect', () => {
       console.log('✅ Đã kết nối Socket.IO tới server!');
