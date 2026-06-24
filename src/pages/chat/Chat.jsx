@@ -26,14 +26,14 @@ const Chat = () => {
   const navigate = useNavigate();
   const socketRef = useRef(null);
   const [inputValue, setInputValue] = useState('');
-  
+
   const chatState = useSelector(state => state.chat) || {};
   const conversations = Array.isArray(chatState.conversations) ? chatState.conversations : [];
   const messages = Array.isArray(chatState.messages) ? chatState.messages : [];
   const activeConversationId = chatState.activeConversationId || null;
-  
+
   const token = useSelector(state => state.auth?.token);
-  
+
   // Lấy ID và thông tin user hiện tại từ token JWT
   let currentUserId = null;
   let currentUserName = '';
@@ -199,7 +199,7 @@ const Chat = () => {
           try {
             osc1.stop();
             if (isIncoming) osc2.stop();
-          } catch (e) {}
+          } catch (e) { }
         }, isIncoming ? 2000 : 1200);
       };
 
@@ -218,7 +218,7 @@ const Chat = () => {
     if (audioContextRef.current) {
       try {
         audioContextRef.current.close();
-      } catch (e) {}
+      } catch (e) { }
       audioContextRef.current = null;
     }
   };
@@ -226,7 +226,7 @@ const Chat = () => {
   const stopStream = (streamRef) => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => {
-        try { track.stop(); } catch (e) {}
+        try { track.stop(); } catch (e) { }
       });
       streamRef.current = null;
     }
@@ -293,7 +293,7 @@ const Chat = () => {
 
       const msgSenderId = newMessage.sender?._id || newMessage.sender;
       if (
-        newMessage.conversationId === activeConversationIdRef.current && 
+        newMessage.conversationId === activeConversationIdRef.current &&
         msgSenderId !== currentUserId
       ) {
         socketRef.current.emit('mark-as-read', {
@@ -359,11 +359,11 @@ const Chat = () => {
       if (data.status === 'accepted') {
         stopRingtone();
         setCallState('connected');
-        
+
         if (localStreamRef.current) {
           const call = peerRef.current.call(data.recipientId, localStreamRef.current);
           currentCallRef.current = call;
-          
+
           call.on('stream', (userRemoteStream) => {
             remoteStreamRef.current = userRemoteStream;
             setRemoteStreamReceived(true);
@@ -386,7 +386,7 @@ const Chat = () => {
       console.log('📞 call-ended');
       stopRingtone();
       if (currentCallRef.current) {
-        try { currentCallRef.current.close(); } catch(e){}
+        try { currentCallRef.current.close(); } catch (e) { }
         currentCallRef.current = null;
       }
       stopStream(localStreamRef);
@@ -512,14 +512,14 @@ const Chat = () => {
   // Gác máy / Hủy cuộc gọi
   const handleHangUp = () => {
     stopRingtone();
-    
+
     const otherUserId = recipientInfo?.id || recipientInfo?._id || callerInfo?.callerId;
     if (otherUserId && socketRef.current) {
       socketRef.current.emit('end-call', { targetId: otherUserId });
     }
 
     if (currentCallRef.current) {
-      try { currentCallRef.current.close(); } catch(e){}
+      try { currentCallRef.current.close(); } catch (e) { }
       currentCallRef.current = null;
     }
 
@@ -566,7 +566,7 @@ const Chat = () => {
     const file = e.target.files[0];
     if (!file) return;
 
-    if (file.size > 10 * 1024 * 1024) {
+    if (file.size > 100 * 1024 * 1024) {
       toast.error("File quá lớn. Giới hạn tải lên là 10MB.");
       return;
     }
@@ -666,7 +666,7 @@ const Chat = () => {
   const handleSendMessage = (e) => {
     e.preventDefault();
     if (!inputValue.trim() || !activeConversationId) return;
-    
+
     const messageData = {
       conversationId: activeConversationId,
       senderId: currentUserId,
@@ -711,20 +711,20 @@ const Chat = () => {
         <div className="chat-sidebar">
           <div className="chat-sidebar-header">
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <ArrowLeft 
-                size={22} 
-                style={{ cursor: 'pointer', color: '#555' }} 
-                onClick={() => navigate('/dashboard')} 
-                title="Quay lại Bảng tin" 
+              <ArrowLeft
+                size={22}
+                style={{ cursor: 'pointer', color: '#555' }}
+                onClick={() => navigate('/dashboard')}
+                title="Quay lại Bảng tin"
               />
               <span style={{ fontWeight: 700 }}>Tin nhắn</span>
             </div>
-            <MoreVertical size={20} color="#666" style={{cursor: 'pointer'}} />
+            <MoreVertical size={20} color="#666" style={{ cursor: 'pointer' }} />
           </div>
           <div className="chat-search-bar">
-            <input 
-              type="text" 
-              placeholder="Tìm kiếm hội thoại..." 
+            <input
+              type="text"
+              placeholder="Tìm kiếm hội thoại..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -736,10 +736,10 @@ const Chat = () => {
                 const participant = getOtherParticipant(conv.participants);
                 const isActive = conv._id === activeConversationId;
                 const isOnline = participant && onlineUsers.includes(participant._id);
-                
+
                 return (
-                  <div 
-                    className={`conversation-item ${isActive ? 'active' : ''}`} 
+                  <div
+                    className={`conversation-item ${isActive ? 'active' : ''}`}
                     key={conv._id || idx}
                     onClick={() => handleSelectConversation(conv._id)}
                   >
@@ -782,9 +782,9 @@ const Chat = () => {
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '20px', color: '#0084ff' }}>
-                  <Phone size={24} style={{cursor: 'pointer'}} onClick={() => startCall('audio')} title="Gọi thoại" />
-                  <Video size={24} style={{cursor: 'pointer'}} onClick={() => startCall('video')} title="Gọi video" />
-                  <MoreVertical size={24} style={{cursor: 'pointer'}} color="#666" />
+                  <Phone size={24} style={{ cursor: 'pointer' }} onClick={() => startCall('audio')} title="Gọi thoại" />
+                  <Video size={24} style={{ cursor: 'pointer' }} onClick={() => startCall('video')} title="Gọi video" />
+                  <MoreVertical size={24} style={{ cursor: 'pointer' }} color="#666" />
                 </div>
               </div>
 
@@ -810,20 +810,20 @@ const Chat = () => {
                       <React.Fragment key={msg._id || idx}>
                         <div className={`message-row ${isMe ? 'row-sent' : 'row-received'}`}>
                           {!isMe && (
-                            <img 
-                              src={otherUser?.avatar || 'https://via.placeholder.com/50'} 
-                              alt="Avatar" 
-                              className="message-avatar-mini" 
+                            <img
+                              src={otherUser?.avatar || 'https://via.placeholder.com/50'}
+                              alt="Avatar"
+                              className="message-avatar-mini"
                             />
                           )}
-                          
+
                           <div className={`message-bubble-wrapper ${isMe ? 'msg-sent' : 'msg-received'}`}>
                             {msg.fileUrl && msg.fileType === 'image' && (
                               <div className="message-image-container animate-fade-in">
-                                <img 
-                                  src={msg.fileUrl} 
-                                  alt="Hình ảnh đính kèm" 
-                                  className="message-image-el" 
+                                <img
+                                  src={msg.fileUrl}
+                                  alt="Hình ảnh đính kèm"
+                                  className="message-image-el"
                                   onClick={() => window.open(msg.fileUrl, '_blank')}
                                 />
                               </div>
@@ -848,8 +848,8 @@ const Chat = () => {
                               <div className="message-code-container animate-fade-in">
                                 <div className="code-header-bar">
                                   <span className="code-lang-badge">{msg.codeSnippet.language}</span>
-                                  <button 
-                                    className="btn-copy-code" 
+                                  <button
+                                    className="btn-copy-code"
                                     onClick={() => {
                                       navigator.clipboard.writeText(msg.codeSnippet.code);
                                       toast.success("Đã sao chép mã nguồn!");
@@ -882,10 +882,10 @@ const Chat = () => {
                 })()}
                 {isOtherUserTyping && (
                   <div className="message-row row-received animate-fade-in">
-                    <img 
-                      src={otherUser?.avatar || 'https://via.placeholder.com/50'} 
-                      alt="Avatar" 
-                      className="message-avatar-mini" 
+                    <img
+                      src={otherUser?.avatar || 'https://via.placeholder.com/50'}
+                      alt="Avatar"
+                      className="message-avatar-mini"
                     />
                     <div className="typing-indicator-bubble">
                       <span className="typing-dot"></span>
@@ -901,8 +901,8 @@ const Chat = () => {
                 <div className="code-editor-panel animate-slide-up">
                   <div className="code-editor-header">
                     <span className="editor-title">Chia sẻ mã nguồn</span>
-                    <select 
-                      value={codeLanguage} 
+                    <select
+                      value={codeLanguage}
                       onChange={(e) => setCodeLanguage(e.target.value)}
                       className="language-selector"
                     >
@@ -916,8 +916,8 @@ const Chat = () => {
                       <option value="sql">SQL</option>
                     </select>
                   </div>
-                  <textarea 
-                    value={codeText} 
+                  <textarea
+                    value={codeText}
                     onChange={(e) => setCodeText(e.target.value)}
                     placeholder="Dán hoặc nhập đoạn code của bạn vào đây..."
                     className="code-editor-textarea"
@@ -935,51 +935,51 @@ const Chat = () => {
               )}
 
               <form className="chat-input-area" onSubmit={handleSendMessage}>
-                <input 
-                  type="file" 
-                  ref={imageInputRef} 
-                  style={{ display: 'none' }} 
+                <input
+                  type="file"
+                  ref={imageInputRef}
+                  style={{ display: 'none' }}
                   accept="image/*"
                   onChange={(e) => onFileChange(e, 'image')}
                 />
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
+                <input
+                  type="file"
+                  ref={fileInputRef}
                   style={{ display: 'none' }}
                   onChange={(e) => onFileChange(e, 'file')}
                 />
 
                 <div className="input-toolbar-left">
-                  <button 
-                    type="button" 
-                    className="toolbar-btn" 
-                    onClick={() => triggerFileUpload('image')} 
+                  <button
+                    type="button"
+                    className="toolbar-btn"
+                    onClick={() => triggerFileUpload('image')}
                     title="Gửi hình ảnh"
                   >
                     <Image size={20} />
                   </button>
-                  <button 
-                    type="button" 
-                    className="toolbar-btn" 
-                    onClick={() => triggerFileUpload('file')} 
+                  <button
+                    type="button"
+                    className="toolbar-btn"
+                    onClick={() => triggerFileUpload('file')}
                     title="Đính kèm tệp tin"
                   >
                     <Paperclip size={20} />
                   </button>
-                  <button 
-                    type="button" 
-                    className={`toolbar-btn ${isCodeEditorOpen ? 'active-toolbar-btn' : ''}`} 
-                    onClick={() => setIsCodeEditorOpen(!isCodeEditorOpen)} 
+                  <button
+                    type="button"
+                    className={`toolbar-btn ${isCodeEditorOpen ? 'active-toolbar-btn' : ''}`}
+                    onClick={() => setIsCodeEditorOpen(!isCodeEditorOpen)}
                     title="Gửi đoạn code"
                   >
                     <Code size={20} />
                   </button>
                 </div>
 
-                <input 
-                  type="text" 
-                  className="chat-input" 
-                  placeholder={isCodeEditorOpen ? "Nhập code ở khung phía trên..." : "Nhập tin nhắn..."} 
+                <input
+                  type="text"
+                  className="chat-input"
+                  placeholder={isCodeEditorOpen ? "Nhập code ở khung phía trên..." : "Nhập tin nhắn..."}
                   value={inputValue}
                   onChange={handleInputChange}
                   disabled={isCodeEditorOpen}
@@ -1003,112 +1003,112 @@ const Chat = () => {
 
       {/* --- GIAO DIỆN CUỘC GỌI OVERLAY --- */}
       {callState !== 'idle' && (
-      <div className={`call-overlay ${callState}`}>
-        <div className="call-glass-container">
-          {callState === 'ringing' && (
-            <div className="call-ringing-panel animate-fade-in">
-              <div className="call-avatar-pulsing">
-                <img src={callerInfo?.callerAvatar || 'https://via.placeholder.com/150'} alt="Caller Avatar" className="large-avatar" />
-                <div className="pulse-ring ring1"></div>
-                <div className="pulse-ring ring2"></div>
-              </div>
-              <h2 className="call-title">{callerInfo?.callerName || 'Sinh viên UTE'}</h2>
-              <p className="call-subtitle">{callType === 'video' ? 'Đang gọi video cho bạn...' : 'Đang gọi thoại cho bạn...'}</p>
-              <div className="call-actions-row">
-                <button className="btn-call btn-accept" onClick={handleAcceptCall}>
-                  <Phone size={20} style={{ marginRight: '8px' }} /> Chấp nhận
-                </button>
-                <button className="btn-call btn-decline" onClick={handleDeclineCall}>
-                  <PhoneOff size={20} style={{ marginRight: '8px' }} /> Từ chối
-                </button>
-              </div>
-            </div>
-          )}
-
-          {callState === 'calling' && (
-            <div className="call-ringing-panel animate-fade-in">
-              <div className="call-avatar-pulsing">
-                <img src={recipientInfo?.avatar || 'https://via.placeholder.com/150'} alt="Recipient Avatar" className="large-avatar" />
-                <div className="pulse-ring ring1"></div>
-                <div className="pulse-ring ring2"></div>
-              </div>
-              <h2 className="call-title">Đang gọi {recipientInfo?.name}...</h2>
-              <p className="call-subtitle">Vui lòng chờ phản hồi...</p>
-              
-              {callType === 'video' && localStreamRef.current && (
-                <div className="local-preview-mini">
-                  <video ref={localVideoRef} autoPlay playsInline muted className="local-video-mini-el" />
+        <div className={`call-overlay ${callState}`}>
+          <div className="call-glass-container">
+            {callState === 'ringing' && (
+              <div className="call-ringing-panel animate-fade-in">
+                <div className="call-avatar-pulsing">
+                  <img src={callerInfo?.callerAvatar || 'https://via.placeholder.com/150'} alt="Caller Avatar" className="large-avatar" />
+                  <div className="pulse-ring ring1"></div>
+                  <div className="pulse-ring ring2"></div>
                 </div>
-              )}
-
-              <div className="call-actions-row">
-                <button className="btn-call btn-decline" onClick={handleHangUp}>
-                  <PhoneOff size={20} style={{ marginRight: '8px' }} /> Hủy cuộc gọi
-                </button>
+                <h2 className="call-title">{callerInfo?.callerName || 'Sinh viên UTE'}</h2>
+                <p className="call-subtitle">{callType === 'video' ? 'Đang gọi video cho bạn...' : 'Đang gọi thoại cho bạn...'}</p>
+                <div className="call-actions-row">
+                  <button className="btn-call btn-accept" onClick={handleAcceptCall}>
+                    <Phone size={20} style={{ marginRight: '8px' }} /> Chấp nhận
+                  </button>
+                  <button className="btn-call btn-decline" onClick={handleDeclineCall}>
+                    <PhoneOff size={20} style={{ marginRight: '8px' }} /> Từ chối
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {callState === 'connected' && (
-            <div className="call-active-panel animate-fade-in">
-              <div className="video-streams-container">
-                {callType === 'video' ? (
-                  <>
-                    <div className="remote-video-wrapper">
-                      {remoteStreamReceived ? (
-                        <video ref={remoteVideoRef} autoPlay playsInline className="remote-video" />
-                      ) : (
-                        <div className="stream-loading">
-                          <img src={recipientInfo?.avatar || callerInfo?.callerAvatar || 'https://via.placeholder.com/150'} alt="Loading" className="large-avatar pulse" />
-                          <span>Đang kết nối luồng camera...</span>
-                        </div>
-                      )}
-                      <span className="user-label">{recipientInfo?.name || callerInfo?.callerName || 'Người nhận'}</span>
-                    </div>
-                    {!isCameraOff && (
-                      <div className="local-video-wrapper">
-                        <video ref={localVideoRef} autoPlay playsInline muted className="local-video" />
-                        <span className="user-label">Bạn</span>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="voice-only-container">
-                    <div className="voice-avatars">
-                      <div className="voice-avatar-item">
-                        <img src={currentUserAvatar || 'https://via.placeholder.com/150'} alt="My Avatar" className="large-avatar" />
-                        <span>Bạn</span>
-                      </div>
-                      <div className="voice-avatar-item pulse-avatar">
-                        <img src={recipientInfo?.avatar || callerInfo?.callerAvatar || 'https://via.placeholder.com/150'} alt="Other Avatar" className="large-avatar" />
-                        <span>{recipientInfo?.name || callerInfo?.callerName || 'Đối phương'}</span>
-                      </div>
-                    </div>
-                    <audio ref={remoteVideoRef} autoPlay />
+            {callState === 'calling' && (
+              <div className="call-ringing-panel animate-fade-in">
+                <div className="call-avatar-pulsing">
+                  <img src={recipientInfo?.avatar || 'https://via.placeholder.com/150'} alt="Recipient Avatar" className="large-avatar" />
+                  <div className="pulse-ring ring1"></div>
+                  <div className="pulse-ring ring2"></div>
+                </div>
+                <h2 className="call-title">Đang gọi {recipientInfo?.name}...</h2>
+                <p className="call-subtitle">Vui lòng chờ phản hồi...</p>
+
+                {callType === 'video' && localStreamRef.current && (
+                  <div className="local-preview-mini">
+                    <video ref={localVideoRef} autoPlay playsInline muted className="local-video-mini-el" />
                   </div>
                 )}
-              </div>
 
-              <div className="call-active-controls">
-                <button className={`control-btn ${isMuted ? 'active-mute' : ''}`} onClick={toggleMute} title={isMuted ? 'Bật Micro' : 'Tắt Micro'}>
-                  {isMuted ? <MicOff size={22} /> : <Mic size={22} />}
-                </button>
-                {callType === 'video' && (
-                  <button className={`control-btn ${isCameraOff ? 'active-mute' : ''}`} onClick={toggleCamera} title={isCameraOff ? 'Bật Camera' : 'Tắt Camera'}>
-                    {isCameraOff ? <VideoOff size={22} /> : <Video size={22} />}
+                <div className="call-actions-row">
+                  <button className="btn-call btn-decline" onClick={handleHangUp}>
+                    <PhoneOff size={20} style={{ marginRight: '8px' }} /> Hủy cuộc gọi
                   </button>
-                )}
-                <button className="control-btn hang-up-btn" onClick={handleHangUp} title="Gác máy">
-                  <PhoneOff size={22} />
-                </button>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+
+            {callState === 'connected' && (
+              <div className="call-active-panel animate-fade-in">
+                <div className="video-streams-container">
+                  {callType === 'video' ? (
+                    <>
+                      <div className="remote-video-wrapper">
+                        {remoteStreamReceived ? (
+                          <video ref={remoteVideoRef} autoPlay playsInline className="remote-video" />
+                        ) : (
+                          <div className="stream-loading">
+                            <img src={recipientInfo?.avatar || callerInfo?.callerAvatar || 'https://via.placeholder.com/150'} alt="Loading" className="large-avatar pulse" />
+                            <span>Đang kết nối luồng camera...</span>
+                          </div>
+                        )}
+                        <span className="user-label">{recipientInfo?.name || callerInfo?.callerName || 'Người nhận'}</span>
+                      </div>
+                      {!isCameraOff && (
+                        <div className="local-video-wrapper">
+                          <video ref={localVideoRef} autoPlay playsInline muted className="local-video" />
+                          <span className="user-label">Bạn</span>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="voice-only-container">
+                      <div className="voice-avatars">
+                        <div className="voice-avatar-item">
+                          <img src={currentUserAvatar || 'https://via.placeholder.com/150'} alt="My Avatar" className="large-avatar" />
+                          <span>Bạn</span>
+                        </div>
+                        <div className="voice-avatar-item pulse-avatar">
+                          <img src={recipientInfo?.avatar || callerInfo?.callerAvatar || 'https://via.placeholder.com/150'} alt="Other Avatar" className="large-avatar" />
+                          <span>{recipientInfo?.name || callerInfo?.callerName || 'Đối phương'}</span>
+                        </div>
+                      </div>
+                      <audio ref={remoteVideoRef} autoPlay />
+                    </div>
+                  )}
+                </div>
+
+                <div className="call-active-controls">
+                  <button className={`control-btn ${isMuted ? 'active-mute' : ''}`} onClick={toggleMute} title={isMuted ? 'Bật Micro' : 'Tắt Micro'}>
+                    {isMuted ? <MicOff size={22} /> : <Mic size={22} />}
+                  </button>
+                  {callType === 'video' && (
+                    <button className={`control-btn ${isCameraOff ? 'active-mute' : ''}`} onClick={toggleCamera} title={isCameraOff ? 'Bật Camera' : 'Tắt Camera'}>
+                      {isCameraOff ? <VideoOff size={22} /> : <Video size={22} />}
+                    </button>
+                  )}
+                  <button className="control-btn hang-up-btn" onClick={handleHangUp} title="Gác máy">
+                    <PhoneOff size={22} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-    )}
-  </div>
-);
+      )}
+    </div>
+  );
 };
 
 export default Chat;
