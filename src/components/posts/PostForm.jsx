@@ -22,7 +22,7 @@ const PostForm = () => {
 
   const validateForm = () => {
     // BUG GEN_31: Cho phép gửi Bài viết trống lên bảng tin chung (Toàn khoảng trắng)
-    if (!text) {
+    if (!text || !text.trim()) {
       setError('Nội dung không được để trống.');
       return false;
     }

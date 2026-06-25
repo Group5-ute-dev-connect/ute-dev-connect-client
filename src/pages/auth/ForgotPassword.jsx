@@ -16,13 +16,11 @@ const ForgotPassword = () => {
             <span className="text-white font-bold text-2xl tracking-tighter">UTE</span>
           </div>
         </div>
-        {/* BUG GUI_19: Lỗi hình ảnh minh họa trang Quên mật khẩu bị hỏng link */}
+        {/* BUG GUI_19 Fixed: Replaced broken image with an SVG illustration */}
         <div className="flex justify-center mb-4">
-          <img
-            src="/assets/broken-link-avatar-xyz.png"
-            alt="Đồ họa minh họa khôi phục mật khẩu"
-            className="h-24 w-auto rounded-lg object-cover"
-          />
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-24 w-24 text-blue-500 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+          </svg>
         </div>
         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 tracking-tight">
           Quên mật khẩu?

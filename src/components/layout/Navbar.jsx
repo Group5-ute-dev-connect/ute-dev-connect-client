@@ -23,8 +23,10 @@ const Navbar = () => {
   const role = localStorage.getItem('role');
 
   const [showNotifications, setShowNotifications] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [reputation, setReputation] = useState(0);
   const notificationRef = useRef(null);
+  const mobileMenuRef = useRef(null);
 
   const userPayload = token ? parseJwt(token) : null;
   const userId = userPayload ? userPayload.id : null;
@@ -48,10 +50,18 @@ const Navbar = () => {
       if (notificationRef.current && !notificationRef.current.contains(event.target)) {
         setShowNotifications(false);
       }
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target)) {
+        setMenuOpen(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [navigate]);
 
   const handleNotificationClick = (notification) => {
     if (!notification.isRead) {
@@ -121,8 +131,26 @@ const Navbar = () => {
               </span>
             </Link>
           </div>
+
+          {/* Hamburger button - visible on mobile only */}
+          <button 
+            className="md:hidden p-2 rounded-lg hover:bg-white/10 transition-colors flex items-center justify-center"
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-label="Toggle menu"
+          >
+            {menuOpen ? (
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            ) : (
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            )}
+          </button>
           
-          <div className="flex items-center space-x-1 lg:space-x-3 overflow-x-auto no-scrollbar">
+          {/* Desktop nav links - hidden on mobile */}
+          <div className="hidden md:flex items-center space-x-1 lg:space-x-3 overflow-x-auto no-scrollbar">
             <Link 
               to="/dashboard" 
               className="text-gray-600 hover:text-blue-600 px-2 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap"
@@ -303,6 +331,129 @@ const Navbar = () => {
           </div>
         </div>
       </div>
+
+      {/* Mobile menu dropdown */}
+      {menuOpen && (
+        <div 
+          ref={mobileMenuRef}
+          className="md:hidden bg-white border-t border-gray-100 shadow-lg absolute left-0 right-0 z-40 transition-all"
+        >
+          <div className="flex flex-col px-4 py-3 space-y-1">
+            <Link 
+              to="/dashboard" 
+              className="text-gray-600 hover:text-blue-600 hover:bg-gray-50 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+              onClick={() => setMenuOpen(false)}
+            >
+              Bảng tin
+            </Link>
+            <Link 
+              to="/profiles" 
+              className="text-gray-600 hover:text-blue-600 hover:bg-gray-50 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+              onClick={() => setMenuOpen(false)}
+            >
+              Cộng đồng
+            </Link>
+            <Link 
+              to="/groups" 
+              className="text-gray-600 hover:text-blue-600 hover:bg-gray-50 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+              onClick={() => setMenuOpen(false)}
+            >
+              Nhóm học tập
+            </Link>
+            <Link 
+              to="/search" 
+              className="text-gray-600 hover:text-blue-600 hover:bg-gray-50 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+              onClick={() => setMenuOpen(false)}
+            >
+              Tìm kiếm
+            </Link>
+            {token ? (
+              <>
+                <Link 
+                  to="/chat" 
+                  className="flex items-center gap-2 text-gray-600 hover:text-blue-600 hover:bg-gray-50 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-message-circle"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+                  Tin nhắn
+                </Link>
+                <div className="flex items-center gap-1.5 px-3 py-2">
+                  <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                  <span className="text-sm font-bold text-indigo-700">{reputation}</span>
+                </div>
+                {role === 'admin' && (
+                  <Link 
+                    to="/admin" 
+                    className="flex items-center gap-1.5 text-red-600 hover:bg-red-50 px-3 py-2 rounded-md text-sm font-bold transition-colors"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    <ShieldCheck className="w-4 h-4" />
+                    Admin
+                  </Link>
+                )}
+                <button 
+                  onClick={() => { setShowNotifications(!showNotifications); setMenuOpen(false); }}
+                  className="flex items-center gap-2 text-gray-600 hover:text-blue-600 hover:bg-gray-50 px-3 py-2 rounded-md text-sm font-medium transition-colors relative text-left"
+                >
+                  <Bell size={18} />
+                  Thông báo
+                  {unreadCount > 0 && (
+                    <span className="inline-flex items-center justify-center px-1.5 py-0.5 ml-1 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+                <Link 
+                  to={userId ? `/profile/${userId}` : `/edit-profile`} 
+                  className="flex items-center gap-2 text-gray-600 hover:text-blue-600 hover:bg-gray-50 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  <User size={18} />
+                  Hồ sơ của tôi
+                </Link>
+                <button 
+                  onClick={() => { handleLogout(); setMenuOpen(false); }}
+                  className="flex items-center gap-2 text-red-600 hover:bg-red-50 px-3 py-2 rounded-md text-sm font-medium transition-colors text-left"
+                >
+                  <LogOut size={18} />
+                  Đăng xuất
+                </button>
+              </>
+            ) : (
+              <>
+                <Link 
+                  to="/login" 
+                  className="text-gray-600 hover:text-gray-900 hover:bg-gray-50 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Đăng nhập
+                </Link>
+                <Link 
+                  to="/register" 
+                  className="bg-blue-50 text-blue-700 hover:bg-blue-100 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Đăng ký
+                </Link>
+                <Link 
+                  to="/auth/forgot-password" 
+                  className="bg-blue-600 text-white hover:bg-blue-700 px-3 py-2 rounded-md text-sm font-medium shadow-sm transition-all"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Quên mật khẩu
+                </Link>
+                <Link
+                  to="/saved-posts"
+                  className="text-sm font-medium text-gray-600 hover:text-blue-600 hover:bg-gray-50 px-3 py-2 rounded-md transition-colors"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Bài viết đã lưu
+                </Link>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </nav>
   );
 };

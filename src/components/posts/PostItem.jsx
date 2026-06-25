@@ -46,11 +46,30 @@ const PostItem = ({ post }) => {
 
   const handleDelete = (e) => {
     e.preventDefault();
-    // BUG GEN_07: Thiếu hộp thoại xác nhận khi thực hiện chức năng Xóa bài viết (Bỏ qua confirm)
+    if (!window.confirm('Bạn có chắc muốn xóa bài viết này?')) return;
     dispatch(deletePost(_id));
   };
-  // BUG GUI_12: Hiển thị định dạng ngày tháng thô của Database (Raw ISO)
-  const formattedDate = date;
+  const getTimeAgo = (dateString) => {
+    const now = new Date();
+    const past = new Date(dateString);
+    const diffMs = now - past;
+    const diffSecs = Math.floor(diffMs / 1000);
+    const diffMins = Math.floor(diffSecs / 60);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+    const diffWeeks = Math.floor(diffDays / 7);
+    const diffMonths = Math.floor(diffDays / 30);
+    
+    if (diffSecs < 60) return 'Vừa xong';
+    if (diffMins < 60) return `${diffMins} phút trước`;
+    if (diffHours < 24) return `${diffHours} giờ trước`;
+    if (diffDays < 7) return `${diffDays} ngày trước`;
+    if (diffWeeks < 4) return `${diffWeeks} tuần trước`;
+    if (diffMonths < 12) return `${diffMonths} tháng trước`;
+    return past.toLocaleDateString('vi-VN');
+  };
+  
+  const formattedDate = getTimeAgo(date);
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 overflow-hidden group">

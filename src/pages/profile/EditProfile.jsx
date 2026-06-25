@@ -70,13 +70,11 @@ const EditProfile = () => {
       } catch (err) {
         console.log("Lỗi tải profile hoặc profile chưa được tạo:", err);
         // BUG GEN_17: Lỗi Token hết hạn ứng dụng đứng im không tự chuyển hướng đăng nhập
-        /*
         if (err.response?.status === 401) {
           localStorage.removeItem('token');
-          navigate('/register');
+          navigate('/login');
           return;
         }
-        */
       }
     };
     
@@ -97,12 +95,10 @@ const EditProfile = () => {
       errors.name = 'Vui lòng nhập họ và tên.';
     } else {
       // BUG GEN_14: Cho phép đặt Họ Tên chứa toàn ký tự đặc biệt (Comment out logic regex chặn ký tự lạ)
-      /*
-      const nameRegex = /^[a-zA-ZÀ-ỹ\s]+$/;
+      const nameRegex = /^[a-zA-ZÀ-ỹ\s.'-]+$/;
       if (!nameRegex.test(formData.name)) {
-        errors.name = 'Họ và tên chỉ chứa chữ cái và khoảng trắng.';
+        errors.name = 'Họ và tên chỉ chứa chữ cái, khoảng trắng, dấu chấm hoặc dấu gạch ngang.';
       }
-      */
     }
     if (!formData.status) errors.status = 'Vui lòng chọn trạng thái.';
     if (!formData.faculty) errors.faculty = 'Vui lòng chọn khoa.';
@@ -127,13 +123,11 @@ const EditProfile = () => {
       setTimeout(() => navigate('/'), 2000);
     } catch (err) {
       // BUG GEN_17: Lỗi Token hết hạn ứng dụng đứng im không tự chuyển hướng đăng nhập
-      /*
       if (err.response?.status === 401) {
         localStorage.removeItem('token');
-        navigate('/register');
+        navigate('/login');
         return;
       }
-      */
       toast.error(err.response?.data?.msg || err.response?.data?.errors?.[0]?.msg || 'Có lỗi xảy ra, vui lòng thử lại.');
     } finally {
       setLoading(false);

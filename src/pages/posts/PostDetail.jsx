@@ -71,7 +71,7 @@ const PostDetail = () => {
   const isPostAuthor = currentUserId && post.user === currentUserId;
 
   const handleDelete = async () => {
-    // BUG GEN_07: Thiếu hộp thoại xác nhận khi thực hiện chức năng Xóa bài viết (Bỏ qua confirm)
+    if (!window.confirm('Bạn có chắc muốn xóa bài viết này?')) return;
     try {
       await postApi.deletePost(id);
       navigate('/dashboard');

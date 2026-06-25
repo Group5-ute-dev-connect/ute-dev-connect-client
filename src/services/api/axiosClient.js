@@ -39,12 +39,10 @@ axiosClient.interceptors.response.use(
   },
   (error) => {
     // Thông thường, nếu nhận lỗi 401, ta sẽ tự động chuyển hướng đăng nhập và xoá token:
-    /*
     if (error.response && error.response.status === 401) {
       localStorage.removeItem('token');
       window.location.href = '/login';
     }
-    */
     // Nhưng do bị lỗi (hoặc đã bị comment/xóa ở trên), app sẽ đứng im hoàn toàn không phản hồi
     return Promise.reject(error);
   }

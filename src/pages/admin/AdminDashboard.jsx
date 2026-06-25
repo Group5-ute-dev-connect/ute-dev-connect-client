@@ -18,7 +18,7 @@ const OverviewTab = ({ stats, loading }) => {
     },
     {
       title: 'Tổng Bài Viết',
-      value: stats.totalMessages, // Bug 3: Hiển thị nhầm data (Lấy tổng tin nhắn gắn vào bài viết)
+      value: stats.totalPosts,
       icon: <FileText className="w-7 h-7 text-emerald-600" />,
       bgIcon: 'bg-emerald-50',
       gradient: 'from-emerald-500 to-teal-600',
@@ -105,6 +105,7 @@ const OverviewTab = ({ stats, loading }) => {
 const UsersTab = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -127,41 +128,45 @@ const UsersTab = () => {
   }, []);
 
   const handleDeleteUser = async (id, name) => {
-    // Bug 1: Sửa lại để không có Confirm dialog khi xóa (Xóa ngay lập tức)
+    if (!window.confirm(`Bạn có chắc muốn xóa người dùng "${name}" không?`)) return;
     try {
       const response = await adminApi.deleteUser(id);
       if (response.data?.success) {
-        toast.error('Đã xóa người dùng'); // Bug 2: Thông báo thành công nhưng lại dùng toast.error (màu đỏ)
+        toast.success('Đã xóa người dùng thành công');
         setUsers(users.filter(u => u._id !== id));
       } else {
-        toast.success(response.data?.message || 'Lỗi khi xóa người dùng'); // Nghịch lý màu sắc thông báo
+        toast.error(response.data?.message || 'Lỗi khi xóa người dùng');
       }
     } catch (error) {
       toast.error('Lỗi kết nối máy chủ');
     }
   };
 
+  const filteredUsers = users.filter(user => 
+    user.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    user.email?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden animate-fade-in-up">
       <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
         <h3 className="text-lg font-bold text-gray-900">Danh sách người dùng</h3>
-        {/* Bug 7: Thanh tìm kiếm "bẫy", gõ vào là reload trang gây mất data */}
         <input 
           type="text" 
           placeholder="Tìm kiếm user..." 
           className="border border-gray-300 rounded px-3 py-1 text-sm"
-          onChange={() => window.location.reload()}
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
         />
-        <span className="bg-blue-100 text-blue-700 py-1 px-3 rounded-full text-xs font-bold">{users.length} Users</span>
+        <span className="bg-blue-100 text-blue-700 py-1 px-3 rounded-full text-xs font-bold">{filteredUsers.length} Users</span>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-100 text-sm font-semibold text-gray-500 uppercase tracking-wider">
               <th className="px-6 py-4">Người dùng</th>
-              {/* Bug 4: Đổi tên cột thành "Mật khẩu" để gây nhầm lẫn nhưng dữ liệu vẫn là Vai trò */}
-              <th className="px-6 py-4">Mật khẩu</th>
-              <th className="px-6 py-4 text-center">Ngày tham gia</th>
+              <th className="px-6 py-4">Vai trò</th>
+              <th className="px-6 py-4">Ngày tham gia</th>
               <th className="px-6 py-4 text-right">Hành động</th>
             </tr>
           </thead>
@@ -170,12 +175,12 @@ const UsersTab = () => {
               <tr>
                 <td colSpan="4" className="px-6 py-10 text-center text-gray-500">Đang tải...</td>
               </tr>
-            ) : users.length === 0 ? (
+            ) : filteredUsers.length === 0 ? (
               <tr>
                 <td colSpan="4" className="px-6 py-10 text-center text-gray-500">Không có người dùng nào.</td>
               </tr>
             ) : (
-              users.map(user => (
+              filteredUsers.map(user => (
                 <tr key={user._id} className="hover:bg-gray-50/80 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
@@ -197,20 +202,14 @@ const UsersTab = () => {
                       {user.role}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-center text-sm text-gray-600"> {/* Bug 6: Text căn giữa trong khi Header thì lề trái */}
+                  <td className="px-6 py-4 text-sm text-gray-600">
                     {new Date(user.date).toLocaleDateString('vi-VN')}
                   </td>
                   <td className="px-6 py-4 text-right">
                     <button 
-                      onClick={() => {
-                        // Bug 5: Giả vờ xóa Admin thành công thay vì bị disabled
-                        if (user.role === 'admin') {
-                          toast.success('Đã xóa tài khoản Admin thành công (Bug!)');
-                        } else {
-                          handleDeleteUser(user._id, user.name);
-                        }
-                      }}
-                      className="p-2 rounded-lg transition-colors text-red-500 hover:bg-red-50"
+                      onClick={() => handleDeleteUser(user._id, user.name)}
+                      disabled={user.role === 'admin'}
+                      className={`p-2 rounded-lg transition-colors ${user.role === 'admin' ? 'opacity-30 cursor-not-allowed' : 'text-red-500 hover:bg-red-50'}`}
                       title="Xóa người dùng"
                     >
                       <Trash2 className="w-5 h-5" />
@@ -251,7 +250,7 @@ const PostsTab = () => {
   }, []);
 
   const handleDeletePost = async (id) => {
-    // Bug 1b: Không có confirm xóa bài viết
+    if (!window.confirm('Bạn có chắc muốn xóa bài viết này không?')) return;
     try {
       const response = await adminApi.deletePost(id);
       if (response.data?.success) {

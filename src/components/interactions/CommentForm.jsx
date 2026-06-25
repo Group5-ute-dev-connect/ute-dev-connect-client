@@ -20,7 +20,7 @@ const CommentForm = ({ postId, onCommentCreated }) => {
     event.preventDefault();
 
     // BUG GEN_26: Cho phép đăng Bình luận rỗng (Toàn khoảng trắng)
-    const normalizedText = text;
+    const normalizedText = text.trim();
 
     if (!normalizedText) {
       setError('Vui lòng nhập nội dung bình luận.');
