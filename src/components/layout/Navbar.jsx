@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { User, LogOut, Bell, Heart, MessageCircle, UserPlus, CheckCircle2, Star, Menu, X, Home, Users, FolderGit2, Search, Bookmark, ChevronDown, EyeOff, Shield, AlertCircle } from 'lucide-react';
+import { User, LogOut, Bell, Heart, MessageCircle, UserPlus, CheckCircle2, Star, Menu, X, Home, Users, FolderGit2, Search, Bookmark, ChevronDown, EyeOff, Shield, AlertCircle, LayoutDashboard } from 'lucide-react';
 import { logout } from '../../store/authSlice';
 import { getNotifications, getUnreadCount, markAsRead, markAllAsRead } from '../../store/notificationSlice';
 import { profileApi } from '../../services/api/profileApi';
@@ -333,14 +333,24 @@ const Navbar = () => {
                       </Link>
 
                       {role === 'admin' && (
-                        <Link
-                          to="/admin/filters"
-                          onClick={() => setShowUserDropdown(false)}
-                          className="flex items-center gap-2.5 px-4 py-2 text-sm text-rose-600 dark:text-rose-400 hover:bg-rose-50/50 dark:hover:bg-rose-900/20 font-medium transition-colors"
-                        >
-                          <FolderGit2 size={16} className="text-rose-400 dark:text-rose-500" />
-                          <span>Quản lý Bộ Lọc</span>
-                        </Link>
+                        <>
+                          <Link
+                            to="/admin/dashboard"
+                            onClick={() => setShowUserDropdown(false)}
+                            className="flex items-center gap-2.5 px-4 py-2 text-sm text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium transition-colors"
+                          >
+                            <LayoutDashboard size={16} className="text-indigo-400 dark:text-indigo-500" />
+                            <span>Thống kê hệ thống</span>
+                          </Link>
+                          <Link
+                            to="/admin/filters"
+                            onClick={() => setShowUserDropdown(false)}
+                            className="flex items-center gap-2.5 px-4 py-2 text-sm text-rose-600 dark:text-rose-400 hover:bg-rose-50/50 dark:hover:bg-rose-900/20 font-medium transition-colors"
+                          >
+                            <FolderGit2 size={16} className="text-rose-400 dark:text-rose-500" />
+                            <span>Quản lý Bộ Lọc</span>
+                          </Link>
+                        </>
                       )}
 
                       <div className="border-t border-gray-100 dark:border-gray-800 my-1"></div>
@@ -496,14 +506,24 @@ const Navbar = () => {
                     Bài viết đã ẩn
                   </Link>
                   {role === 'admin' && (
-                    <Link 
-                      to="/admin/filters" 
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center gap-3 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 px-3 py-2.5 rounded-lg text-sm font-bold transition-colors"
-                    >
-                      <FolderGit2 size={18} className="text-rose-500 dark:text-rose-400" />
-                      Quản lý Bộ Lọc
-                    </Link>
+                    <>
+                      <Link 
+                        to="/admin/dashboard" 
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center gap-3 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 px-3 py-2.5 rounded-lg text-sm font-bold transition-colors"
+                      >
+                        <LayoutDashboard size={18} className="text-indigo-500 dark:text-indigo-400" />
+                        Thống kê hệ thống
+                      </Link>
+                      <Link 
+                        to="/admin/filters" 
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center gap-3 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 px-3 py-2.5 rounded-lg text-sm font-bold transition-colors"
+                      >
+                        <FolderGit2 size={18} className="text-rose-500 dark:text-rose-400" />
+                        Quản lý Bộ Lọc
+                      </Link>
+                    </>
                   )}
                   
                   <div className="pt-4 mt-4 border-t border-gray-100 dark:border-gray-800">

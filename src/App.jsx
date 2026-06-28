@@ -20,6 +20,7 @@ import Groups from "./pages/groups/Groups";
 import GroupDetail from "./pages/groups/GroupDetail";
 import SearchPage from "./pages/search/SearchPage";
 import WordFilterPage from "./pages/admin/WordFilterPage";
+import AdminDashboard from "./pages/admin/AdminDashboard";
 
 function App() {
   const location = useLocation();
@@ -52,6 +53,7 @@ function App() {
           <Route path="/saved-posts" element={<SavedPosts />} />
           <Route path="/hidden-posts" element={<HiddenPosts />} />
           <Route path="/notifications" element={<Notifications />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/filters" element={<WordFilterPage />} />
         </Route>
 
