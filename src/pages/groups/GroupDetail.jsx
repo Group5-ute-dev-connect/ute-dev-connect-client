@@ -9,7 +9,7 @@ import {
   Users, ArrowLeft, Loader2, MessageSquare, ThumbsUp, 
   Shield, Calendar, SendHorizontal, AlertCircle, LogOut, Lock,
   HelpCircle, MessageSquarePlus, Eye, Edit2, CheckCircle, Clock3,
-  Crown, Mail, UserCheck, UserX, X
+  Crown, Mail, UserCheck, UserX, X, Trash2, Plus, Search, ShieldAlert, Settings
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -144,6 +144,9 @@ const GroupDetail = () => {
   const [codeSnippet, setCodeSnippet] = useState('');
   const [codeLanguage, setCodeLanguage] = useState('javascript');
   const [isPreview, setIsPreview] = useState(false);
+  const [editingPostId, setEditingPostId] = useState(null);
+  const [editingPostText, setEditingPostText] = useState('');
+  const [selectedDetailPost, setSelectedDetailPost] = useState(null);
 
   // Tabs
   const [activeTab, setActiveTab] = useState('feed'); // 'feed' or 'pending' or 'join-requests' or 'members'
@@ -156,6 +159,11 @@ const GroupDetail = () => {
   const [joinSubmitting, setJoinSubmitting] = useState(false);
   const [hasLocalPendingJoinRequest, setHasLocalPendingJoinRequest] = useState(false);
   const [moderatorActionUserId, setModeratorActionUserId] = useState('');
+  const [groupBannedWords, setGroupBannedWords] = useState([]);
+  const [groupBannedWordsLoading, setGroupBannedWordsLoading] = useState(false);
+  const [newGroupWord, setNewGroupWord] = useState('');
+  const [groupWordSearch, setGroupWordSearch] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState({
     isOpen: false,
     type: '',
@@ -165,6 +173,9 @@ const GroupDetail = () => {
     confirmText: '',
   });
   const [confirmLoading, setConfirmLoading] = useState(false);
+  const [privacyType, setPrivacyType] = useState('private');
+  const [postModerationType, setPostModerationType] = useState('auto');
+  const [settingsLoading, setSettingsLoading] = useState(false);
 
   // Fetch Group Info & Feed
   const fetchGroupData = async ({ showPageLoader = true } = {}) => {
@@ -175,6 +186,10 @@ const GroupDetail = () => {
       const response = await groupApi.getGroupById(id);
       const groupData = response.data?.data || response.data || null;
       setGroup(groupData);
+      if (groupData) {
+        setPrivacyType(groupData.privacyType || 'private');
+        setPostModerationType(groupData.postModerationType || 'auto');
+      }
       
       const isMember = isUserMemberOfGroup(groupData, userId);
       const isAdmin = isUserGroupAdmin(groupData, userId);
@@ -191,13 +206,19 @@ const GroupDetail = () => {
       if (groupData && (isMember || isAdmin)) {
         await fetchFeed();
         
-        // If admin/mod, fetch pending posts count
+        // If admin/mod, fetch pending posts & join requests counts
         if (isAdmin || isMod) {
           try {
             const pendingResponse = await groupApi.getPendingPosts(id);
             setPendingPosts(extractArrayPayload(pendingResponse));
           } catch (e) {
             console.error('Lỗi khi lấy số lượng bài viết chờ duyệt:', e);
+          }
+          try {
+            const requestsResponse = await groupApi.getJoinRequests(id);
+            setJoinRequests(extractArrayPayload(requestsResponse));
+          } catch (e) {
+            console.error('Lỗi khi lấy số lượng yêu cầu tham gia:', e);
           }
         } else {
           setPendingPosts([]);
@@ -267,6 +288,57 @@ const GroupDetail = () => {
       toast.error(err.response?.data?.message || 'Không thể tải yêu cầu tham gia nhóm.');
     } finally {
       setJoinRequestsLoading(false);
+    }
+  };
+
+  const fetchGroupFilters = async () => {
+    try {
+      setGroupBannedWordsLoading(true);
+      const response = await groupApi.getGroupFilters(id);
+      setGroupBannedWords(response.data?.data || response.data || []);
+    } catch (err) {
+      console.error('Lỗi khi tải bộ lọc từ cấm của nhóm:', err);
+      toast.error(err.response?.data?.message || 'Không thể tải bộ lọc từ cấm của nhóm.');
+    } finally {
+      setGroupBannedWordsLoading(false);
+    }
+  };
+
+  const handleAddGroupWord = async (e) => {
+    e.preventDefault();
+    const cleanWord = newGroupWord.trim();
+    if (!cleanWord) return;
+
+    if (groupBannedWords.some(w => w.toLowerCase() === cleanWord.toLowerCase())) {
+      toast.warning('Từ cấm này đã tồn tại trong danh sách của nhóm.');
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      const res = await groupApi.addGroupFilter(id, cleanWord);
+      setGroupBannedWords(res.data?.data || res.data || []);
+      setNewGroupWord('');
+      toast.success(`Đã thêm từ cấm "${cleanWord}" thành công!`);
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || 'Lỗi khi thêm từ cấm.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeleteGroupWord = async (word) => {
+    setActionLoading(true);
+    try {
+      const res = await groupApi.deleteGroupFilter(id, word);
+      setGroupBannedWords(res.data?.data || res.data || []);
+      toast.success(`Đã xóa từ cấm "${word}" thành công!`);
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || 'Lỗi khi xóa từ cấm.');
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -454,18 +526,28 @@ const GroupDetail = () => {
     try {
       setJoinSubmitting(true);
       const response = await groupApi.requestJoinGroup(id);
-      if (response.success || response.data) {
-        setHasLocalPendingJoinRequest(true);
-        setGroup((prevGroup) => (
-          prevGroup
-            ? {
-                ...prevGroup,
-                hasPendingJoinRequest: true,
-                joinRequestStatus: 'pending',
-              }
-            : prevGroup
-        ));
-        toast.success('Đã gửi yêu cầu tham gia nhóm, vui lòng chờ duyệt');
+      const resPayload = response.data || response;
+      const resData = resPayload.data || resPayload;
+      if (resData) {
+        const joinStatus = resData.status || resPayload.status;
+        const joinMessage = resData.message || resPayload.message;
+
+        if (joinStatus === 'approved') {
+          toast.success(joinMessage || 'Tham gia nhóm thành công!');
+          fetchGroupData({ showPageLoader: false });
+        } else {
+          setHasLocalPendingJoinRequest(true);
+          setGroup((prevGroup) => (
+            prevGroup
+              ? {
+                  ...prevGroup,
+                  hasPendingJoinRequest: true,
+                  joinRequestStatus: 'pending',
+                }
+              : prevGroup
+          ));
+          toast.success(joinMessage || 'Đã gửi yêu cầu tham gia nhóm, vui lòng chờ duyệt');
+        }
       }
     } catch (err) {
       console.error('Lỗi gửi yêu cầu tham gia nhóm:', err);
@@ -502,7 +584,15 @@ const GroupDetail = () => {
         showCodeSnippet ? codeLanguage : 'javascript'
       );
       if (response.success || response.data) {
-        toast.success('Đăng bài thành công!');
+        const postData = response.data?.data || response.data || {};
+        const msg = response.data?.message || 'Đăng bài thành công!';
+        
+        if (postData.status === 'pending') {
+          toast.warning(msg, { autoClose: 6000 });
+        } else {
+          toast.success(msg);
+        }
+
         setNewPostText('');
         setCodeSnippet('');
         setShowCodeSnippet(false);
@@ -553,6 +643,63 @@ const GroupDetail = () => {
     }));
   };
 
+  const handleEditPostSubmit = async (postId, post) => {
+    const trimmedText = editingPostText.trim();
+    if (!trimmedText) return;
+    
+    setActionLoading(true);
+    try {
+      const response = await postApi.updatePost(
+        postId,
+        trimmedText,
+        post.isQuestion,
+        post.codeSnippet || '',
+        post.codeLanguage || 'javascript',
+        post.visibility
+      );
+      const updatedPost = response.data?.data || response.data;
+      
+      if (updatedPost.pendingEdit && updatedPost.pendingEdit.status === 'pending') {
+        toast.warning('Nội dung chỉnh sửa chứa từ khóa nhạy cảm và đang chờ Ban quản trị duyệt. Nội dung bài viết hiện tại tạm thời giữ nguyên.', { autoClose: 8000 });
+        setPosts((prevPosts) =>
+          prevPosts.map((p) => (p._id === postId ? { ...p, ...updatedPost } : p))
+        );
+      } else if (updatedPost.status === 'pending') {
+        toast.warning('Bài viết chứa từ khóa nhạy cảm và đã được chuyển sang chế độ chờ duyệt.', { autoClose: 6000 });
+        setPosts((prevPosts) => prevPosts.filter((p) => p._id !== postId));
+      } else {
+        toast.success('Cập nhật bài thảo luận thành công!');
+        setPosts((prevPosts) =>
+          prevPosts.map((p) => (p._id === postId ? { ...p, ...updatedPost } : p))
+        );
+      }
+      
+      setEditingPostId(null);
+      setEditingPostText('');
+    } catch (err) {
+      console.error('Lỗi khi cập nhật bài viết:', err);
+      toast.error(err.response?.data?.message || 'Không thể cập nhật bài thảo luận.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeletePost = async (postId) => {
+    if (window.confirm('Bạn có chắc chắn muốn xóa bài thảo luận này?')) {
+      setActionLoading(true);
+      try {
+        const response = await postApi.deletePost(postId);
+        toast.success(response.data?.message || 'Đã xóa bài thảo luận thành công!');
+        setPosts((prevPosts) => prevPosts.filter((p) => p._id !== postId));
+      } catch (err) {
+        console.error('Lỗi khi xóa bài viết:', err);
+        toast.error(err.response?.data?.message || 'Không thể xóa bài thảo luận.');
+      } finally {
+        setActionLoading(false);
+      }
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
@@ -589,7 +736,8 @@ const GroupDetail = () => {
   const joinRequestStatus = getJoinRequestStatus(group) || (hasLocalPendingJoinRequest ? 'pending' : '');
   const isJoinRequestPending = joinRequestStatus === 'pending';
   const effectiveActiveTab =
-    !canModerate && (activeTab === 'pending' || activeTab === 'join-requests')
+    (!canModerate && (activeTab === 'pending' || activeTab === 'join-requests' || activeTab === 'group-filters')) ||
+    (!isUserAdmin && activeTab === 'settings')
       ? 'feed'
       : activeTab;
   const members = Array.isArray(group.members) ? group.members : [];
@@ -613,7 +761,11 @@ const GroupDetail = () => {
     tabs.splice(1, 0,
       { id: 'pending', label: `Duyệt bài (${pendingPosts.length})` },
       { id: 'join-requests', label: `Yêu cầu tham gia (${joinRequests.length})` },
+      { id: 'group-filters', label: 'Bộ lọc từ cấm' }
     );
+    if (isUserAdmin) {
+      tabs.push({ id: 'settings', label: 'Cài đặt' });
+    }
   }
 
   const getMemberRoleMeta = (memberUser) => {
@@ -645,6 +797,56 @@ const GroupDetail = () => {
       label: 'Thành viên',
       badgeClassName: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-600',
     };
+  };
+
+  const handleKickMember = async (memberUser) => {
+    const memberId = getEntityId(memberUser);
+    const memberName = memberUser.name || 'Thành viên';
+    
+    if (window.confirm(`Bạn có chắc chắn muốn xóa thành viên "${memberName}" khỏi nhóm?`)) {
+      setActionLoading(true);
+      try {
+        const response = await groupApi.kickMember(id, memberId);
+        toast.success(response.data?.message || 'Đã xóa thành viên thành công.');
+        
+        // Cập nhật lại thông tin nhóm
+        setGroup(prevGroup => {
+          if (!prevGroup) return null;
+          return {
+            ...prevGroup,
+            members: prevGroup.members.filter(m => getEntityId(getMemberUser(m)) !== memberId)
+          };
+        });
+      } catch (err) {
+        console.error('Lỗi khi xóa thành viên:', err);
+        toast.error(err.response?.data?.message || 'Không thể xóa thành viên.');
+      } finally {
+        setActionLoading(false);
+      }
+    }
+  };
+
+  const handleSaveSettings = async (e) => {
+    e.preventDefault();
+    setSettingsLoading(true);
+    try {
+      const response = await groupApi.updateGroupSettings(id, {
+        privacyType,
+        postModerationType
+      });
+      toast.success(response.data?.message || 'Cập nhật cấu hình cài đặt nhóm thành công!');
+      const updatedGroup = response.data?.data || response.data;
+      if (updatedGroup) {
+        setGroup(updatedGroup);
+        setPrivacyType(updatedGroup.privacyType || 'private');
+        setPostModerationType(updatedGroup.postModerationType || 'auto');
+      }
+    } catch (err) {
+      console.error('Lỗi lưu cài đặt nhóm:', err);
+      toast.error(err.response?.data?.message || 'Không thể lưu cài đặt nhóm.');
+    } finally {
+      setSettingsLoading(false);
+    }
   };
 
   const renderMemberRow = (member, compact = false) => {
@@ -712,6 +914,16 @@ const GroupDetail = () => {
             >
               <Crown className="w-3 h-3 mr-1" />
               Chuyển quyền
+            </button>
+          )}
+
+          {isUserAdmin && !isMemberAdmin && (
+            <button
+              onClick={() => handleKickMember(memberUser)}
+              disabled={confirmLoading || actionLoading}
+              className={`${actionButtonClassName} text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 disabled:opacity-60 disabled:cursor-not-allowed rounded transition-colors font-bold inline-flex items-center`}
+            >
+              Xóa thành viên
             </button>
           )}
         </div>
@@ -824,6 +1036,9 @@ const GroupDetail = () => {
                   }
                   if (tab.id === 'join-requests') {
                     fetchJoinRequests();
+                  }
+                  if (tab.id === 'group-filters') {
+                    fetchGroupFilters();
                   }
                 }}
                 className={`flex-grow py-2.5 text-center text-sm font-semibold rounded-lg transition-all ${
@@ -1076,85 +1291,145 @@ const GroupDetail = () => {
                                 )}
 
                                 {/* Post Header */}
-                                <div className="p-5 flex items-center space-x-3 border-b border-gray-50">
-                                  <div className="h-10 w-10 bg-indigo-50 rounded-full flex items-center justify-center overflow-hidden">
-                                    <img 
-                                      src={post.avatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} 
-                                      alt={post.name} 
-                                      className="w-full h-full object-cover" 
-                                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
-                                    />
+                                <div className="p-5 flex items-center justify-between border-b border-gray-50 gap-4">
+                                  <div className="flex items-center space-x-3 min-w-0">
+                                    <div className="h-10 w-10 bg-indigo-50 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
+                                      <img 
+                                        src={post.avatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} 
+                                        alt={post.name} 
+                                        className="w-full h-full object-cover" 
+                                        onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
+                                      />
+                                    </div>
+                                    <div className="min-w-0">
+                                      <div className="flex items-center gap-1.5 flex-wrap">
+                                        <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{post.name || 'Thành viên'}</h4>
+                                        <RankBadge score={post.user?.reputation} className="px-1.5 py-0.5 text-3xs border font-bold rounded-full scale-90 origin-left" />
+                                        {post.user?.reputation !== undefined && (
+                                          <span className="inline-flex items-center px-1.5 py-0.2 rounded-full text-3xs font-bold bg-amber-50 text-amber-700 border border-amber-100 shadow-3xs" title="Điểm uy tín">
+                                            ★ {post.user.reputation}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center text-xs text-gray-400 mt-0.5">
+                                        <Calendar className="w-3.5 h-3.5 mr-1" />
+                                        <span>{postDate}</span>
+                                      </div>
+                                    </div>
                                   </div>
-                                  <div>
-                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                      <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100">{post.name || 'Thành viên'}</h4>
-                                      <RankBadge score={post.user?.reputation} className="px-1.5 py-0.5 text-3xs border font-bold rounded-full scale-90 origin-left" />
-                                      {post.user?.reputation !== undefined && (
-                                        <span className="inline-flex items-center px-1.5 py-0.2 rounded-full text-3xs font-bold bg-amber-50 text-amber-700 border border-amber-100 shadow-3xs" title="Điểm uy tín">
-                                          ★ {post.user.reputation}
-                                        </span>
-                                      )}
-                                    </div>
-                                    <div className="flex items-center text-xs text-gray-400 mt-0.5">
-                                      <Calendar className="w-3.5 h-3.5 mr-1" />
-                                      <span>{postDate}</span>
-                                    </div>
+
+                                  {/* Post Actions */}
+                                  <div className="flex items-center space-x-1 flex-shrink-0">
+                                    {userId && (post.user?._id || post.user || '').toString() === userId.toString() && editingPostId !== post._id && (
+                                      <button 
+                                        onClick={(e) => { 
+                                          e.preventDefault(); 
+                                          setEditingPostId(post._id); 
+                                          setEditingPostText(post.text); 
+                                        }} 
+                                        className="text-gray-400 hover:text-blue-500 p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors" 
+                                        title="Chỉnh sửa bài viết"
+                                      >
+                                        <Edit2 className="w-4 h-4" />
+                                      </button>
+                                    )}
+                                    {userId && (((post.user?._id || post.user || '').toString() === userId.toString()) || canModerate) && (
+                                      <button 
+                                        onClick={() => handleDeletePost(post._id)} 
+                                        className="text-gray-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors" 
+                                        title="Xóa bài viết"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                    )}
                                   </div>
                                 </div>
 
                                 {/* Post Body */}
                                 <div className="p-5 space-y-3">
-                                  <div className="flex flex-wrap gap-1.5 mb-1">
-                                    {post.isQuestion && (
-                                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-150">
-                                        <HelpCircle className="w-3.5 h-3.5 mr-1 text-indigo-600" /> Câu hỏi
-                                      </span>
-                                    )}
-                                    {post.isQuestion && post.acceptedAnswer && (
-                                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-green-50 text-green-700 border border-green-150">
-                                        <CheckCircle className="w-3.5 h-3.5 mr-1 text-green-600" /> Đã giải quyết
-                                      </span>
-                                    )}
-                                  </div>
-
-                                  <div className="text-gray-800 dark:text-gray-200 text-sm leading-relaxed prose prose-slate prose-sm max-w-none prose-p:my-1 prose-pre:my-2 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1">
-                                    <ReactMarkdown
-                                      remarkPlugins={[remarkGfm]}
-                                      components={{
-                                        code({ inline, className, children, ...props }) {
-                                          const match = /language-(\w+)/.exec(className || '')
-                                          return !inline && match ? (
-                                            <SyntaxHighlighter
-                                              {...props}
-                                              children={String(children).replace(/\n$/, '')}
-                                              style={vscDarkPlus}
-                                              language={match[1]}
-                                              PreTag="div"
-                                              className="rounded-md"
-                                            />
-                                          ) : (
-                                            <code {...props} className={`${className || ''} bg-gray-150 text-red-500 px-1 py-0.5 rounded text-xs font-mono`}>
-                                              {children}
-                                            </code>
-                                          )
-                                        }
-                                      }}
-                                    >
-                                      {post.text}
-                                    </ReactMarkdown>
-                                  </div>
-
-                                  {post.codeSnippet && (
-                                    <div className="mt-3 border-t border-gray-100 dark:border-gray-700 pt-3">
-                                      <span className="text-xs font-bold text-slate-500 block mb-1 uppercase tracking-wider">Mã nguồn ({post.codeLanguage || 'javascript'}):</span>
-                                      <SyntaxHighlighter
-                                        children={post.codeSnippet}
-                                        style={vscDarkPlus}
-                                        language={post.codeLanguage || 'javascript'}
-                                        PreTag="div"
-                                        className="rounded-lg shadow-sm overflow-hidden text-xs"
+                                  {editingPostId === post._id ? (
+                                    <div className="space-y-3">
+                                      <textarea
+                                        value={editingPostText}
+                                        onChange={(e) => setEditingPostText(e.target.value)}
+                                        className="w-full min-h-[120px] p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:text-gray-100"
+                                        placeholder="Nhập nội dung bài viết..."
                                       />
+                                      <div className="flex justify-end gap-2">
+                                        <button
+                                          onClick={() => setEditingPostId(null)}
+                                          className="px-3 py-1.5 bg-gray-150 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-350 rounded-lg text-xs font-semibold transition-colors"
+                                        >
+                                          Hủy
+                                        </button>
+                                        <button
+                                          onClick={() => handleEditPostSubmit(post._id, post)}
+                                          disabled={!editingPostText.trim()}
+                                          className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-lg text-xs font-semibold transition-colors"
+                                        >
+                                          Lưu thay đổi
+                                        </button>
+                                      </div>
                                     </div>
+                                  ) : (
+                                    <>
+                                      <div className="flex flex-wrap gap-1.5 mb-1">
+                                        {post.isQuestion && (
+                                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-150">
+                                            <HelpCircle className="w-3.5 h-3.5 mr-1 text-indigo-600" /> Câu hỏi
+                                          </span>
+                                        )}
+                                        {post.isQuestion && post.acceptedAnswer && (
+                                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-green-50 text-green-700 border border-green-150">
+                                            <CheckCircle className="w-3.5 h-3.5 mr-1 text-green-600" /> Đã giải quyết
+                                          </span>
+                                        )}
+                                      </div>
+
+                                      <div 
+                                        onClick={() => setSelectedDetailPost(post)}
+                                        className="text-gray-800 dark:text-gray-200 text-sm leading-relaxed prose prose-slate prose-sm max-w-none prose-p:my-1 prose-pre:my-2 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1 cursor-pointer hover:bg-slate-50/30 dark:hover:bg-slate-700/20 p-2.5 -mx-2.5 rounded-2xl transition-all duration-200"
+                                        title="Nhấp để xem chi tiết bài thảo luận"
+                                      >
+                                        <ReactMarkdown
+                                          remarkPlugins={[remarkGfm]}
+                                          components={{
+                                            code({ inline, className, children, ...props }) {
+                                              const match = /language-(\w+)/.exec(className || '')
+                                              return !inline && match ? (
+                                                <SyntaxHighlighter
+                                                  {...props}
+                                                  children={String(children).replace(/\n$/, '')}
+                                                  style={vscDarkPlus}
+                                                  language={match[1]}
+                                                  PreTag="div"
+                                                  className="rounded-md"
+                                                />
+                                              ) : (
+                                                <code {...props} className={`${className || ''} bg-gray-150 text-red-500 px-1 py-0.5 rounded text-xs font-mono`}>
+                                                  {children}
+                                                </code>
+                                              )
+                                            }
+                                          }}
+                                        >
+                                          {post.text}
+                                        </ReactMarkdown>
+                                      </div>
+
+                                      {post.codeSnippet && (
+                                        <div className="mt-3 border-t border-gray-100 dark:border-gray-700 pt-3">
+                                          <span className="text-xs font-bold text-slate-500 block mb-1 uppercase tracking-wider">Mã nguồn ({post.codeLanguage || 'javascript'}):</span>
+                                          <SyntaxHighlighter
+                                            children={post.codeSnippet}
+                                            style={vscDarkPlus}
+                                            language={post.codeLanguage || 'javascript'}
+                                            PreTag="div"
+                                            className="rounded-lg shadow-sm overflow-hidden text-xs"
+                                          />
+                                        </div>
+                                      )}
+                                    </>
                                   )}
                                 </div>
 
@@ -1448,6 +1723,206 @@ const GroupDetail = () => {
                     </div>
                   )}
 
+                  {/* TAB 3.5: GROUP FILTERS */}
+                  {effectiveActiveTab === 'group-filters' && canModerate && (
+                    <div className="space-y-4 animate-fade-in">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-extrabold text-gray-800 dark:text-gray-200 uppercase tracking-wider">
+                          Bộ lọc từ cấm của nhóm
+                        </h3>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          {groupBannedWords.length} từ cấm
+                        </span>
+                      </div>
+
+                      {/* Add Word Form */}
+                      <form onSubmit={handleAddGroupWord} className="flex gap-2">
+                        <div className="relative flex-grow">
+                          <input
+                            type="text"
+                            placeholder="Nhập từ cấm mới (ví dụ: hack, toxic...)"
+                            value={newGroupWord}
+                            onChange={(e) => setNewGroupWord(e.target.value)}
+                            disabled={actionLoading}
+                            className="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:text-gray-100"
+                          />
+                        </div>
+                        <button
+                          type="submit"
+                          disabled={actionLoading || !newGroupWord.trim()}
+                          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-xl text-sm font-semibold flex items-center gap-1.5 transition-colors"
+                        >
+                          {actionLoading ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Plus className="w-4 h-4" />
+                          )}
+                          <span>Thêm</span>
+                        </button>
+                      </form>
+
+                      {/* Search & Word List */}
+                      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 space-y-4">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                          <input
+                            type="text"
+                            placeholder="Tìm kiếm từ cấm trong nhóm..."
+                            value={groupWordSearch}
+                            onChange={(e) => setGroupWordSearch(e.target.value)}
+                            className="pl-9 w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:text-gray-100"
+                          />
+                        </div>
+
+                        {groupBannedWordsLoading ? (
+                          <div className="text-center py-10">
+                            <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mx-auto mb-2" />
+                            <span className="text-sm text-gray-500 dark:text-gray-400">Đang tải bộ lọc từ cấm...</span>
+                          </div>
+                        ) : groupBannedWords.length === 0 ? (
+                          <div className="text-center py-10 text-gray-500 dark:text-gray-400 flex flex-col items-center">
+                            <ShieldAlert className="w-8 h-8 text-gray-300 dark:text-gray-600 mb-2" />
+                            <p className="text-sm font-medium">Chưa cấu hình từ cấm nào cho nhóm này.</p>
+                            <p className="text-xs text-gray-400 mt-1">Các bài viết và bình luận trong nhóm chỉ chịu sự kiểm duyệt của bộ lọc từ cấm hệ thống.</p>
+                          </div>
+                        ) : (
+                          <div className="flex flex-wrap gap-2 max-h-[300px] overflow-y-auto pr-1">
+                            {groupBannedWords
+                              .filter(word => word.toLowerCase().includes(groupWordSearch.toLowerCase()))
+                              .map((word, idx) => (
+                                <div
+                                  key={idx}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/50 rounded-xl text-sm font-semibold text-red-700 dark:text-red-400 animate-fade-in"
+                                >
+                                  <span>{word}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteGroupWord(word)}
+                                    disabled={actionLoading}
+                                    className="p-0.5 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-full transition-colors text-red-500"
+                                    title="Xóa từ cấm"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* TAB 3.75: GROUP SETTINGS */}
+                  {effectiveActiveTab === 'settings' && isUserAdmin && (
+                    <div className="space-y-6 animate-fade-in">
+                      <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-4">
+                        <div>
+                          <h3 className="text-base font-extrabold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                            <Settings className="w-5 h-5 text-indigo-500" />
+                            Cài đặt nhóm học tập
+                          </h3>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Cấu hình chế độ tham gia và phê duyệt bài thảo luận của nhóm.</p>
+                        </div>
+                      </div>
+
+                      <form onSubmit={handleSaveSettings} className="space-y-6">
+                        
+                        {/* Privacy Selection */}
+                        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-6 space-y-4 shadow-3xs">
+                          <label className="text-sm font-bold text-gray-800 dark:text-gray-200 block">
+                            Chế độ tham gia nhóm (Privacy)
+                          </label>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            
+                            <label className={`flex items-start gap-3 p-4 rounded-2xl border-2 transition-all cursor-pointer ${privacyType === 'public' ? 'border-indigo-500 bg-indigo-50/20 dark:bg-indigo-950/20' : 'border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600'}`}>
+                              <input
+                                type="radio"
+                                name="privacyType"
+                                value="public"
+                                checked={privacyType === 'public'}
+                                onChange={() => setPrivacyType('public')}
+                                className="mt-1 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                              />
+                              <div>
+                                <span className="text-sm font-bold text-gray-900 dark:text-gray-100 block">Nhóm cộng đồng (Công khai)</span>
+                                <span className="text-xs text-gray-500 dark:text-gray-400 block mt-0.5">Mọi người dùng đều có thể tự do tham gia nhóm ngay lập tức mà không cần phê duyệt từ quản trị viên.</span>
+                              </div>
+                            </label>
+
+                            <label className={`flex items-start gap-3 p-4 rounded-2xl border-2 transition-all cursor-pointer ${privacyType === 'private' ? 'border-indigo-500 bg-indigo-50/20 dark:bg-indigo-950/20' : 'border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600'}`}>
+                              <input
+                                type="radio"
+                                name="privacyType"
+                                value="private"
+                                checked={privacyType === 'private'}
+                                onChange={() => setPrivacyType('private')}
+                                className="mt-1 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                              />
+                              <div>
+                                <span className="text-sm font-bold text-gray-900 dark:text-gray-100 block">Nhóm riêng tư</span>
+                                <span className="text-xs text-gray-500 dark:text-gray-400 block mt-0.5">Yêu cầu người dùng gửi đơn tham gia. Admin hoặc Kiểm duyệt viên cần phê duyệt thủ công trước khi vào nhóm.</span>
+                              </div>
+                            </label>
+
+                          </div>
+                        </div>
+
+                        {/* Post Moderation Selection */}
+                        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-6 space-y-4 shadow-3xs">
+                          <label className="text-sm font-bold text-gray-800 dark:text-gray-200 block">
+                            Chế độ phê duyệt bài thảo luận (Moderation)
+                          </label>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            
+                            <label className={`flex items-start gap-3 p-4 rounded-2xl border-2 transition-all cursor-pointer ${postModerationType === 'auto' ? 'border-indigo-500 bg-indigo-50/20 dark:bg-indigo-950/20' : 'border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600'}`}>
+                              <input
+                                type="radio"
+                                name="postModerationType"
+                                value="auto"
+                                checked={postModerationType === 'auto'}
+                                onChange={() => setPostModerationType('auto')}
+                                className="mt-1 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                              />
+                              <div>
+                                <span className="text-sm font-bold text-gray-900 dark:text-gray-100 block">Tự động duyệt bài viết</span>
+                                <span className="text-xs text-gray-500 dark:text-gray-400 block mt-0.5">Bài viết được đăng trực tiếp. Chỉ chuyển sang hàng chờ duyệt nếu bài đăng chứa từ cấm trong bộ lọc từ khóa của nhóm/hệ thống.</span>
+                              </div>
+                            </label>
+
+                            <label className={`flex items-start gap-3 p-4 rounded-2xl border-2 transition-all cursor-pointer ${postModerationType === 'manual' ? 'border-indigo-500 bg-indigo-50/20 dark:bg-indigo-950/20' : 'border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600'}`}>
+                              <input
+                                type="radio"
+                                name="postModerationType"
+                                value="manual"
+                                checked={postModerationType === 'manual'}
+                                onChange={() => setPostModerationType('manual')}
+                                className="mt-1 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                              />
+                              <div>
+                                <span className="text-sm font-bold text-gray-900 dark:text-gray-100 block">Kiểm duyệt tất cả bài viết</span>
+                                <span className="text-xs text-gray-500 dark:text-gray-400 block mt-0.5">Mọi bài đăng của thành viên bình thường bắt buộc phải được Admin/Mod phê duyệt thủ công trước khi xuất hiện trên bảng tin.</span>
+                              </div>
+                            </label>
+
+                          </div>
+                        </div>
+
+                        {/* Save Button */}
+                        <div className="flex justify-end">
+                          <button
+                            type="submit"
+                            disabled={settingsLoading}
+                            className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition-colors disabled:bg-indigo-400 flex items-center gap-2 shadow-sm"
+                          >
+                            {settingsLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                            Lưu cấu hình cài đặt
+                          </button>
+                        </div>
+
+                      </form>
+                    </div>
+                  )}
+
                   {/* TAB 4: MEMBERS DETAILED VIEW */}
                   {effectiveActiveTab === 'members' && (
                     <div className="space-y-4 block md:hidden">
@@ -1522,6 +1997,101 @@ const GroupDetail = () => {
                 {confirmLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 {confirmDialog.confirmText}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selectedDetailPost && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-150 dark:border-gray-700 shadow-2xl max-w-3xl w-full max-h-[85vh] overflow-y-auto flex flex-col">
+            {/* Modal Header */}
+            <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between sticky top-0 bg-white dark:bg-gray-800 z-10">
+              <div className="flex items-center space-x-3">
+                <div className="h-10 w-10 bg-indigo-50 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <img 
+                    src={selectedDetailPost.avatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} 
+                    alt={selectedDetailPost.name} 
+                    className="w-full h-full object-cover" 
+                  />
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100">{selectedDetailPost.name || 'Thành viên'}</h4>
+                    <RankBadge score={selectedDetailPost.user?.reputation} className="px-1.5 py-0.5 text-3xs border font-bold rounded-full scale-90 origin-left" />
+                  </div>
+                  <p className="text-xs text-gray-400">Chi tiết bài thảo luận trong nhóm</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setSelectedDetailPost(null)}
+                className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-500 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-6 flex-grow">
+              {/* Post Markdown Text */}
+              <div className="text-gray-800 dark:text-gray-200 text-sm leading-relaxed prose prose-slate prose-sm max-w-none">
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    code({ inline, className, children, ...props }) {
+                      const match = /language-(\w+)/.exec(className || '')
+                      return !inline && match ? (
+                        <SyntaxHighlighter
+                          {...props}
+                          children={String(children).replace(/\n$/, '')}
+                          style={vscDarkPlus}
+                          language={match[1]}
+                          PreTag="div"
+                          className="rounded-md"
+                        />
+                      ) : (
+                        <code {...props} className={`${className || ''} bg-gray-150 text-red-500 px-1 py-0.5 rounded text-xs font-mono`}>
+                          {children}
+                        </code>
+                      )
+                    }
+                  }}
+                >
+                  {selectedDetailPost.text}
+                </ReactMarkdown>
+              </div>
+
+              {/* Code Snippet */}
+              {selectedDetailPost.codeSnippet && (
+                <div className="mt-3 border-t border-gray-150 dark:border-gray-700 pt-3">
+                  <span className="text-xs font-bold text-slate-500 block mb-1 uppercase tracking-wider">Mã nguồn ({selectedDetailPost.codeLanguage || 'javascript'}):</span>
+                  <SyntaxHighlighter
+                    children={selectedDetailPost.codeSnippet}
+                    style={vscDarkPlus}
+                    language={selectedDetailPost.codeLanguage || 'javascript'}
+                    PreTag="div"
+                    className="rounded-lg shadow-sm overflow-hidden text-xs"
+                  />
+                </div>
+              )}
+
+              {/* Comments Section inside Modal */}
+              <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
+                <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-4">Bình luận ({selectedDetailPost.comments?.length || 0})</h4>
+                <CommentSection
+                  postId={selectedDetailPost._id}
+                  post={selectedDetailPost}
+                  comments={selectedDetailPost.comments || []}
+                  onCommentsChange={(nextComments) => {
+                    setSelectedDetailPost(prev => prev ? { ...prev, comments: nextComments } : null);
+                    setPosts((prevPosts) =>
+                      prevPosts.map((p) =>
+                        p._id === selectedDetailPost._id ? { ...p, comments: nextComments } : p
+                      )
+                    );
+                  }}
+                />
+              </div>
             </div>
           </div>
         </div>

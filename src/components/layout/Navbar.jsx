@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { User, LogOut, Bell, Heart, MessageCircle, UserPlus, CheckCircle2, Star, Menu, X, Home, Users, FolderGit2, Search, Bookmark, ChevronDown, EyeOff } from 'lucide-react';
+import { User, LogOut, Bell, Heart, MessageCircle, UserPlus, CheckCircle2, Star, Menu, X, Home, Users, FolderGit2, Search, Bookmark, ChevronDown, EyeOff, Shield, AlertCircle } from 'lucide-react';
 import { logout } from '../../store/authSlice';
 import { getNotifications, getUnreadCount, markAsRead, markAllAsRead } from '../../store/notificationSlice';
 import { profileApi } from '../../services/api/profileApi';
@@ -82,10 +82,18 @@ const Navbar = () => {
     setShowNotifications(false);
     
     // Navigate based on type
-    if (notification.type === 'like' || notification.type === 'comment') {
-      navigate(`/post/${notification.post}`);
+    if (notification.type === 'like' || notification.type === 'comment' || notification.type === 'post_approved') {
+      const postId = notification.post?._id || notification.post;
+      if (postId) navigate(`/post/${postId}`);
     } else if (notification.type === 'follow') {
-      navigate(`/profile/${notification.sender._id}`);
+      navigate(`/profile/${notification.sender?._id || notification.sender}`);
+    } else if (notification.type === 'post_pending') {
+      const groupId = notification.post?.group;
+      if (groupId) {
+        navigate(`/groups/${groupId}`);
+      } else {
+        navigate('/groups');
+      }
     }
   };
 
@@ -94,6 +102,9 @@ const Navbar = () => {
       case 'like': return <Heart className="w-4 h-4 text-red-500 fill-red-500" />;
       case 'comment': return <MessageCircle className="w-4 h-4 text-blue-500 fill-blue-500" />;
       case 'follow': return <UserPlus className="w-4 h-4 text-green-500" />;
+      case 'post_pending': return <Shield className="w-4 h-4 text-yellow-500" />;
+      case 'post_approved': return <CheckCircle2 className="w-4 h-4 text-green-500" />;
+      case 'post_rejected': return <AlertCircle className="w-4 h-4 text-red-500" />;
       default: return <Bell className="w-4 h-4 text-gray-500" />;
     }
   };
@@ -104,6 +115,9 @@ const Navbar = () => {
       case 'like': return <><span className="font-semibold">{name}</span> đã thích bài viết của bạn.</>;
       case 'comment': return <><span className="font-semibold">{name}</span> đã bình luận về bài viết của bạn.</>;
       case 'follow': return <><span className="font-semibold">{name}</span> đã bắt đầu theo dõi bạn.</>;
+      case 'post_pending': return <><span className="font-semibold">{name}</span> đã đăng một bài viết cần duyệt trong nhóm học tập.</>;
+      case 'post_approved': return <><span className="font-semibold">{name}</span> đã phê duyệt bài viết của bạn.</>;
+      case 'post_rejected': return <><span className="font-semibold">{name}</span> đã từ chối bài viết của bạn vì vi phạm tiêu chuẩn.</>;
       default: return 'Bạn có thông báo mới';
     }
   };

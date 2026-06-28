@@ -8,6 +8,7 @@ import {
 import { 
   getConversations, getMessages, setActiveConversation, addMessage, markMessagesAsRead 
 } from '../../store/chatSlice';
+import { addNotification } from '../../store/notificationSlice';
 import axiosClient from '../../services/api/axiosClient';
 import { toast } from 'react-toastify';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -121,6 +122,55 @@ const ChatWidget = () => {
       dispatch(markMessagesAsRead({ conversationId, userId }));
     });
 
+    socket.on('new_notification', (notification) => {
+      dispatch(addNotification(notification));
+      
+      const getNotifText = (notif) => {
+        const name = notif.sender?.name || 'Ai đó';
+        switch (notif.type) {
+          case 'like': return `${name} đã thích bài viết của bạn.`;
+          case 'comment': return `${name} đã bình luận về bài viết của bạn.`;
+          case 'follow': return `${name} đã bắt đầu theo dõi bạn.`;
+          case 'post_pending': return `${name} đã đăng một bài viết cần duyệt trong nhóm học tập.`;
+          case 'post_approved': return `${name} đã phê duyệt bài viết của bạn.`;
+          case 'post_rejected': return `${name} đã từ chối bài viết của bạn vì vi phạm tiêu chuẩn.`;
+          default: return 'Bạn có thông báo mới';
+        }
+      };
+
+      const msg = getNotifText(notification);
+
+      if (notification.type === 'post_pending') {
+        toast.warn(msg, {
+          position: "top-right",
+          autoClose: 7000,
+          closeOnClick: true,
+          pauseOnHover: true,
+        });
+      } else if (notification.type === 'post_approved') {
+        toast.success(msg, {
+          position: "top-right",
+          autoClose: 5000,
+          closeOnClick: true,
+          pauseOnHover: true,
+        });
+      } else if (notification.type === 'post_rejected') {
+        toast.error(msg, {
+          position: "top-right",
+          autoClose: 5000,
+          closeOnClick: true,
+          pauseOnHover: true,
+        });
+      } else {
+        toast.info(msg, {
+          position: "top-right",
+          autoClose: 5000,
+          closeOnClick: true,
+          pauseOnHover: true,
+        });
+      }
+    });
+
     return () => {
       socket.off('receive_message');
       socket.off('get-online-users');
@@ -129,6 +179,7 @@ const ChatWidget = () => {
       socket.off('typing');
       socket.off('stop-typing');
       socket.off('messages-read');
+      socket.off('new_notification');
     };
   }, [token, currentUserId, activeConversationId, isOpen, dispatch]);
 

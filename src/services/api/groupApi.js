@@ -93,6 +93,31 @@ export const groupApi = {
   // Từ chối và xóa bài viết (chỉ Admin / Mod nhóm)
   rejectPost: (groupId, postId) => {
     return axiosClient.put(`/groups/${groupId}/posts/${postId}/status`, { status: 'rejected' });
+  },
+
+  // Lấy bộ lọc từ cấm của nhóm
+  getGroupFilters: (groupId) => {
+    return axiosClient.get(`/groups/${groupId}/filters`);
+  },
+
+  // Thêm từ cấm vào nhóm
+  addGroupFilter: (groupId, word) => {
+    return axiosClient.post(`/groups/${groupId}/filters`, { word });
+  },
+
+  // Xóa từ cấm khỏi nhóm
+  deleteGroupFilter: (groupId, word) => {
+    return axiosClient.delete(`/groups/${groupId}/filters/${encodeURIComponent(word)}`);
+  },
+
+  // Xóa thành viên khỏi nhóm (chỉ Admin nhóm)
+  kickMember: (groupId, userId) => {
+    return axiosClient.delete(`/groups/${groupId}/members/${userId}`);
+  },
+
+  // Cập nhật cấu hình cài đặt nhóm (chỉ Admin nhóm)
+  updateGroupSettings: (groupId, settings) => {
+    return axiosClient.put(`/groups/${groupId}/settings`, settings);
   }
 };
 
