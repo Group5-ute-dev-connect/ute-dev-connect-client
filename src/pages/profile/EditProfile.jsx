@@ -141,7 +141,7 @@ const EditProfile = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 relative overflow-hidden pb-12 font-sans">
+    <div className="min-h-screen bg-slate-50 dark:bg-gray-900 relative overflow-hidden pb-12 font-sans">
       {/* Background Decorations */}
       <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-br from-blue-600 via-indigo-700 to-purple-800 transform -skew-y-3 origin-top-left z-0 shadow-2xl"></div>
       
@@ -160,12 +160,12 @@ const EditProfile = () => {
         <form onSubmit={handleSubmit} className="space-y-8 relative z-10">
           
           {/* Section 1: Thông tin cơ bản */}
-          <div className="bg-white/95 backdrop-blur-xl shadow-xl rounded-2xl p-8 border border-white/50 transition-all hover:shadow-2xl hover:-translate-y-1 duration-300">
-            <div className="flex items-center space-x-3 mb-6 border-b border-gray-100 pb-4">
-              <div className="bg-blue-100 p-2.5 rounded-xl text-blue-600 shadow-sm">
+          <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl shadow-xl rounded-2xl p-8 border border-white/50 dark:border-gray-700/50 transition-all hover:shadow-2xl hover:-translate-y-1 duration-300">
+            <div className="flex items-center space-x-3 mb-6 border-b border-gray-100 dark:border-gray-700 pb-4">
+              <div className="bg-blue-100 dark:bg-blue-900/30 p-2.5 rounded-xl text-blue-600 dark:text-blue-400 shadow-sm">
                 <User size={24} />
               </div>
-              <h2 className="text-2xl font-bold text-gray-800 tracking-tight">Thông tin cơ bản</h2>
+              <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 tracking-tight">Thông tin cơ bản</h2>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -223,12 +223,12 @@ const EditProfile = () => {
           </div>
 
           {/* Section 2: Kỹ năng & Giới thiệu */}
-          <div className="bg-white/95 backdrop-blur-xl shadow-xl rounded-2xl p-8 border border-white/50 transition-all hover:shadow-2xl hover:-translate-y-1 duration-300">
-            <div className="flex items-center space-x-3 mb-6 border-b border-gray-100 pb-4">
-              <div className="bg-purple-100 p-2.5 rounded-xl text-purple-600 shadow-sm">
+          <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl shadow-xl rounded-2xl p-8 border border-white/50 dark:border-gray-700/50 transition-all hover:shadow-2xl hover:-translate-y-1 duration-300">
+            <div className="flex items-center space-x-3 mb-6 border-b border-gray-100 dark:border-gray-700 pb-4">
+              <div className="bg-purple-100 dark:bg-purple-900/30 p-2.5 rounded-xl text-purple-600 dark:text-purple-400 shadow-sm">
                 <Code size={24} />
               </div>
-              <h2 className="text-2xl font-bold text-gray-800 tracking-tight">Kỹ năng & Giới thiệu</h2>
+              <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 tracking-tight">Kỹ năng & Giới thiệu</h2>
             </div>
             
             <div className="space-y-6">
@@ -243,8 +243,8 @@ const EditProfile = () => {
                   icon={Code}
                   required
                 />
-                <p className="text-sm text-gray-500 mt-1 ml-1 flex items-center">
-                  <span className="inline-block w-1.5 h-1.5 bg-gray-400 rounded-full mr-2"></span>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 ml-1 flex items-center">
+                  <span className="inline-block w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full mr-2"></span>
                   Sử dụng dấu phẩy để phân cách các kỹ năng
                 </p>
               </div>
@@ -271,12 +271,12 @@ const EditProfile = () => {
           </div>
 
           {/* Section 3: Mạng xã hội */}
-          <div className="bg-white/95 backdrop-blur-xl shadow-xl rounded-2xl p-8 border border-white/50 transition-all hover:shadow-2xl hover:-translate-y-1 duration-300">
-            <div className="flex items-center space-x-3 mb-6 border-b border-gray-100 pb-4">
-              <div className="bg-pink-100 p-2.5 rounded-xl text-pink-600 shadow-sm">
+          <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl shadow-xl rounded-2xl p-8 border border-white/50 dark:border-gray-700/50 transition-all hover:shadow-2xl hover:-translate-y-1 duration-300">
+            <div className="flex items-center space-x-3 mb-6 border-b border-gray-100 dark:border-gray-700 pb-4">
+              <div className="bg-pink-100 dark:bg-pink-900/30 p-2.5 rounded-xl text-pink-600 dark:text-pink-400 shadow-sm">
                 <Globe size={24} />
               </div>
-              <h2 className="text-2xl font-bold text-gray-800 tracking-tight">Liên kết mạng xã hội</h2>
+              <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 tracking-tight">Liên kết mạng xã hội</h2>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

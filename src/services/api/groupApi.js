@@ -37,8 +37,8 @@ export const groupApi = {
   },
 
   // Lấy bảng tin (feed) của nhóm
-  getGroupFeed: (id) => {
-    return axiosClient.get(`/groups/${id}/feed`);
+  getGroupFeed: (id, page = 1, limit = 10) => {
+    return axiosClient.get(`/groups/${id}/feed?page=${page}&limit=${limit}`);
   },
 
   // Đăng bài viết mới trong nhóm
