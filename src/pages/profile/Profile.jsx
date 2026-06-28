@@ -9,7 +9,8 @@ import Avatar from '../../components/common/Avatar';
 import ReputationBadge from '../../components/common/ReputationBadge';
 import FollowModal from '../../components/profile/FollowModal';
 import RankBadge from '../../components/common/RankBadge';
-import { MapPin, Briefcase, GraduationCap, Globe, Code, Video, MessageCircle, Users, Camera, Link as LinkIcon, MessageSquare, User, UserPlus, UserMinus, X } from 'lucide-react';
+import Navbar from '../../components/layout/Navbar';
+import { MapPin, Briefcase, GraduationCap, Globe, Code, Video, MessageCircle, Users, Camera, Link as LinkIcon, MessageSquare, User, UserPlus, UserMinus, X, ArrowLeft } from 'lucide-react';
 
 // Helper to decode token
 const parseJwt = (token) => {
@@ -170,20 +171,26 @@ const Profile = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col justify-between transition-colors duration-200">
+        <Navbar />
+        <div className="flex-grow flex justify-center items-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        </div>
       </div>
     );
   }
 
   if (error || !profile) {
     return (
-      <div className="max-w-4xl mx-auto py-20 px-4 text-center">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">404 Not Found</h1>
-        <p className="text-xl text-gray-600 mb-8">{error || 'Hồ sơ không tồn tại.'}</p>
-        <Link to="/profiles" className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition">
-          Trở về trang Khám phá
-        </Link>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col transition-colors duration-200">
+        <Navbar />
+        <div className="flex-grow max-w-4xl mx-auto py-20 px-4 text-center">
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">404 Not Found</h1>
+          <p className="text-xl text-gray-600 dark:text-gray-400 mb-8">{error || 'Hồ sơ không tồn tại.'}</p>
+          <Link to="/profiles" className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition">
+            Trở về trang Khám phá
+          </Link>
+        </div>
       </div>
     );
   }
@@ -191,8 +198,20 @@ const Profile = () => {
   const { user, status, company, location, website, social, bio, skills, faculty, classCode } = profile;
 
   return (
-    <>
-      <div className="max-w-4xl mx-auto pb-20 animate-fade-in">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col transition-colors duration-200">
+      <Navbar />
+      
+      <main className="flex-grow py-8 px-4">
+        <div className="max-w-4xl mx-auto pb-20 animate-fade-in">
+          {/* Back Button */}
+          <div className="mb-6 flex items-center">
+            <button 
+              onClick={() => navigate(-1)} 
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700/60 rounded-xl shadow-sm hover:shadow transition-all"
+            >
+              <ArrowLeft size={16} /> Quay lại
+            </button>
+          </div>
         {/* Cover Image & Basic Info Header */}
         <div className="bg-white dark:bg-gray-800 shadow-md rounded-2xl overflow-hidden mb-8">
           {/* Cover Image Placeholder */}
@@ -413,7 +432,8 @@ const Profile = () => {
           </div>
         </div>
       )}
-    </>
+      </main>
+    </div>
   );
 };
 
