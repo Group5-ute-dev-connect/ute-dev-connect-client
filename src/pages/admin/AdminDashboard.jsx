@@ -285,6 +285,7 @@ const AdminDashboard = () => {
   const summary = stats?.summary || {};
   const growth = stats?.growth || {};
   const leaderboards = stats?.leaderboards || {};
+  const advanced = stats?.advanced || {};
 
   // Choose the growth data based on selected metric tab
   const getSelectedGrowthData = () => {
@@ -519,6 +520,134 @@ const AdminDashboard = () => {
                 </div>
 
                 {renderSvgChart(getSelectedGrowthData())}
+              </div>
+
+              {/* Advanced Statistics Section */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                {/* Faculty Demographics & Q&A Stats */}
+                <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700/60 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
+                  <div>
+                    <h3 className="text-base font-extrabold text-gray-800 dark:text-white border-b border-gray-100 dark:border-gray-700 pb-3 mb-5 flex items-center gap-2">
+                      <Users className="text-blue-500" size={18} />
+                      Phân Bố Sinh Viên & Q&A
+                    </h3>
+
+                    {/* Q&A Small Stats Banner */}
+                    {advanced.qaStats && (
+                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-indigo-950/20 dark:to-blue-950/20 border border-blue-100 dark:border-indigo-900/30 p-4 rounded-2xl mb-6">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-xs font-bold text-indigo-800 dark:text-indigo-300">Tỉ lệ hỗ trợ học tập (Q&A)</span>
+                          <span className="text-xs font-black text-indigo-900 dark:text-indigo-200">
+                            {advanced.qaStats.totalQuestions > 0 
+                              ? Math.round((advanced.qaStats.solvedQuestions / advanced.qaStats.totalQuestions) * 100)
+                              : 0}% Đã Giải Quyết
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 h-2 rounded-full overflow-hidden">
+                          <div 
+                            className="bg-indigo-600 dark:bg-indigo-400 h-full rounded-full transition-all duration-300"
+                            style={{ width: `${advanced.qaStats.totalQuestions > 0 ? (advanced.qaStats.solvedQuestions / advanced.qaStats.totalQuestions) * 100 : 0}%` }}
+                          />
+                        </div>
+                        <div className="flex justify-between items-center text-[10px] text-gray-400 dark:text-gray-500 mt-2 font-medium">
+                          <span>Tổng số câu hỏi: {advanced.qaStats.totalQuestions}</span>
+                          <span>Đã có câu trả lời chuẩn: {advanced.qaStats.solvedQuestions}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Faculty list */}
+                    <div className="space-y-4 max-h-[220px] overflow-y-auto pr-1">
+                      <span className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider block mb-2 block">Sinh viên theo Khoa</span>
+                      {advanced.facultyDistribution?.map((fac, idx) => {
+                        const totalProfiles = advanced.facultyDistribution.reduce((acc, f) => acc + f.count, 0) || 1;
+                        const percentage = Math.round((fac.count / totalProfiles) * 100);
+                        const colors = ['bg-blue-500', 'bg-indigo-500', 'bg-purple-500', 'bg-pink-500', 'bg-teal-500', 'bg-amber-500'];
+                        const barColor = colors[idx % colors.length];
+
+                        return (
+                          <div key={fac._id} className="space-y-1.5">
+                            <div className="flex justify-between items-center text-xs font-bold text-gray-700 dark:text-gray-300">
+                              <span className="line-clamp-1 pr-4">{fac._id}</span>
+                              <span className="text-gray-400 dark:text-gray-500 font-medium flex-shrink-0">{fac.count} SV ({percentage}%)</span>
+                            </div>
+                            <div className="w-full bg-gray-100 dark:bg-gray-700 h-2 rounded-full overflow-hidden">
+                              <div 
+                                className={`${barColor} h-full rounded-full transition-all duration-300`}
+                                style={{ width: `${percentage}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {!advanced.facultyDistribution?.length && (
+                        <p className="text-xs text-gray-400 text-center py-10">Chưa có dữ liệu Khoa sinh viên</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Developer Trends (Programming Languages & Skills) */}
+                <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700/60 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
+                  <div>
+                    <h3 className="text-base font-extrabold text-gray-800 dark:text-white border-b border-gray-100 dark:border-gray-700 pb-3 mb-5 flex items-center gap-2">
+                      <TrendingUp className="text-purple-500" size={18} />
+                      Xu Hướng Lập Trình (Developer Trends)
+                    </h3>
+
+                    {/* Left/Right Grid for Languages and Skills */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      {/* Left: Languages */}
+                      <div>
+                        <span className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider block mb-3 block">Ngôn ngữ trong bài viết</span>
+                        <div className="space-y-3.5 max-h-[220px] overflow-y-auto pr-1">
+                          {advanced.languagesDistribution?.map((lang, idx) => {
+                            const maxLangCount = Math.max(...advanced.languagesDistribution.map(l => l.count), 1);
+                            const percentage = Math.round((lang.count / maxLangCount) * 100);
+                            return (
+                              <div key={lang._id} className="space-y-1">
+                                <div className="flex justify-between items-center text-xs font-bold text-gray-700 dark:text-gray-300">
+                                  <span className="capitalize">{lang._id || 'Khác'}</span>
+                                  <span className="text-gray-400 dark:text-gray-500 font-medium">{lang.count} bài</span>
+                                </div>
+                                <div className="w-full bg-gray-100 dark:bg-gray-700 h-1.5 rounded-full overflow-hidden">
+                                  <div 
+                                    className="bg-indigo-500 h-full rounded-full transition-all duration-300"
+                                    style={{ width: `${percentage}%` }}
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })}
+                          {!advanced.languagesDistribution?.length && (
+                            <p className="text-xs text-gray-400 text-center py-10">Chưa có bài đăng chia sẻ mã nguồn</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Right: Skills */}
+                      <div>
+                        <span className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider block mb-3 block">Kỹ năng được khai báo</span>
+                        <div className="flex flex-wrap gap-2 max-h-[220px] overflow-y-auto pr-1">
+                          {advanced.skillsDistribution?.map((skill) => (
+                            <span 
+                              key={skill._id} 
+                              className="px-2.5 py-1.5 bg-gray-50 hover:bg-indigo-50 dark:bg-gray-700/40 dark:hover:bg-indigo-950/20 border border-gray-100 dark:border-gray-700 hover:border-indigo-200 dark:hover:border-indigo-900/50 rounded-xl text-2xs font-bold text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors inline-flex items-center gap-1.5"
+                            >
+                              <span className="capitalize">{skill._id}</span>
+                              <span className="h-4 min-w-4 px-1 rounded-md bg-gray-100 dark:bg-gray-700 text-[9px] text-gray-400 dark:text-gray-500 flex items-center justify-center font-black">
+                                {skill.count}
+                              </span>
+                            </span>
+                          ))}
+                          {!advanced.skillsDistribution?.length && (
+                            <p className="text-xs text-gray-400 text-center py-10 w-full">Chưa có thông tin kỹ năng thành viên</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Leaderboards Grid */}
