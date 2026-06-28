@@ -12,6 +12,9 @@ import { toast } from 'react-toastify';
 const EditProfile = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState('');
+  const [originalAvatarUrl, setOriginalAvatarUrl] = useState('');
 
   const [formData, setFormData] = useState({
     status: '',
@@ -47,6 +50,9 @@ const EditProfile = () => {
         if (res.data) {
            console.log("Data profile nhận được:", res.data);
            const profile = res.data.profile || res.data;
+           const userAvatar = profile.user?.avatar || '';
+           setAvatarPreview(userAvatar);
+           setOriginalAvatarUrl(userAvatar);
            setFormData(prev => ({
              ...prev,
              status: profile.status || '',
@@ -77,6 +83,47 @@ const EditProfile = () => {
     
     fetchProfile();
   }, [navigate]);
+
+  const handleAvatarChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Vui lòng chọn file hình ảnh (jpg, png, gif, webp).');
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Kích thước file không được vượt quá 10MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setAvatarPreview(reader.result);
+    };
+    reader.readAsDataURL(file);
+
+    setUploading(true);
+    const formDataObj = new FormData();
+    formDataObj.append('avatar', file);
+
+    try {
+      const res = await profileApi.uploadAvatar(formDataObj);
+      toast.success('Cập nhật ảnh đại diện thành công!');
+      const newAvatarUrl = res.data.avatar;
+      setAvatarPreview(newAvatarUrl);
+      setOriginalAvatarUrl(newAvatarUrl);
+      
+      window.dispatchEvent(new CustomEvent('avatarUpdated', { detail: newAvatarUrl }));
+    } catch (err) {
+      console.error('Lỗi khi tải ảnh đại diện:', err);
+      toast.error(err.response?.data?.msg || 'Có lỗi xảy ra khi tải ảnh lên.');
+      setAvatarPreview(originalAvatarUrl);
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -158,6 +205,56 @@ const EditProfile = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8 relative z-10">
+          
+          {/* Section: Ảnh đại diện */}
+          <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl shadow-xl rounded-2xl p-8 border border-white/50 dark:border-gray-700/50 transition-all hover:shadow-2xl hover:-translate-y-1 duration-300">
+            <div className="flex items-center space-x-3 mb-6 border-b border-gray-100 dark:border-gray-700 pb-4">
+              <div className="bg-blue-100 dark:bg-blue-900/30 p-2.5 rounded-xl text-blue-600 dark:text-blue-400 shadow-sm">
+                <Camera size={24} />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 tracking-tight">Ảnh đại diện</h2>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row items-center gap-6">
+              <div className="relative group">
+                <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white dark:border-gray-700 shadow-lg relative bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                  {avatarPreview ? (
+                    <img src={avatarPreview} alt="Avatar Preview" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-400">
+                      <User size={48} />
+                    </div>
+                  )}
+                  {uploading && (
+                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                    </div>
+                  )}
+                </div>
+                <label 
+                  htmlFor="avatar-upload" 
+                  className="absolute bottom-1 right-1 bg-blue-600 hover:bg-blue-700 text-white p-2.5 rounded-full shadow-md cursor-pointer transition-all hover:scale-110 flex items-center justify-center border-2 border-white dark:border-gray-800"
+                >
+                  <Camera size={16} />
+                </label>
+                <input 
+                  type="file" 
+                  id="avatar-upload" 
+                  className="hidden" 
+                  accept="image/*" 
+                  onChange={handleAvatarChange}
+                  disabled={uploading}
+                />
+              </div>
+              
+              <div className="text-center sm:text-left space-y-2">
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Thay đổi ảnh đại diện</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md">
+                  Nhấn vào nút camera để chọn ảnh từ thiết bị của bạn. Hỗ trợ định dạng JPG, PNG, GIF, WebP. Dung lượng tối đa 10MB.
+                </p>
+              </div>
+            </div>
+          </div>
           
           {/* Section 1: Thông tin cơ bản */}
           <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl shadow-xl rounded-2xl p-8 border border-white/50 dark:border-gray-700/50 transition-all hover:shadow-2xl hover:-translate-y-1 duration-300">
