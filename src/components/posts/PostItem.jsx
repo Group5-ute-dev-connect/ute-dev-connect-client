@@ -25,7 +25,7 @@ const PostItem = ({ post, isDetail = false, onPostUpdate }) => {
   
   const parseJwt = (t) => { try { return JSON.parse(atob(t.split('.')[1])); } catch { return null; } };
   
-  const { _id, text, name, avatar, user, likes, comments, tags, date, isSaved, isQuestion, acceptedAnswer, visibility, isHidden } = post || {};
+  const { _id, text, name, avatar, user, likes, comments, tags, date, isSaved, isQuestion, acceptedAnswer, visibility, isHidden, views } = post || {};
   
   const currentUserId = token ? parseJwt(token)?.user?.id || parseJwt(token)?.id : null;
   const isLiked = Array.isArray(likes) && currentUserId && likes.some(like => {
@@ -334,8 +334,8 @@ const PostItem = ({ post, isDetail = false, onPostUpdate }) => {
               <RankBadge score={authorReputation} className="px-1.5 py-0.5 text-3xs border font-bold rounded-full scale-90 origin-left" />
               <ReputationBadge score={authorReputation} className="px-1.5 py-0.2 text-3xs shadow-3xs" />
             </div>
-            {/* Ngày đăng & Quyền riêng tư */}
-            <div className="flex items-center text-xs text-gray-400 mt-0.5 gap-2">
+            {/* Ngày đăng & Quyền riêng tư & Lượt xem */}
+            <div className="flex items-center text-xs text-gray-400 mt-0.5 gap-2 flex-wrap">
               <span className="flex items-center">
                 <Calendar className="w-3 h-3 mr-1" />
                 {formattedDate}
@@ -344,6 +344,11 @@ const PostItem = ({ post, isDetail = false, onPostUpdate }) => {
               <span className="flex items-center gap-1" title={getVisibilityTitle(visibility)}>
                 {getVisibilityIcon(visibility)}
                 <span>{getVisibilityText(visibility)}</span>
+              </span>
+              <span className="text-gray-300">•</span>
+              <span className="flex items-center gap-1" title="Lượt xem bài viết">
+                <Eye className="w-3 h-3 text-gray-400" />
+                <span>{views || 0} lượt xem</span>
               </span>
             </div>
           </div>
