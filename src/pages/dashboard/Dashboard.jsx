@@ -24,6 +24,7 @@ const Dashboard = () => {
   const { posts, loading, loadingMore, error, page, hasMore } = useSelector((state) => state.post);
   const { token } = useSelector((state) => state.auth);
 
+  const [activeTab, setActiveTab] = useState('latest'); // 'latest', 'trending', 'friends'
   const [filterText, setFilterText] = useState('');
   const [profile, setProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(false);
@@ -42,8 +43,8 @@ const Dashboard = () => {
   }, [token]);
 
   useEffect(() => {
-    dispatch(getPosts({ page: 1, limit: 5 }));
-  }, [dispatch]);
+    dispatch(getPosts({ page: 1, limit: 5, filter: activeTab }));
+  }, [dispatch, activeTab]);
 
   const observerTarget = useRef(null);
 
@@ -51,7 +52,7 @@ const Dashboard = () => {
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && hasMore && !loading && !loadingMore && !filterText.trim()) {
-          dispatch(getPosts({ page: page + 1, limit: 5 }));
+          dispatch(getPosts({ page: page + 1, limit: 5, filter: activeTab }));
         }
       },
       { threshold: 0.1 }
@@ -66,7 +67,7 @@ const Dashboard = () => {
         observer.unobserve(observerTarget.current);
       }
     };
-  }, [hasMore, loading, loadingMore, page, dispatch, filterText]);
+  }, [hasMore, loading, loadingMore, page, dispatch, filterText, activeTab]);
 
   // Mục 3: Lọc bài viết theo từ khóa (lọc theo text, name, tags)
   const filteredPosts = posts.filter((post) => {
@@ -88,7 +89,7 @@ const Dashboard = () => {
 
   // Handler refresh
   const handleRefresh = () => {
-    dispatch(getPosts({ page: 1, limit: 5 }));
+    dispatch(getPosts({ page: 1, limit: 5, filter: activeTab }));
   };
 
   return (
@@ -169,6 +170,45 @@ const Dashboard = () => {
                     </p>
                   )}
                 </form>
+              </div>
+
+              {/* Tabs Điều hướng Newsfeed */}
+              <div className="flex border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-2 rounded-2xl shadow-sm gap-2 mb-6">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('latest')}
+                  className={`flex-grow flex items-center justify-center gap-2 py-2.5 px-4 text-sm font-semibold rounded-xl transition-all duration-200 ${
+                    activeTab === 'latest'
+                      ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                  }`}
+                >
+                  🌐 Mới nhất
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('trending')}
+                  className={`flex-grow flex items-center justify-center gap-2 py-2.5 px-4 text-sm font-semibold rounded-xl transition-all duration-200 ${
+                    activeTab === 'trending'
+                      ? 'bg-orange-50 dark:bg-orange-950/20 text-orange-600 dark:text-orange-400'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                  }`}
+                >
+                  🔥 Xu hướng
+                </button>
+                {token && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('friends')}
+                    className={`flex-grow flex items-center justify-center gap-2 py-2.5 px-4 text-sm font-semibold rounded-xl transition-all duration-200 ${
+                      activeTab === 'friends'
+                        ? 'bg-green-50 dark:bg-green-950/20 text-green-600 dark:text-green-400'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                    }`}
+                  >
+                    🤝 Bạn bè
+                  </button>
+                )}
               </div>
 
               {/* Form tạo bài viết (chỉ hiện khi đã đăng nhập) */}
