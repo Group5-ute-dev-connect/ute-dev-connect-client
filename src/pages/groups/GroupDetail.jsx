@@ -740,7 +740,7 @@ const GroupDetail = () => {
               <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div>
                   <div className="flex items-center gap-2 mb-2">
-                    <h1 className="text-2xl md:text-3xl font-extrabold text-gray-950 tracking-tight">
+                    <h1 className="text-2xl md:text-3xl font-extrabold text-gray-950 dark:text-gray-100 tracking-tight">
                       {group.name}
                     </h1>
                     {isUserAdmin && (
@@ -941,7 +941,7 @@ const GroupDetail = () => {
                                 value={newPostText}
                                 onChange={(e) => setNewPostText(e.target.value)}
                                 rows={3}
-                                className="block w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-950 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors resize-none"
+                                className="block w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-950 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors resize-none"
                               />
 
                               {showCodeSnippet && (
