@@ -18,9 +18,9 @@ const initialState = {
 // Async thunk: Lấy tất cả bài viết (GET /api/posts)
 export const getPosts = createAsyncThunk(
   "post/getPosts",
-  async ({ page = 1, limit = 5, filter = 'latest' } = {}, { rejectWithValue }) => {
+  async ({ page = 1, limit = 5, filter = 'latest', timeframe = '7d' } = {}, { rejectWithValue }) => {
     try {
-      const response = await axiosClient.get(`/posts?page=${page}&limit=${limit}&filter=${filter}`);
+      const response = await axiosClient.get(`/posts?page=${page}&limit=${limit}&filter=${filter}&timeframe=${timeframe}`);
       return response.data;
     } catch (error) {
       return rejectWithValue(

@@ -25,6 +25,7 @@ const Dashboard = () => {
   const { token } = useSelector((state) => state.auth);
 
   const [activeTab, setActiveTab] = useState('latest'); // 'latest', 'trending', 'friends'
+  const [timeframe, setTimeframe] = useState('7d'); // '24h', '7d', '30d', 'all'
   const [filterText, setFilterText] = useState('');
   const [profile, setProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(false);
@@ -43,8 +44,8 @@ const Dashboard = () => {
   }, [token]);
 
   useEffect(() => {
-    dispatch(getPosts({ page: 1, limit: 5, filter: activeTab }));
-  }, [dispatch, activeTab]);
+    dispatch(getPosts({ page: 1, limit: 5, filter: activeTab, timeframe }));
+  }, [dispatch, activeTab, timeframe]);
 
   const observerTarget = useRef(null);
 
@@ -52,7 +53,7 @@ const Dashboard = () => {
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && hasMore && !loading && !loadingMore && !filterText.trim()) {
-          dispatch(getPosts({ page: page + 1, limit: 5, filter: activeTab }));
+          dispatch(getPosts({ page: page + 1, limit: 5, filter: activeTab, timeframe }));
         }
       },
       { threshold: 0.1 }
@@ -67,7 +68,7 @@ const Dashboard = () => {
         observer.unobserve(observerTarget.current);
       }
     };
-  }, [hasMore, loading, loadingMore, page, dispatch, filterText, activeTab]);
+  }, [hasMore, loading, loadingMore, page, dispatch, filterText, activeTab, timeframe]);
 
   // Mục 3: Lọc bài viết theo từ khóa (lọc theo text, name, tags)
   const filteredPosts = posts.filter((post) => {
@@ -89,7 +90,7 @@ const Dashboard = () => {
 
   // Handler refresh
   const handleRefresh = () => {
-    dispatch(getPosts({ page: 1, limit: 5, filter: activeTab }));
+    dispatch(getPosts({ page: 1, limit: 5, filter: activeTab, timeframe }));
   };
 
   return (
@@ -187,7 +188,7 @@ const Dashboard = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setActiveTab('trending')}
+                  onClick={() => { setActiveTab('trending'); setTimeframe('7d'); }}
                   className={`flex-grow flex items-center justify-center gap-2 py-2.5 px-4 text-sm font-semibold rounded-xl transition-all duration-200 ${
                     activeTab === 'trending'
                       ? 'bg-orange-50 dark:bg-orange-950/20 text-orange-600 dark:text-orange-400'
@@ -210,6 +211,34 @@ const Dashboard = () => {
                   </button>
                 )}
               </div>
+
+              {/* Bộ lọc khoảng thời gian khi ở tab Xu hướng */}
+              {activeTab === 'trending' && (
+                <div className="flex items-center gap-2 bg-white dark:bg-gray-800 p-2 rounded-2xl shadow-sm mb-6 border border-orange-100 dark:border-gray-750 transition-all duration-200">
+                  <span className="text-xs font-bold text-gray-500 dark:text-gray-400 pl-2 uppercase tracking-wider">Xu hướng theo:</span>
+                  <div className="flex gap-1.5 flex-1">
+                    {[
+                      { id: '24h', label: 'Hôm nay' },
+                      { id: '7d', label: 'Tuần này' },
+                      { id: '30d', label: 'Tháng này' },
+                      { id: 'all', label: 'Tất cả' }
+                    ].map(t => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => setTimeframe(t.id)}
+                        className={`flex-1 py-1.5 px-3 text-xs font-semibold rounded-xl transition-all duration-150 ${
+                          timeframe === t.id
+                            ? 'bg-orange-500 text-white shadow-sm shadow-orange-500/20'
+                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                        }`}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Form tạo bài viết (chỉ hiện khi đã đăng nhập) */}
               {token && (
