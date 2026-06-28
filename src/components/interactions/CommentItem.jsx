@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, CheckCircle, Loader2, Edit, Trash2, X, Save, ChevronUp, Star } from 'lucide-react';
+import { User, CheckCircle, Loader2, Edit, Trash2, X, Save, ChevronUp, Star, ChevronDown } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
 import { postApi } from '../../services/api/postApi';
@@ -41,6 +41,7 @@ const CommentItem = ({ comment, post, onCommentsChange }) => {
   const currentUserId = token ? parseJwt(token)?.user?.id || parseJwt(token)?.id : null;
   const [isAccepting, setIsAccepting] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
+  const [isDisapproving, setIsDisapproving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(comment?.text || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -53,19 +54,28 @@ const CommentItem = ({ comment, post, onCommentsChange }) => {
   const date = comment?.date || comment?.createdAt;
   const isAccepted = comment?.isAccepted;
 
-  // Xử lý approvals (upvotes)
+  // Xử lý approvals (upvotes) và disapprovals (downvotes)
   const hasApproved = comment?.approvals && Array.isArray(comment.approvals) && comment.approvals.some(
     (app) => (app.user?._id || app.user || '').toString() === currentUserId?.toString()
   );
   const approvalsCount = comment?.approvals?.length || 0;
 
+  const hasDisapproved = comment?.disapprovals && Array.isArray(comment.disapprovals) && comment.disapprovals.some(
+    (dis) => (dis.user?._id || dis.user || '').toString() === currentUserId?.toString()
+  );
+  const disapprovalsCount = comment?.disapprovals?.length || 0;
+
+  const commentScore = approvalsCount - disapprovalsCount;
+
   // Xác định câu trả lời hữu ích nhất (nhiều vote nhất)
   const commentsArray = Array.isArray(post?.comments) ? post.comments : [];
   const maxApprovals = commentsArray.reduce((max, c) => {
-    const count = c.approvals?.length || 0;
-    return count > max ? count : max;
+    const cUp = c.approvals?.length || 0;
+    const cDown = c.disapprovals?.length || 0;
+    const cScore = cUp - cDown;
+    return cScore > max ? cScore : max;
   }, 0);
-  const isTopVoted = approvalsCount > 0 && approvalsCount === maxApprovals;
+  const isTopVoted = commentScore > 0 && commentScore === maxApprovals;
 
   const handleApprove = async () => {
     if (!token) {
@@ -89,6 +99,31 @@ const CommentItem = ({ comment, post, onCommentsChange }) => {
       toast.error(err.response?.data?.message || 'Không thể phê duyệt bình luận');
     } finally {
       setIsApproving(false);
+    }
+  };
+
+  const handleDisapprove = async () => {
+    if (!token) {
+      toast.warning('Vui lòng đăng nhập để thực hiện phản đối.');
+      return;
+    }
+    try {
+      setIsDisapproving(true);
+      const res = await postApi.disapproveComment(post._id, comment._id);
+      if (res.data && res.data.data) {
+        onCommentsChange?.(res.data.data);
+        const updatedComments = res.data.data;
+        const updatedComment = updatedComments.find(c => c._id === comment._id);
+        const nextHasDisapproved = updatedComment?.disapprovals?.some(
+          (dis) => (dis.user?._id || dis.user || '').toString() === currentUserId?.toString()
+        );
+        toast.success(nextHasDisapproved ? 'Đã phản đối bình luận!' : 'Đã bỏ phản đối bình luận!');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || 'Không thể phản đối bình luận');
+    } finally {
+      setIsDisapproving(false);
     }
   };
 
@@ -163,13 +198,23 @@ const CommentItem = ({ comment, post, onCommentsChange }) => {
       <div className="flex flex-col items-center justify-start pt-1 gap-1 flex-shrink-0 w-8">
         <button 
           onClick={handleApprove}
-          disabled={isApproving}
+          disabled={isApproving || isDisapproving}
           className={`p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex flex-col items-center justify-center ${hasApproved ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 font-bold' : 'text-gray-400 dark:text-gray-500'}`}
-          title={hasApproved ? 'Bỏ phê duyệt' : 'Phê duyệt câu trả lời này'}
+          title={hasApproved ? 'Bỏ phê duyệt (Upvote)' : 'Phê duyệt bình luận này (Upvote)'}
         >
           <ChevronUp className="w-6 h-6 stroke-[3]" />
         </button>
-        <span className="text-xs font-bold text-gray-700 dark:text-gray-300">{approvalsCount}</span>
+        <span className={`text-xs font-bold ${commentScore > 0 ? 'text-green-600 dark:text-green-400' : commentScore < 0 ? 'text-red-500 dark:text-red-400' : 'text-gray-700 dark:text-gray-300'}`}>
+          {commentScore > 0 ? `+${commentScore}` : commentScore}
+        </span>
+        <button 
+          onClick={handleDisapprove}
+          disabled={isApproving || isDisapproving}
+          className={`p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex flex-col items-center justify-center ${hasDisapproved ? 'text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/30 font-bold' : 'text-gray-400 dark:text-gray-500'}`}
+          title={hasDisapproved ? 'Bỏ phản đối (Downvote)' : 'Phản đối bình luận này (Downvote)'}
+        >
+          <ChevronDown className="w-6 h-6 stroke-[3]" />
+        </button>
         
         {isAccepted && (
           <CheckCircle className="w-5 h-5 text-green-600 mt-2 fill-green-50" title="Đã được tác giả bài viết chấp nhận" />
