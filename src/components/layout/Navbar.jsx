@@ -49,6 +49,18 @@ const Navbar = () => {
     }
   }, [dispatch, token]);
 
+  useEffect(() => {
+    const handleAvatarUpdate = (e) => {
+      const newAvatarUrl = e.detail;
+      setUserInfo(prev => prev ? { ...prev, avatar: newAvatarUrl } : null);
+    };
+
+    window.addEventListener('avatarUpdated', handleAvatarUpdate);
+    return () => {
+      window.removeEventListener('avatarUpdated', handleAvatarUpdate);
+    };
+  }, []);
+
   // Click outside to close dropdown
   useEffect(() => {
     const handleClickOutside = (event) => {
