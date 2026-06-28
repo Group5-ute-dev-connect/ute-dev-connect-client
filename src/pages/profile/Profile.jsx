@@ -8,7 +8,7 @@ import PostItem from '../../components/posts/PostItem';
 import Avatar from '../../components/common/Avatar';
 import ReputationBadge from '../../components/common/ReputationBadge';
 import FollowModal from '../../components/profile/FollowModal';
-import { MapPin, Briefcase, GraduationCap, Globe, Code, Video, MessageCircle, Users, Camera, Link as LinkIcon, MessageSquare, User, UserPlus, UserMinus } from 'lucide-react';
+import { MapPin, Briefcase, GraduationCap, Globe, Code, Video, MessageCircle, Users, Camera, Link as LinkIcon, MessageSquare, User, UserPlus, UserMinus, X } from 'lucide-react';
 
 // Helper to decode token
 const parseJwt = (token) => {
@@ -36,6 +36,7 @@ const Profile = () => {
   const [postsPage, setPostsPage] = useState(1);
   const [postsHasMore, setPostsHasMore] = useState(true);
   const [modalConfig, setModalConfig] = useState({ isOpen: false, type: 'followers' });
+  const [isAvatarZoomed, setIsAvatarZoomed] = useState(false);
   const observerTarget = useRef(null);
 
   const handleMessage = async () => {
@@ -132,6 +133,20 @@ const Profile = () => {
   }, [id]);
 
   useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setIsAvatarZoomed(false);
+      }
+    };
+    if (isAvatarZoomed) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isAvatarZoomed]);
+
+  useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && postsHasMore && !postsLoading && !postsLoadingMore && profile?.user?._id) {
@@ -183,11 +198,18 @@ const Profile = () => {
         
         <div className="px-8 pb-8 relative">
           <div className="flex flex-col md:flex-row justify-between items-center md:items-end -mt-16 md:-mt-20 mb-6">
-            <Avatar 
-              src={user?.avatar} 
-              alt={user?.name} 
-              className="w-32 h-32 md:w-40 md:h-40 border-4 border-white dark:border-gray-800 shadow-lg bg-white dark:bg-gray-800"
-            />
+            <div 
+              onClick={() => setIsAvatarZoomed(true)} 
+              className="cursor-pointer transition-transform duration-300 hover:scale-105 active:scale-95 group relative"
+              title="Xem ảnh đại diện"
+            >
+              <Avatar 
+                src={user?.avatar} 
+                alt={user?.name} 
+                className="w-32 h-32 md:w-40 md:h-40 border-4 border-white dark:border-gray-800 shadow-lg bg-white dark:bg-gray-800"
+              />
+              <div className="absolute inset-0 bg-black/10 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center"></div>
+            </div>
             <div className="mt-4 md:mt-0 flex gap-3">
               {loggedInUserId === user?._id ? (
                 <Link to="/edit-profile" className="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 px-6 py-2.5 rounded-xl font-medium shadow-sm transition-colors flex items-center gap-2">
@@ -355,6 +377,36 @@ const Profile = () => {
         currentFollowing={user?.following}
         onFollowToggle={() => fetchProfileAndPosts()}
       />
+
+      {/* Lightbox for Avatar Zoom */}
+      {isAvatarZoomed && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center animate-fade-in p-4"
+          onClick={() => setIsAvatarZoomed(false)}
+        >
+          {/* Close Button */}
+          <button 
+            onClick={() => setIsAvatarZoomed(false)}
+            className="absolute top-6 right-6 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 p-3 rounded-full transition-all duration-200 cursor-pointer"
+            aria-label="Close"
+          >
+            <X size={24} />
+          </button>
+          
+          {/* Image Container */}
+          <div className="relative max-w-2xl w-full max-h-[85vh] flex items-center justify-center">
+            <img 
+              src={user?.avatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} 
+              alt={user?.name || "Avatar"} 
+              className="max-w-full max-h-[80vh] rounded-2xl border-4 border-white/10 shadow-2xl object-contain select-none transition-all duration-300"
+              onClick={(e) => e.stopPropagation()} 
+            />
+            <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-white font-semibold text-lg text-center drop-shadow-md whitespace-nowrap">
+              {user?.name}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
