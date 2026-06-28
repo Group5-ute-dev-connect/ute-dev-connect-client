@@ -558,7 +558,15 @@ const GroupDetail = () => {
         showCodeSnippet ? codeLanguage : 'javascript'
       );
       if (response.success || response.data) {
-        toast.success('Đăng bài thành công!');
+        const postData = response.data?.data || response.data || {};
+        const msg = response.data?.message || 'Đăng bài thành công!';
+        
+        if (postData.status === 'pending') {
+          toast.warning(msg, { autoClose: 6000 });
+        } else {
+          toast.success(msg);
+        }
+
         setNewPostText('');
         setCodeSnippet('');
         setShowCodeSnippet(false);
