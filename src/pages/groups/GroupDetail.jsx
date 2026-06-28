@@ -772,6 +772,33 @@ const GroupDetail = () => {
     };
   };
 
+  const handleKickMember = async (memberUser) => {
+    const memberId = getEntityId(memberUser);
+    const memberName = memberUser.name || 'Thành viên';
+    
+    if (window.confirm(`Bạn có chắc chắn muốn xóa thành viên "${memberName}" khỏi nhóm?`)) {
+      setActionLoading(true);
+      try {
+        const response = await groupApi.kickMember(id, memberId);
+        toast.success(response.data?.message || 'Đã xóa thành viên thành công.');
+        
+        // Cập nhật lại thông tin nhóm
+        setGroup(prevGroup => {
+          if (!prevGroup) return null;
+          return {
+            ...prevGroup,
+            members: prevGroup.members.filter(m => getEntityId(getMemberUser(m)) !== memberId)
+          };
+        });
+      } catch (err) {
+        console.error('Lỗi khi xóa thành viên:', err);
+        toast.error(err.response?.data?.message || 'Không thể xóa thành viên.');
+      } finally {
+        setActionLoading(false);
+      }
+    }
+  };
+
   const renderMemberRow = (member, compact = false) => {
     const memberUser = getMemberUser(member);
     if (!memberUser) return null;
@@ -837,6 +864,16 @@ const GroupDetail = () => {
             >
               <Crown className="w-3 h-3 mr-1" />
               Chuyển quyền
+            </button>
+          )}
+
+          {isUserAdmin && !isMemberAdmin && (
+            <button
+              onClick={() => handleKickMember(memberUser)}
+              disabled={confirmLoading || actionLoading}
+              className={`${actionButtonClassName} text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 disabled:opacity-60 disabled:cursor-not-allowed rounded transition-colors font-bold inline-flex items-center`}
+            >
+              Xóa thành viên
             </button>
           )}
         </div>

@@ -108,6 +108,11 @@ export const groupApi = {
   // Xóa từ cấm khỏi nhóm
   deleteGroupFilter: (groupId, word) => {
     return axiosClient.delete(`/groups/${groupId}/filters/${encodeURIComponent(word)}`);
+  },
+
+  // Xóa thành viên khỏi nhóm (chỉ Admin nhóm)
+  kickMember: (groupId, userId) => {
+    return axiosClient.delete(`/groups/${groupId}/members/${userId}`);
   }
 };
 
