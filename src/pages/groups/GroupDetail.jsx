@@ -127,7 +127,12 @@ const GroupDetail = () => {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [feedLoading, setFeedLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState('');
+  const observerTarget = import('react').then(React => React.useRef(null)); // need to use useRef from import
+
   
   // Post & Comment States
   const [newPostText, setNewPostText] = useState('');
@@ -213,17 +218,28 @@ const GroupDetail = () => {
     }
   };
 
-  const fetchFeed = async () => {
+  const fetchFeed = async (pageNum = 1, append = false) => {
     try {
-      setFeedLoading(true);
-      const response = await groupApi.getGroupFeed(id);
+      if (append) setLoadingMore(true);
+      else setFeedLoading(true);
+
+      const response = await groupApi.getGroupFeed(id, pageNum, 10);
       const feedPosts = response.data?.data || response.data || [];
-      setPosts(feedPosts);
+      const hasMoreData = response.data?.hasMore !== undefined ? response.data.hasMore : feedPosts.length === 10;
+
+      if (append) {
+        setPosts(prev => [...prev, ...feedPosts]);
+      } else {
+        setPosts(feedPosts);
+      }
+      setHasMore(hasMoreData);
+      setPage(pageNum);
     } catch (err) {
       console.error('Lỗi khi tải bảng tin nhóm:', err);
       toast.error('Không thể tải bảng tin nhóm.');
     } finally {
       setFeedLoading(false);
+      setLoadingMore(false);
     }
   };
 
@@ -298,7 +314,7 @@ const GroupDetail = () => {
       setPendingPostAction({ postId, type: 'approve' });
       const res = await groupApi.approvePost(id, postId);
       if (res.data) {
-        toast.success(res.data.message || '�� ph� duy?t b�i vi?t.');
+        toast.success(res.data.message || 'Đã phê duyệt bài viết.');
         setPendingPosts((prev) => prev.filter((post) => post._id !== postId));
         await fetchFeed();
         await fetchGroupData({ showPageLoader: false });
@@ -326,7 +342,7 @@ const GroupDetail = () => {
       setJoinRequestAction({ userId: targetUserId, type: 'approve' });
       const res = await groupApi.approveJoinRequest(id, targetUserId);
       if (res.data) {
-        toast.success(res.data.message || '�� duy?t y�u c?u tham gia nh�m.');
+        toast.success(res.data.message || 'Đã duyệt yêu cầu tham gia nhóm.');
         setJoinRequests((prev) =>
           prev.filter((request) => getEntityId(getJoinRequestUser(request)) !== targetUserId.toString())
         );
@@ -345,7 +361,7 @@ const GroupDetail = () => {
       setJoinRequestAction({ userId: targetUserId, type: 'reject' });
       const res = await groupApi.rejectJoinRequest(id, targetUserId);
       if (res.data) {
-        toast.success(res.data.message || '�� t? ch?i y�u c?u tham gia nh�m.');
+        toast.success(res.data.message || 'Đã từ chối yêu cầu tham gia nhóm.');
         setJoinRequests((prev) =>
           prev.filter((request) => getEntityId(getJoinRequestUser(request)) !== targetUserId.toString())
         );
@@ -380,7 +396,7 @@ const GroupDetail = () => {
         setPendingPostAction({ postId, type: 'reject' });
         const res = await groupApi.rejectPost(id, postId);
         if (res.data) {
-          toast.success(res.data.message || '�� t? ch?i b�i vi?t.');
+          toast.success(res.data.message || 'Đã từ chối bài viết.');
           setPendingPosts((prev) => prev.filter((post) => post._id !== postId));
           await fetchGroupData({ showPageLoader: false });
         }
@@ -389,7 +405,7 @@ const GroupDetail = () => {
       if (confirmDialog.type === 'leave-group') {
         const response = await groupApi.leaveGroup(id);
         if (response.success || response.data) {
-          toast.success('�� r?i kh?i nh�m h?c t?p.');
+          toast.success('Đã rời khỏi nhóm học tập.');
           closeConfirmDialog(true);
           navigate('/groups');
           return;
@@ -403,7 +419,7 @@ const GroupDetail = () => {
 
         const response = await groupApi.transferGroupAdmin(id, newAdminId);
         if (response.success || response.data) {
-          toast.success(response.data?.message || '�� chuy?n quy?n qu?n tr? nh�m th�nh c�ng.');
+          toast.success(response.data?.message || 'Đã chuyển quyền quản trị nhóm thành công.');
           await fetchGroupData({ showPageLoader: false });
         }
       }
@@ -448,7 +464,7 @@ const GroupDetail = () => {
               }
             : prevGroup
         ));
-        toast.success('�� g?i y�u c?u tham gia nh�m, vui l�ng ch? duy?t');
+        toast.success('Đã gửi yêu cầu tham gia nhóm, vui lòng chờ duyệt');
       }
     } catch (err) {
       console.error('Lỗi gửi yêu cầu tham gia nhóm:', err);
@@ -538,11 +554,11 @@ const GroupDetail = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
         <Navbar />
         <div className="flex-grow flex flex-col items-center justify-center py-20">
           <Loader2 className="h-10 w-10 text-indigo-600 animate-spin" />
-          <p className="mt-3 text-gray-500 text-sm font-medium">Đang tải thông tin nhóm...</p>
+          <p className="mt-3 text-gray-500 dark:text-gray-400 text-sm font-medium">Đang tải thông tin nhóm...</p>
         </div>
       </div>
     );
@@ -550,7 +566,7 @@ const GroupDetail = () => {
 
   if (error || !group) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
         <Navbar />
         <div className="max-w-3xl mx-auto mt-10 px-4 flex-grow w-full">
           <div className="bg-red-50 text-red-700 p-4 rounded-xl flex items-start space-x-2 border border-red-100 mb-6">
@@ -626,7 +642,7 @@ const GroupDetail = () => {
       isMemberAdmin,
       isMemberMod,
       label: 'Thành viên',
-      badgeClassName: 'bg-gray-100 text-gray-600 border border-gray-200',
+      badgeClassName: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-600',
     };
   };
 
@@ -647,7 +663,7 @@ const GroupDetail = () => {
         className={`flex ${compact ? 'items-start' : 'items-center'} justify-between gap-3 ${compact ? 'border-b border-gray-50 pb-3 last:border-b-0 last:pb-0' : ''}`}
       >
         <div className="flex items-center space-x-2.5 min-w-0">
-          <div className="h-8 w-8 bg-gray-100 rounded-full flex-shrink-0 flex items-center justify-center overflow-hidden border border-gray-200">
+          <div className="h-8 w-8 bg-gray-100 dark:bg-gray-700 rounded-full flex-shrink-0 flex items-center justify-center overflow-hidden border border-gray-200 dark:border-gray-600">
             <img
               src={memberUser.avatar || DEFAULT_AVATAR}
               alt={memberUser.name}
@@ -661,7 +677,7 @@ const GroupDetail = () => {
           <div className="min-w-0">
             <Link
               to={`/profile/${memberId}`}
-              className="text-xs font-semibold text-gray-900 hover:text-indigo-600 transition-colors truncate block"
+              className="text-xs font-semibold text-gray-900 dark:text-gray-100 hover:text-indigo-600 transition-colors truncate block"
             >
               {memberUser.name || 'Thành viên'}
             </Link>
@@ -703,19 +719,19 @@ const GroupDetail = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
       <Navbar />
 
       <main className="flex-grow">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           
           {/* Back button */}
-          <Link to="/groups" className="inline-flex items-center mb-6 text-gray-500 hover:text-indigo-600 transition-colors font-medium text-sm">
+          <Link to="/groups" className="inline-flex items-center mb-6 text-gray-500 dark:text-gray-400 hover:text-indigo-600 transition-colors font-medium text-sm">
             <ArrowLeft className="w-4 h-4 mr-1.5" /> Quay lại danh sách nhóm
           </Link>
 
           {/* Group Banner */}
-          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden mb-8">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden mb-8">
             <div className="h-32 md:h-48 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 relative">
             </div>
             
@@ -740,11 +756,11 @@ const GroupDetail = () => {
                     )}
                   </div>
                   
-                  <p className="text-sm text-gray-600 max-w-2xl leading-relaxed">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 max-w-2xl leading-relaxed">
                     {group.description || 'Chưa có mô tả cho nhóm này.'}
                   </p>
 
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-4 text-xs text-gray-500">
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-4 text-xs text-gray-500 dark:text-gray-400">
                     <span className="flex items-center gap-1">
                       <Users className="w-4 h-4" />
                       <strong>{memberCount}</strong> thành viên
@@ -752,7 +768,7 @@ const GroupDetail = () => {
                     <span>•</span>
                     <span>Tạo ngày {formattedDate}</span>
                     <span>•</span>
-                    <span>Admin: <strong className="font-semibold text-gray-700">{group.admin?.name || 'Ẩn danh'}</strong></span>
+                    <span>Admin: <strong className="font-semibold text-gray-700 dark:text-gray-300">{group.admin?.name || 'Ẩn danh'}</strong></span>
                   </div>
                 </div>
 
@@ -761,7 +777,7 @@ const GroupDetail = () => {
                     !isUserAdmin ? (
                       <button
                         onClick={handleLeave}
-                        className="inline-flex items-center px-4 py-2.5 bg-gray-100 hover:bg-orange-50 hover:text-orange-600 text-gray-700 font-semibold rounded-xl text-sm transition-all duration-200"
+                        className="inline-flex items-center px-4 py-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-orange-50 hover:text-orange-600 text-gray-700 dark:text-gray-300 font-semibold rounded-xl text-sm transition-all duration-200"
                       >
                         <LogOut className="w-4 h-4 mr-2" />
                         Rời nhóm
@@ -796,7 +812,7 @@ const GroupDetail = () => {
           </div>
 
           {/* Navigation Tabs (Responsive) */}
-          <div className="flex bg-white p-1 rounded-xl border border-gray-100 shadow-sm mb-6">
+          <div className="flex bg-white dark:bg-gray-800 p-1 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mb-6">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
@@ -812,7 +828,7 @@ const GroupDetail = () => {
                 className={`flex-grow py-2.5 text-center text-sm font-semibold rounded-lg transition-all ${
                   effectiveActiveTab === tab.id 
                     ? 'bg-indigo-600 text-white shadow-sm' 
-                    : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50/50'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-indigo-600 hover:bg-indigo-50/50'
                 }`}
               >
                 {tab.label}
@@ -828,13 +844,13 @@ const GroupDetail = () => {
               
               {/* Check if member */}
               {!isUserMember ? (
-                <div className="bg-white rounded-2xl border border-gray-150 p-8 text-center shadow-sm">
+                <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-150 p-8 text-center shadow-sm">
                   <div className="h-14 w-14 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Lock className="h-6 w-6 text-indigo-600" />
                   </div>
-                  <h3 className="text-lg font-bold text-gray-900 mb-1">Nhóm Riêng Tư</h3>
-                  <p className="text-sm text-gray-500 mb-6 max-w-sm mx-auto">
-                    N?i dung b?ng tin, m� ngu?n th?o lu?n ch? hi?n th? v?i th�nh vi�n trong nh�m n�y.
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">Nhóm Riêng Tư</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-sm mx-auto">
+                    Nội dung bảng tin, mã nguồn thảo luận chỉ hiển thị với thành viên trong nhóm này.
                   </p>
                   {isJoinRequestPending ? (
                     <div className="inline-flex items-center px-4 py-2 rounded-xl text-sm font-semibold bg-amber-50 text-amber-700 border border-amber-100">
@@ -858,9 +874,9 @@ const GroupDetail = () => {
                   {effectiveActiveTab === 'feed' && (
                     <>
                       {/* Create Post Form */}
-                      <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm mb-6">
+                      <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm mb-6">
                         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
-                          <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center">
+                          <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider flex items-center">
                             {isQuestion ? (
                               <HelpCircle className="w-4 h-4 mr-1.5 text-indigo-600 animate-pulse" />
                             ) : (
@@ -878,9 +894,9 @@ const GroupDetail = () => {
                                   onChange={() => setIsQuestion(!isQuestion)}
                                 />
                                 <div className={`block w-8 h-5 rounded-full transition-colors ${isQuestion ? 'bg-indigo-600' : 'bg-gray-300'}`}></div>
-                                <div className={`dot absolute left-0.5 top-0.5 bg-white w-4 h-4 rounded-full transition-transform ${isQuestion ? 'transform translate-x-3' : ''}`}></div>
+                                <div className={`dot absolute left-0.5 top-0.5 bg-white dark:bg-gray-800 w-4 h-4 rounded-full transition-transform ${isQuestion ? 'transform translate-x-3' : ''}`}></div>
                               </div>
-                              <div className="ml-2 text-xs font-semibold text-gray-600">Câu hỏi Q&A</div>
+                              <div className="ml-2 text-xs font-semibold text-gray-600 dark:text-gray-400">Câu hỏi Q&A</div>
                             </label>
 
                             <label className="flex items-center cursor-pointer">
@@ -892,9 +908,9 @@ const GroupDetail = () => {
                                   onChange={() => setShowCodeSnippet(!showCodeSnippet)}
                                 />
                                 <div className={`block w-8 h-5 rounded-full transition-colors ${showCodeSnippet ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
-                                <div className={`dot absolute left-0.5 top-0.5 bg-white w-4 h-4 rounded-full transition-transform ${showCodeSnippet ? 'transform translate-x-3' : ''}`}></div>
+                                <div className={`dot absolute left-0.5 top-0.5 bg-white dark:bg-gray-800 w-4 h-4 rounded-full transition-transform ${showCodeSnippet ? 'transform translate-x-3' : ''}`}></div>
                               </div>
-                              <div className="ml-2 text-xs font-semibold text-gray-600">Mã nguồn (Code)</div>
+                              <div className="ml-2 text-xs font-semibold text-gray-600 dark:text-gray-400">Mã nguồn (Code)</div>
                             </label>
                           </div>
                         </div>
@@ -903,14 +919,14 @@ const GroupDetail = () => {
                           <button
                             type="button"
                             onClick={() => setIsPreview(false)}
-                            className={`px-2.5 py-1 text-xs font-medium rounded-lg flex items-center transition-colors ${!isPreview ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}
+                            className={`px-2.5 py-1 text-xs font-medium rounded-lg flex items-center transition-colors ${!isPreview ? 'bg-blue-50 text-blue-600' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 dark:bg-gray-900'}`}
                           >
                             <Edit2 className="w-3.5 h-3.5 mr-1" /> Viết bài
                           </button>
                           <button
                             type="button"
                             onClick={() => setIsPreview(true)}
-                            className={`px-2.5 py-1 text-xs font-medium rounded-lg flex items-center transition-colors ${isPreview ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}
+                            className={`px-2.5 py-1 text-xs font-medium rounded-lg flex items-center transition-colors ${isPreview ? 'bg-blue-50 text-blue-600' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 dark:bg-gray-900'}`}
                           >
                             <Eye className="w-3.5 h-3.5 mr-1" /> Xem trước
                           </button>
@@ -924,7 +940,7 @@ const GroupDetail = () => {
                                 value={newPostText}
                                 onChange={(e) => setNewPostText(e.target.value)}
                                 rows={3}
-                                className="block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-950 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors resize-none"
+                                className="block w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-950 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-colors resize-none"
                               />
 
                               {showCodeSnippet && (
@@ -936,7 +952,7 @@ const GroupDetail = () => {
                                     <select
                                       value={codeLanguage}
                                       onChange={(e) => setCodeLanguage(e.target.value)}
-                                      className="text-xs px-2 py-1 bg-white border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium"
+                                      className="text-xs px-2 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium"
                                     >
                                       <option value="javascript">JavaScript</option>
                                       <option value="python">Python</option>
@@ -958,7 +974,7 @@ const GroupDetail = () => {
                               )}
                             </>
                           ) : (
-                            <div className="p-4 border rounded-xl bg-gray-50 min-h-[96px] text-sm text-slate-800 prose prose-slate prose-sm max-w-none prose-p:my-1 prose-pre:my-2 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1">
+                            <div className="p-4 border rounded-xl bg-gray-50 dark:bg-gray-900 min-h-[96px] text-sm text-slate-800 prose prose-slate prose-sm max-w-none prose-p:my-1 prose-pre:my-2 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1">
                               {newPostText ? (
                                 <ReactMarkdown
                                   remarkPlugins={[remarkGfm]}
@@ -989,7 +1005,7 @@ const GroupDetail = () => {
                               )}
 
                               {showCodeSnippet && codeSnippet && (
-                                <div className="mt-3 border-t border-gray-200 pt-3">
+                                <div className="mt-3 border-t border-gray-200 dark:border-gray-600 pt-3">
                                   <span className="text-xs font-bold text-slate-500 block mb-1">Mã nguồn ({codeLanguage}):</span>
                                   <SyntaxHighlighter
                                     children={codeSnippet}
@@ -1023,17 +1039,17 @@ const GroupDetail = () => {
 
                       {/* Feed list */}
                       <div className="space-y-4">
-                        <h3 className="text-sm font-extrabold text-gray-800 uppercase tracking-wider">
+                        <h3 className="text-sm font-extrabold text-gray-800 dark:text-gray-200 uppercase tracking-wider">
                           Bài viết thảo luận ({posts.length})
                         </h3>
 
                         {feedLoading && posts.length === 0 ? (
                           <div className="text-center py-10">
                             <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mx-auto mb-2" />
-                            <span className="text-sm text-gray-500">Đang tải bài viết...</span>
+                            <span className="text-sm text-gray-500 dark:text-gray-400">Đang tải bài viết...</span>
                           </div>
                         ) : posts.length === 0 ? (
-                          <div className="bg-white rounded-2xl border border-gray-150 p-10 text-center shadow-sm text-gray-500">
+                          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-150 p-10 text-center shadow-sm text-gray-500 dark:text-gray-400">
                             Chưa có bài thảo luận nào trong nhóm này. Hãy đăng bài đầu tiên!
                           </div>
                         ) : (
@@ -1050,7 +1066,7 @@ const GroupDetail = () => {
                             });
 
                             return (
-                              <div key={post._id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                              <div key={post._id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
                                 {post.status === 'pending' && (
                                   <div className="bg-amber-50 text-amber-800 px-5 py-3 border-b border-amber-100 flex items-center gap-1.5 text-xs font-semibold">
                                     <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
@@ -1070,7 +1086,7 @@ const GroupDetail = () => {
                                   </div>
                                   <div>
                                     <div className="flex items-center gap-1.5">
-                                      <h4 className="text-sm font-bold text-gray-900">{post.name || 'Thành viên'}</h4>
+                                      <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100">{post.name || 'Thành viên'}</h4>
                                       {post.user?.reputation !== undefined && (
                                         <span className="inline-flex items-center px-1.5 py-0.2 rounded-full text-3xs font-bold bg-amber-50 text-amber-700 border border-amber-100 shadow-3xs" title="Điểm uy tín">
                                           ★ {post.user.reputation}
@@ -1099,7 +1115,7 @@ const GroupDetail = () => {
                                     )}
                                   </div>
 
-                                  <div className="text-gray-800 text-sm leading-relaxed prose prose-slate prose-sm max-w-none prose-p:my-1 prose-pre:my-2 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1">
+                                  <div className="text-gray-800 dark:text-gray-200 text-sm leading-relaxed prose prose-slate prose-sm max-w-none prose-p:my-1 prose-pre:my-2 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1">
                                     <ReactMarkdown
                                       remarkPlugins={[remarkGfm]}
                                       components={{
@@ -1127,7 +1143,7 @@ const GroupDetail = () => {
                                   </div>
 
                                   {post.codeSnippet && (
-                                    <div className="mt-3 border-t border-gray-100 pt-3">
+                                    <div className="mt-3 border-t border-gray-100 dark:border-gray-700 pt-3">
                                       <span className="text-xs font-bold text-slate-500 block mb-1 uppercase tracking-wider">Mã nguồn ({post.codeLanguage || 'javascript'}):</span>
                                       <SyntaxHighlighter
                                         children={post.codeSnippet}
@@ -1141,7 +1157,7 @@ const GroupDetail = () => {
                                 </div>
 
                                 {/* Post Interactions Footer */}
-                                <div className="px-5 py-3.5 bg-gray-50 border-t border-gray-50 flex items-center justify-between">
+                                <div className="px-5 py-3.5 bg-gray-50 dark:bg-gray-900 border-t border-gray-50 flex items-center justify-between">
                                   <div className="flex items-center space-x-4">
                                     {/* Like button */}
                                     <button
@@ -1149,7 +1165,7 @@ const GroupDetail = () => {
                                       className={`flex items-center text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
                                         isLiked 
                                           ? 'text-indigo-600 bg-indigo-50 hover:bg-indigo-100' 
-                                          : 'text-gray-500 hover:text-indigo-600 hover:bg-gray-100'
+                                          : 'text-gray-500 dark:text-gray-400 hover:text-indigo-600 hover:bg-gray-100 dark:hover:bg-gray-600 dark:bg-gray-700'
                                       }`}
                                     >
                                       <ThumbsUp className={`w-3.5 h-3.5 mr-1.5 ${isLiked ? 'fill-indigo-600' : ''}`} />
@@ -1162,7 +1178,7 @@ const GroupDetail = () => {
                                       className={`flex items-center text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
                                         expandedComments[post._id]
                                           ? 'text-indigo-600 bg-indigo-50'
-                                          : 'text-gray-500 hover:text-indigo-600 hover:bg-gray-100'
+                                          : 'text-gray-500 dark:text-gray-400 hover:text-indigo-600 hover:bg-gray-100 dark:hover:bg-gray-600 dark:bg-gray-700'
                                       }`}
                                     >
                                       <MessageSquare className="w-3.5 h-3.5 mr-1.5" />
@@ -1173,7 +1189,7 @@ const GroupDetail = () => {
 
                                 {/* Comments Section (Expanded Inline) */}
                                 {expandedComments[post._id] && (
-                                  <div className="bg-gray-50 border-t border-gray-150 px-5 py-4">
+                                  <div className="bg-gray-50 dark:bg-gray-900 border-t border-gray-150 px-5 py-4">
                                     <CommentSection
                                       postId={post._id}
                                       post={post}
@@ -1194,23 +1210,31 @@ const GroupDetail = () => {
                           })
                         )}
                       </div>
+                      
+                      {/* Loading More Indicator & Observer Target for Feed */}
+                      {loadingMore && (
+                        <div className="flex justify-center py-4">
+                          <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
+                        </div>
+                      )}
+                      <div ref={observerTarget} className="h-4 w-full"></div>
                     </>
                   )}
 
                   {/* TAB 2: PENDING POSTS FOR MODERATORS */}
                   {effectiveActiveTab === 'pending' && canModerate && (
                     <div className="space-y-4">
-                      <h3 className="text-sm font-extrabold text-gray-800 uppercase tracking-wider">
+                      <h3 className="text-sm font-extrabold text-gray-800 dark:text-gray-200 uppercase tracking-wider">
                         Bài viết đang chờ duyệt ({pendingPosts.length})
                       </h3>
 
                       {pendingLoading ? (
                         <div className="text-center py-10">
                           <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mx-auto mb-2" />
-                          <span className="text-sm text-gray-500">Đang tải bài viết...</span>
+                          <span className="text-sm text-gray-500 dark:text-gray-400">Đang tải bài viết...</span>
                         </div>
                       ) : pendingPosts.length === 0 ? (
-                        <div className="bg-white rounded-2xl border border-gray-150 p-10 text-center shadow-sm text-gray-500">
+                        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-150 p-10 text-center shadow-sm text-gray-500 dark:text-gray-400">
                           Không có bài viết nào đang chờ duyệt.
                         </div>
                       ) : (
@@ -1223,7 +1247,7 @@ const GroupDetail = () => {
                           });
 
                           return (
-                            <div key={post._id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                            <div key={post._id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
                               <div className="p-5 flex items-center justify-between border-b border-gray-50">
                                 <div className="flex items-center space-x-3">
                                   <div className="h-10 w-10 bg-indigo-50 rounded-full flex-shrink-0 flex items-center justify-center overflow-hidden">
@@ -1236,7 +1260,7 @@ const GroupDetail = () => {
                                   </div>
                                   <div>
                                     <div className="flex items-center gap-1.5">
-                                      <h4 className="text-sm font-bold text-gray-900">{post.name || 'Thành viên'}</h4>
+                                      <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100">{post.name || 'Thành viên'}</h4>
                                       {post.user?.reputation !== undefined && (
                                         <span className="inline-flex items-center px-1.5 py-0.2 rounded-full text-3xs font-bold bg-amber-50 text-amber-700 border border-amber-100 shadow-3xs" title="Điểm uy tín">
                                           ★ {post.user.reputation}
@@ -1279,7 +1303,7 @@ const GroupDetail = () => {
                                     </span>
                                   )}
                                 </div>
-                                <div className="text-gray-800 text-sm leading-relaxed prose prose-slate prose-sm max-w-none prose-p:my-1 prose-pre:my-2 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1">
+                                <div className="text-gray-800 dark:text-gray-200 text-sm leading-relaxed prose prose-slate prose-sm max-w-none prose-p:my-1 prose-pre:my-2 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1">
                                   <ReactMarkdown
                                     remarkPlugins={[remarkGfm]}
                                     components={{
@@ -1306,7 +1330,7 @@ const GroupDetail = () => {
                                   </ReactMarkdown>
                                 </div>
                                 {post.codeSnippet && (
-                                  <div className="mt-3 border-t border-gray-100 pt-3">
+                                  <div className="mt-3 border-t border-gray-100 dark:border-gray-700 pt-3">
                                     <span className="text-xs font-bold text-slate-500 block mb-1 uppercase tracking-wider">Mã nguồn ({post.codeLanguage || 'javascript'}):</span>
                                     <SyntaxHighlighter
                                       children={post.codeSnippet}
@@ -1328,17 +1352,17 @@ const GroupDetail = () => {
                   {/* TAB 3: JOIN REQUESTS */}
                   {effectiveActiveTab === 'join-requests' && canModerate && (
                     <div className="space-y-4">
-                      <h3 className="text-sm font-extrabold text-gray-800 uppercase tracking-wider">
+                      <h3 className="text-sm font-extrabold text-gray-800 dark:text-gray-200 uppercase tracking-wider">
                         Yêu cầu tham gia ({joinRequests.length})
                       </h3>
 
                       {joinRequestsLoading ? (
                         <div className="text-center py-10">
                           <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mx-auto mb-2" />
-                          <span className="text-sm text-gray-500">Đang tải yêu cầu tham gia...</span>
+                          <span className="text-sm text-gray-500 dark:text-gray-400">Đang tải yêu cầu tham gia...</span>
                         </div>
                       ) : joinRequests.length === 0 ? (
-                        <div className="bg-white rounded-2xl border border-gray-150 p-10 text-center shadow-sm text-gray-500">
+                        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-150 p-10 text-center shadow-sm text-gray-500 dark:text-gray-400">
                           Chưa có yêu cầu tham gia nào.
                         </div>
                       ) : (
@@ -1351,9 +1375,9 @@ const GroupDetail = () => {
                           const requestDate = request.createdAt || request.requestedAt || request.date || request.updatedAt;
 
                           return (
-                            <div key={requestUserId} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                            <div key={requestUserId} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                               <div className="flex items-center gap-3 min-w-0">
-                                <div className="h-11 w-11 rounded-full overflow-hidden border border-gray-200 bg-gray-100 flex-shrink-0">
+                                <div className="h-11 w-11 rounded-full overflow-hidden border border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 flex-shrink-0">
                                   <img
                                     src={requestUser.avatar || DEFAULT_AVATAR}
                                     alt={requestUser.name}
@@ -1365,9 +1389,9 @@ const GroupDetail = () => {
                                   />
                                 </div>
                                 <div className="min-w-0">
-                                  <div className="text-sm font-bold text-gray-900 truncate">{requestUser.name || 'Người dùng'}</div>
+                                  <div className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{requestUser.name || 'Người dùng'}</div>
                                   {requestUser.email && (
-                                    <div className="text-xs text-gray-500 flex items-center gap-1 truncate mt-0.5">
+                                    <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 truncate mt-0.5">
                                       <Mail className="w-3.5 h-3.5 flex-shrink-0" />
                                       <span className="truncate">{requestUser.email}</span>
                                     </div>
@@ -1424,10 +1448,10 @@ const GroupDetail = () => {
                   {/* TAB 4: MEMBERS DETAILED VIEW */}
                   {effectiveActiveTab === 'members' && (
                     <div className="space-y-4 block md:hidden">
-                      <h3 className="text-sm font-extrabold text-gray-800 uppercase tracking-wider">
+                      <h3 className="text-sm font-extrabold text-gray-800 dark:text-gray-200 uppercase tracking-wider">
                         Thành viên nhóm ({memberCount})
                       </h3>
-                      <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-4">
+                      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-5 space-y-4">
                         {members.map((member) => renderMemberRow(member, true))}
                       </div>
                     </div>
@@ -1438,8 +1462,8 @@ const GroupDetail = () => {
 
             {/* Sidebar Section (Members List - Desktop Only) */}
             <div className={`md:col-span-1 ${effectiveActiveTab !== 'members' ? 'hidden md:block' : ''}`}>
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sticky top-24">
-                <h3 className="text-sm font-extrabold text-gray-800 uppercase tracking-wider mb-4 flex items-center justify-between">
+              <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 sticky top-24">
+                <h3 className="text-sm font-extrabold text-gray-800 dark:text-gray-200 uppercase tracking-wider mb-4 flex items-center justify-between">
                   <span>Thành viên ({memberCount})</span>
                   <Users className="w-4 h-4 text-indigo-500" />
                 </h3>
@@ -1457,32 +1481,32 @@ const GroupDetail = () => {
 
       {confirmDialog.isOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-white rounded-2xl border border-gray-100 shadow-2xl overflow-hidden">
-            <div className="px-6 py-4 bg-gray-50 border-b border-gray-100 flex items-center justify-between gap-3">
+          <div className="w-full max-w-md bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-2xl overflow-hidden">
+            <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between gap-3">
               <div>
-                <h3 className="text-base font-bold text-gray-900">{confirmDialog.title}</h3>
-                <p className="text-xs text-gray-500 mt-1">Xác nhận trước khi tiếp tục.</p>
+                <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">{confirmDialog.title}</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Xác nhận trước khi tiếp tục.</p>
               </div>
               <button
                 type="button"
                 onClick={() => closeConfirmDialog()}
                 disabled={confirmLoading}
-                className="text-gray-400 hover:text-gray-600 disabled:opacity-50"
+                className="text-gray-400 hover:text-gray-600 dark:text-gray-400 disabled:opacity-50"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="px-6 py-5">
-              <p className="text-sm text-gray-600 leading-relaxed">{confirmDialog.message}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{confirmDialog.message}</p>
             </div>
 
-            <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-3 bg-white">
+            <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-700 flex items-center justify-end gap-3 bg-white dark:bg-gray-800">
               <button
                 type="button"
                 onClick={() => closeConfirmDialog()}
                 disabled={confirmLoading}
-                className="px-4 py-2 text-sm font-semibold text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-xl transition-colors disabled:opacity-50"
+                className="px-4 py-2 text-sm font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 dark:bg-gray-900 rounded-xl transition-colors disabled:opacity-50"
               >
                 Hủy
               </button>

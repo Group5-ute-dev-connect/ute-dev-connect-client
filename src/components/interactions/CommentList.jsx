@@ -5,9 +5,9 @@ import CommentItem from './CommentItem';
 const CommentList = ({ post, comments = [], onCommentsChange }) => {
   if (!comments.length) {
     return (
-      <div className="mt-4 rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-6 text-center">
-        <MessageCircle size={28} className="mx-auto text-gray-400" />
-        <p className="mt-2 text-sm text-gray-500">
+      <div className="mt-4 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-6 text-center">
+        <MessageCircle size={28} className="mx-auto text-gray-400 dark:text-gray-500" />
+        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
           Chưa có bình luận nào. Hãy là người đầu tiên bình luận.
         </p>
       </div>

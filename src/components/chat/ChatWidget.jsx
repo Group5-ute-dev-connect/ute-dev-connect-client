@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { getSocket } from '../../services/socketService';
 import { 
   MessageCircle, X, Search, ArrowLeft, Send, Image, Paperclip, 
-  Loader2, Maximize2, MessageSquare, Minimize2
+  Loader2, ArrowUpRight, MessageSquare, Minus
 } from 'lucide-react';
 import { 
   getConversations, getMessages, setActiveConversation, addMessage, markMessagesAsRead 
@@ -11,6 +11,7 @@ import {
 import axiosClient from '../../services/api/axiosClient';
 import { toast } from 'react-toastify';
 import { useNavigate, useLocation } from 'react-router-dom';
+import Avatar from '../common/Avatar';
 
 const ChatWidget = () => {
   const dispatch = useDispatch();
@@ -266,7 +267,7 @@ const ChatWidget = () => {
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
       {/* Floating Chat Box (Expanded state) */}
       {isOpen && (
-        <div className="w-80 sm:w-90 h-[480px] bg-white rounded-3xl border border-gray-100 shadow-2xl flex flex-col overflow-hidden mb-4 transition-all duration-300 transform scale-100 origin-bottom-right">
+        <div className="w-80 sm:w-90 h-[480px] bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-2xl flex flex-col overflow-hidden mb-4 transition-all duration-300 transform scale-100 origin-bottom-right">
           
           {/* Header (Room View vs Conversation List View) */}
           {activeConversationId && otherUser ? (
@@ -279,12 +280,7 @@ const ChatWidget = () => {
                   <ArrowLeft className="w-5 h-5" />
                 </button>
                 <div className="relative">
-                  <img 
-                    src={otherUser.avatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} 
-                    alt={otherUser.name} 
-                    className="w-8 h-8 rounded-full object-cover border border-white/20"
-                    onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
-                  />
+                  <Avatar src={otherUser.avatar} alt={otherUser.name} className="w-8 h-8 border border-white/20" />
                   {onlineUsers.includes(otherUser._id) && (
                     <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border border-white rounded-full"></span>
                   )}
@@ -306,14 +302,14 @@ const ChatWidget = () => {
                   className="p-1 hover:bg-white/10 rounded-full transition-colors" 
                   title="Mở toàn màn hình"
                 >
-                  <Maximize2 className="w-3.5 h-3.5" />
+                  <ArrowUpRight className="w-4 h-4" />
                 </button>
                 <button 
                   onClick={() => setIsOpen(false)} 
                   className="p-1 hover:bg-white/10 rounded-full transition-colors" 
                   title="Thu nhỏ"
                 >
-                  <Minimize2 className="w-3.5 h-3.5" />
+                  <Minus className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -332,13 +328,14 @@ const ChatWidget = () => {
                   className="p-1 hover:bg-white/10 rounded-full transition-colors" 
                   title="Mở hộp chat chính"
                 >
-                  <Maximize2 className="w-3.5 h-3.5" />
+                  <ArrowUpRight className="w-4 h-4" />
                 </button>
                 <button 
                   onClick={() => setIsOpen(false)} 
                   className="p-1 hover:bg-white/10 rounded-full transition-colors"
+                  title="Thu nhỏ"
                 >
-                  <X className="w-4 h-4" />
+                  <Minus className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -347,7 +344,7 @@ const ChatWidget = () => {
           {/* Body Section */}
           {activeConversationId && otherUser ? (
             /* Active Chat Room View */
-            <div className="flex-1 flex flex-col min-h-0 bg-slate-50">
+            <div className="flex-1 flex flex-col min-h-0 bg-slate-50 dark:bg-gray-900">
               
               {/* Message List */}
               <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
@@ -362,10 +359,10 @@ const ChatWidget = () => {
                       >
                         <div className={`max-w-[75%] rounded-2xl px-3 py-2 text-xs shadow-sm ${
                           isMe 
-                            ? 'bg-blue-600 text-white rounded-br-none' 
-                            : 'bg-white text-gray-800 border border-gray-100 rounded-bl-none'
+                            ? 'bg-blue-600 text-white rounded-br-none dark:bg-blue-500' 
+                            : 'bg-white text-gray-800 border border-gray-100 rounded-bl-none dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700'
                         }`}>
-                          {msg.text && <p className="leading-relaxed whitespace-pre-wrap">{msg.text}</p>}
+                          {msg.text && <p className="leading-relaxed whitespace-pre-wrap break-all sm:break-words">{msg.text}</p>}
                           
                           {/* File Attachment Support */}
                           {msg.fileUrl && (
@@ -414,7 +411,7 @@ const ChatWidget = () => {
                 {/* Typing Indicator */}
                 {isOtherUserTyping && (
                   <div className="flex justify-start">
-                    <div className="bg-white text-gray-400 border border-gray-100 rounded-2xl rounded-bl-none px-3 py-2 text-[10px] italic shadow-sm flex items-center gap-1">
+                    <div className="bg-white text-gray-400 border border-gray-100 rounded-2xl rounded-bl-none px-3 py-2 text-[10px] italic shadow-sm flex items-center gap-1 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-500">
                       <span>{otherUser.name} đang nhập</span>
                       <span className="flex gap-0.5">
                         <span className="w-1 h-1 bg-gray-400 rounded-full animate-bounce"></span>
@@ -429,7 +426,7 @@ const ChatWidget = () => {
               </div>
 
               {/* Input Footer */}
-              <form onSubmit={handleSendMessage} className="bg-white p-3 border-t border-gray-100 flex items-center gap-2">
+              <form onSubmit={handleSendMessage} className="bg-white dark:bg-gray-900 p-3 border-t border-gray-100 dark:border-gray-800 flex items-center gap-2">
                 <input 
                   type="file" 
                   ref={imageInputRef} 
@@ -448,7 +445,7 @@ const ChatWidget = () => {
                   type="button"
                   onClick={() => imageInputRef.current?.click()}
                   disabled={isUploading}
-                  className="p-1.5 text-gray-400 hover:text-blue-600 rounded-full hover:bg-slate-50 transition-colors disabled:opacity-50"
+                  className="p-1.5 text-gray-400 hover:text-blue-600 rounded-full hover:bg-slate-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
                   title="Gửi hình ảnh"
                 >
                   <Image className="w-4 h-4" />
@@ -458,7 +455,7 @@ const ChatWidget = () => {
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isUploading}
-                  className="p-1.5 text-gray-400 hover:text-blue-600 rounded-full hover:bg-slate-50 transition-colors disabled:opacity-50"
+                  className="p-1.5 text-gray-400 hover:text-blue-600 rounded-full hover:bg-slate-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
                   title="Đính kèm tệp tin"
                 >
                   <Paperclip className="w-4 h-4" />
@@ -470,7 +467,7 @@ const ChatWidget = () => {
                   value={inputValue}
                   onChange={handleInputChange}
                   disabled={isUploading}
-                  className="flex-1 bg-slate-50 border border-slate-100 rounded-full px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500/50 focus:bg-white"
+                  className="flex-1 bg-slate-50 dark:bg-gray-800 border border-slate-100 dark:border-gray-700 rounded-full px-3 py-1.5 text-xs text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500/50 focus:bg-white dark:focus:bg-gray-900"
                 />
 
                 <button 
@@ -488,22 +485,22 @@ const ChatWidget = () => {
             </div>
           ) : (
             /* Conversation List View */
-            <div className="flex-1 flex flex-col min-h-0 bg-white">
+            <div className="flex-1 flex flex-col min-h-0 bg-white dark:bg-gray-900">
               
               {/* Search Bar */}
-              <div className="p-3 border-b border-gray-50 flex items-center relative">
+              <div className="p-3 border-b border-gray-50 dark:border-gray-800 flex items-center relative">
                 <Search className="w-4 h-4 text-gray-400 absolute left-6" />
                 <input 
                   type="text" 
                   placeholder="Tìm cuộc trò chuyện..." 
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-100 rounded-full text-xs placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500/50 focus:bg-white"
+                  className="w-full pl-9 pr-4 py-1.5 bg-slate-50 dark:bg-gray-800 border border-slate-100 dark:border-gray-700 rounded-full text-xs text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500/50 focus:bg-white dark:focus:bg-gray-900"
                 />
               </div>
 
               {/* Conversation list */}
-              <div className="flex-1 overflow-y-auto divide-y divide-gray-50 min-h-0">
+              <div className="flex-1 overflow-y-auto divide-y divide-gray-50 dark:divide-gray-800 min-h-0">
                 {filteredConversations.length > 0 ? (
                   filteredConversations.map((conv, idx) => {
                     if (!conv) return null;
@@ -519,15 +516,10 @@ const ChatWidget = () => {
                       <div 
                         key={conv._id || idx}
                         onClick={() => handleSelectConversation(conv._id)}
-                        className={`flex items-center gap-3 px-4 py-3 hover:bg-slate-50/80 cursor-pointer transition-colors ${isUnread ? 'bg-blue-50/20' : ''}`}
+                        className={`flex items-center gap-3 px-4 py-3 hover:bg-slate-50/80 dark:hover:bg-gray-800/80 cursor-pointer transition-colors ${isUnread ? 'bg-blue-50/20 dark:bg-blue-900/20' : ''}`}
                       >
                         <div className="relative shrink-0">
-                          <img 
-                            src={participant.avatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} 
-                            alt={participant.name} 
-                            className="w-10 h-10 rounded-full object-cover border border-gray-100 shadow-3xs"
-                            onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
-                          />
+                          <Avatar src={participant.avatar} alt={participant.name} className="w-full h-full" />
                           {isOnline && (
                             <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></span>
                           )}
@@ -535,14 +527,14 @@ const ChatWidget = () => {
                         
                         <div className="min-w-0 flex-1">
                           <div className="flex justify-between items-center">
-                            <span className={`text-xs truncate block ${isUnread ? 'font-bold text-gray-900' : 'font-medium text-gray-800'}`}>
+                            <span className={`text-xs truncate block ${isUnread ? 'font-bold text-gray-900 dark:text-gray-100' : 'font-medium text-gray-800 dark:text-gray-200'}`}>
                               {participant.name}
                             </span>
                             {isUnread && (
                               <span className="w-2 h-2 bg-blue-600 rounded-full shrink-0"></span>
                             )}
                           </div>
-                          <p className={`text-[10px] truncate mt-0.5 ${isUnread ? 'font-bold text-blue-600' : 'text-gray-400'}`}>
+                          <p className={`text-[10px] truncate mt-0.5 ${isUnread ? 'font-bold text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'}`}>
                             {conv.lastMessage ? (conv.lastMessage.text || 'Tệp đính kèm') : 'Chưa có tin nhắn...'}
                           </p>
                         </div>
@@ -569,7 +561,7 @@ const ChatWidget = () => {
       >
         <MessageSquare className="w-6 h-6 transition-transform duration-200" />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white shadow-sm animate-pulse">
+          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white dark:border-gray-900 shadow-sm animate-pulse">
             {unreadCount}
           </span>
         )}
