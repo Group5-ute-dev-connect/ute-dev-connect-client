@@ -16,6 +16,7 @@ const EditProfile = () => {
   const [avatarPreview, setAvatarPreview] = useState('');
   const [originalAvatarUrl, setOriginalAvatarUrl] = useState('');
   const [shouldDeleteAvatar, setShouldDeleteAvatar] = useState(false);
+  const [userId, setUserId] = useState('');
 
   // Cleanup blob URL on unmount
   useEffect(() => {
@@ -60,6 +61,8 @@ const EditProfile = () => {
         if (res.data) {
            console.log("Data profile nhận được:", res.data);
            const profile = res.data.profile || res.data;
+           const uId = profile.user?._id || profile.user?.id || '';
+           setUserId(uId);
            const userAvatar = profile.user?.avatar || '';
            setAvatarPreview(userAvatar);
            setOriginalAvatarUrl(userAvatar);
@@ -171,7 +174,13 @@ const EditProfile = () => {
 
       await profileApi.editProfile(formData);
       toast.success('Cập nhật hồ sơ thành công!');
-      setTimeout(() => navigate('/'), 2000);
+      setTimeout(() => {
+        if (userId) {
+          navigate(`/profile/${userId}`);
+        } else {
+          navigate('/');
+        }
+      }, 2000);
     } catch (err) {
       if (err.response?.status === 401) {
         localStorage.removeItem('token');
