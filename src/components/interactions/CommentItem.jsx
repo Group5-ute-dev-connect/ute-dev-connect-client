@@ -9,6 +9,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import Avatar from '../common/Avatar';
 import ReputationBadge from '../common/ReputationBadge';
+import RankBadge from '../common/RankBadge';
 
 const parseJwt = (token) => {
   try {
@@ -227,8 +228,9 @@ const CommentItem = ({ comment, post, onCommentsChange }) => {
         <div className="min-w-0 flex-1 mt-1">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 <h4 className="font-semibold text-gray-800 dark:text-gray-200">{name}</h4>
+                <RankBadge score={comment?.user?.reputation} className="px-1.5 py-0.5 text-3xs border font-bold rounded-full scale-90 origin-left" />
                 <ReputationBadge score={comment?.user?.reputation} className="px-1.5 py-0.2 text-3xs shadow-3xs" />
               </div>
               {date && (
