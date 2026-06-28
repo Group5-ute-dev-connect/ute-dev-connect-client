@@ -144,6 +144,9 @@ const GroupDetail = () => {
   const [codeSnippet, setCodeSnippet] = useState('');
   const [codeLanguage, setCodeLanguage] = useState('javascript');
   const [isPreview, setIsPreview] = useState(false);
+  const [editingPostId, setEditingPostId] = useState(null);
+  const [editingPostText, setEditingPostText] = useState('');
+  const [selectedDetailPost, setSelectedDetailPost] = useState(null);
 
   // Tabs
   const [activeTab, setActiveTab] = useState('feed'); // 'feed' or 'pending' or 'join-requests' or 'members'
@@ -615,6 +618,63 @@ const GroupDetail = () => {
       ...prev,
       [postId]: !prev[postId]
     }));
+  };
+
+  const handleEditPostSubmit = async (postId, post) => {
+    const trimmedText = editingPostText.trim();
+    if (!trimmedText) return;
+    
+    setActionLoading(true);
+    try {
+      const response = await postApi.updatePost(
+        postId,
+        trimmedText,
+        post.isQuestion,
+        post.codeSnippet || '',
+        post.codeLanguage || 'javascript',
+        post.visibility
+      );
+      const updatedPost = response.data?.data || response.data;
+      
+      if (updatedPost.pendingEdit && updatedPost.pendingEdit.status === 'pending') {
+        toast.warning('Nội dung chỉnh sửa chứa từ khóa nhạy cảm và đang chờ Ban quản trị duyệt. Nội dung bài viết hiện tại tạm thời giữ nguyên.', { autoClose: 8000 });
+        setPosts((prevPosts) =>
+          prevPosts.map((p) => (p._id === postId ? { ...p, ...updatedPost } : p))
+        );
+      } else if (updatedPost.status === 'pending') {
+        toast.warning('Bài viết chứa từ khóa nhạy cảm và đã được chuyển sang chế độ chờ duyệt.', { autoClose: 6000 });
+        setPosts((prevPosts) => prevPosts.filter((p) => p._id !== postId));
+      } else {
+        toast.success('Cập nhật bài thảo luận thành công!');
+        setPosts((prevPosts) =>
+          prevPosts.map((p) => (p._id === postId ? { ...p, ...updatedPost } : p))
+        );
+      }
+      
+      setEditingPostId(null);
+      setEditingPostText('');
+    } catch (err) {
+      console.error('Lỗi khi cập nhật bài viết:', err);
+      toast.error(err.response?.data?.message || 'Không thể cập nhật bài thảo luận.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeletePost = async (postId) => {
+    if (window.confirm('Bạn có chắc chắn muốn xóa bài thảo luận này?')) {
+      setActionLoading(true);
+      try {
+        const response = await postApi.deletePost(postId);
+        toast.success(response.data?.message || 'Đã xóa bài thảo luận thành công!');
+        setPosts((prevPosts) => prevPosts.filter((p) => p._id !== postId));
+      } catch (err) {
+        console.error('Lỗi khi xóa bài viết:', err);
+        toast.error(err.response?.data?.message || 'Không thể xóa bài thảo luận.');
+      } finally {
+        setActionLoading(false);
+      }
+    }
   };
 
   if (loading) {
@@ -1144,85 +1204,145 @@ const GroupDetail = () => {
                                 )}
 
                                 {/* Post Header */}
-                                <div className="p-5 flex items-center space-x-3 border-b border-gray-50">
-                                  <div className="h-10 w-10 bg-indigo-50 rounded-full flex items-center justify-center overflow-hidden">
-                                    <img 
-                                      src={post.avatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} 
-                                      alt={post.name} 
-                                      className="w-full h-full object-cover" 
-                                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
-                                    />
+                                <div className="p-5 flex items-center justify-between border-b border-gray-50 gap-4">
+                                  <div className="flex items-center space-x-3 min-w-0">
+                                    <div className="h-10 w-10 bg-indigo-50 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
+                                      <img 
+                                        src={post.avatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} 
+                                        alt={post.name} 
+                                        className="w-full h-full object-cover" 
+                                        onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
+                                      />
+                                    </div>
+                                    <div className="min-w-0">
+                                      <div className="flex items-center gap-1.5 flex-wrap">
+                                        <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{post.name || 'Thành viên'}</h4>
+                                        <RankBadge score={post.user?.reputation} className="px-1.5 py-0.5 text-3xs border font-bold rounded-full scale-90 origin-left" />
+                                        {post.user?.reputation !== undefined && (
+                                          <span className="inline-flex items-center px-1.5 py-0.2 rounded-full text-3xs font-bold bg-amber-50 text-amber-700 border border-amber-100 shadow-3xs" title="Điểm uy tín">
+                                            ★ {post.user.reputation}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center text-xs text-gray-400 mt-0.5">
+                                        <Calendar className="w-3.5 h-3.5 mr-1" />
+                                        <span>{postDate}</span>
+                                      </div>
+                                    </div>
                                   </div>
-                                  <div>
-                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                      <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100">{post.name || 'Thành viên'}</h4>
-                                      <RankBadge score={post.user?.reputation} className="px-1.5 py-0.5 text-3xs border font-bold rounded-full scale-90 origin-left" />
-                                      {post.user?.reputation !== undefined && (
-                                        <span className="inline-flex items-center px-1.5 py-0.2 rounded-full text-3xs font-bold bg-amber-50 text-amber-700 border border-amber-100 shadow-3xs" title="Điểm uy tín">
-                                          ★ {post.user.reputation}
-                                        </span>
-                                      )}
-                                    </div>
-                                    <div className="flex items-center text-xs text-gray-400 mt-0.5">
-                                      <Calendar className="w-3.5 h-3.5 mr-1" />
-                                      <span>{postDate}</span>
-                                    </div>
+
+                                  {/* Post Actions */}
+                                  <div className="flex items-center space-x-1 flex-shrink-0">
+                                    {userId && (post.user?._id || post.user || '').toString() === userId.toString() && editingPostId !== post._id && (
+                                      <button 
+                                        onClick={(e) => { 
+                                          e.preventDefault(); 
+                                          setEditingPostId(post._id); 
+                                          setEditingPostText(post.text); 
+                                        }} 
+                                        className="text-gray-400 hover:text-blue-500 p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors" 
+                                        title="Chỉnh sửa bài viết"
+                                      >
+                                        <Edit2 className="w-4 h-4" />
+                                      </button>
+                                    )}
+                                    {userId && (((post.user?._id || post.user || '').toString() === userId.toString()) || canModerate) && (
+                                      <button 
+                                        onClick={() => handleDeletePost(post._id)} 
+                                        className="text-gray-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors" 
+                                        title="Xóa bài viết"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                    )}
                                   </div>
                                 </div>
 
                                 {/* Post Body */}
                                 <div className="p-5 space-y-3">
-                                  <div className="flex flex-wrap gap-1.5 mb-1">
-                                    {post.isQuestion && (
-                                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-150">
-                                        <HelpCircle className="w-3.5 h-3.5 mr-1 text-indigo-600" /> Câu hỏi
-                                      </span>
-                                    )}
-                                    {post.isQuestion && post.acceptedAnswer && (
-                                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-green-50 text-green-700 border border-green-150">
-                                        <CheckCircle className="w-3.5 h-3.5 mr-1 text-green-600" /> Đã giải quyết
-                                      </span>
-                                    )}
-                                  </div>
-
-                                  <div className="text-gray-800 dark:text-gray-200 text-sm leading-relaxed prose prose-slate prose-sm max-w-none prose-p:my-1 prose-pre:my-2 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1">
-                                    <ReactMarkdown
-                                      remarkPlugins={[remarkGfm]}
-                                      components={{
-                                        code({ inline, className, children, ...props }) {
-                                          const match = /language-(\w+)/.exec(className || '')
-                                          return !inline && match ? (
-                                            <SyntaxHighlighter
-                                              {...props}
-                                              children={String(children).replace(/\n$/, '')}
-                                              style={vscDarkPlus}
-                                              language={match[1]}
-                                              PreTag="div"
-                                              className="rounded-md"
-                                            />
-                                          ) : (
-                                            <code {...props} className={`${className || ''} bg-gray-150 text-red-500 px-1 py-0.5 rounded text-xs font-mono`}>
-                                              {children}
-                                            </code>
-                                          )
-                                        }
-                                      }}
-                                    >
-                                      {post.text}
-                                    </ReactMarkdown>
-                                  </div>
-
-                                  {post.codeSnippet && (
-                                    <div className="mt-3 border-t border-gray-100 dark:border-gray-700 pt-3">
-                                      <span className="text-xs font-bold text-slate-500 block mb-1 uppercase tracking-wider">Mã nguồn ({post.codeLanguage || 'javascript'}):</span>
-                                      <SyntaxHighlighter
-                                        children={post.codeSnippet}
-                                        style={vscDarkPlus}
-                                        language={post.codeLanguage || 'javascript'}
-                                        PreTag="div"
-                                        className="rounded-lg shadow-sm overflow-hidden text-xs"
+                                  {editingPostId === post._id ? (
+                                    <div className="space-y-3">
+                                      <textarea
+                                        value={editingPostText}
+                                        onChange={(e) => setEditingPostText(e.target.value)}
+                                        className="w-full min-h-[120px] p-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:text-gray-100"
+                                        placeholder="Nhập nội dung bài viết..."
                                       />
+                                      <div className="flex justify-end gap-2">
+                                        <button
+                                          onClick={() => setEditingPostId(null)}
+                                          className="px-3 py-1.5 bg-gray-150 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-350 rounded-lg text-xs font-semibold transition-colors"
+                                        >
+                                          Hủy
+                                        </button>
+                                        <button
+                                          onClick={() => handleEditPostSubmit(post._id, post)}
+                                          disabled={!editingPostText.trim()}
+                                          className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-lg text-xs font-semibold transition-colors"
+                                        >
+                                          Lưu thay đổi
+                                        </button>
+                                      </div>
                                     </div>
+                                  ) : (
+                                    <>
+                                      <div className="flex flex-wrap gap-1.5 mb-1">
+                                        {post.isQuestion && (
+                                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-150">
+                                            <HelpCircle className="w-3.5 h-3.5 mr-1 text-indigo-600" /> Câu hỏi
+                                          </span>
+                                        )}
+                                        {post.isQuestion && post.acceptedAnswer && (
+                                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-green-50 text-green-700 border border-green-150">
+                                            <CheckCircle className="w-3.5 h-3.5 mr-1 text-green-600" /> Đã giải quyết
+                                          </span>
+                                        )}
+                                      </div>
+
+                                      <div 
+                                        onClick={() => setSelectedDetailPost(post)}
+                                        className="text-gray-800 dark:text-gray-200 text-sm leading-relaxed prose prose-slate prose-sm max-w-none prose-p:my-1 prose-pre:my-2 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1 cursor-pointer hover:bg-slate-50/30 dark:hover:bg-slate-700/20 p-2.5 -mx-2.5 rounded-2xl transition-all duration-200"
+                                        title="Nhấp để xem chi tiết bài thảo luận"
+                                      >
+                                        <ReactMarkdown
+                                          remarkPlugins={[remarkGfm]}
+                                          components={{
+                                            code({ inline, className, children, ...props }) {
+                                              const match = /language-(\w+)/.exec(className || '')
+                                              return !inline && match ? (
+                                                <SyntaxHighlighter
+                                                  {...props}
+                                                  children={String(children).replace(/\n$/, '')}
+                                                  style={vscDarkPlus}
+                                                  language={match[1]}
+                                                  PreTag="div"
+                                                  className="rounded-md"
+                                                />
+                                              ) : (
+                                                <code {...props} className={`${className || ''} bg-gray-150 text-red-500 px-1 py-0.5 rounded text-xs font-mono`}>
+                                                  {children}
+                                                </code>
+                                              )
+                                            }
+                                          }}
+                                        >
+                                          {post.text}
+                                        </ReactMarkdown>
+                                      </div>
+
+                                      {post.codeSnippet && (
+                                        <div className="mt-3 border-t border-gray-100 dark:border-gray-700 pt-3">
+                                          <span className="text-xs font-bold text-slate-500 block mb-1 uppercase tracking-wider">Mã nguồn ({post.codeLanguage || 'javascript'}):</span>
+                                          <SyntaxHighlighter
+                                            children={post.codeSnippet}
+                                            style={vscDarkPlus}
+                                            language={post.codeLanguage || 'javascript'}
+                                            PreTag="div"
+                                            className="rounded-lg shadow-sm overflow-hidden text-xs"
+                                          />
+                                        </div>
+                                      )}
+                                    </>
                                   )}
                                 </div>
 
@@ -1679,6 +1799,101 @@ const GroupDetail = () => {
                 {confirmLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 {confirmDialog.confirmText}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selectedDetailPost && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-150 dark:border-gray-700 shadow-2xl max-w-3xl w-full max-h-[85vh] overflow-y-auto flex flex-col">
+            {/* Modal Header */}
+            <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between sticky top-0 bg-white dark:bg-gray-800 z-10">
+              <div className="flex items-center space-x-3">
+                <div className="h-10 w-10 bg-indigo-50 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <img 
+                    src={selectedDetailPost.avatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} 
+                    alt={selectedDetailPost.name} 
+                    className="w-full h-full object-cover" 
+                  />
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100">{selectedDetailPost.name || 'Thành viên'}</h4>
+                    <RankBadge score={selectedDetailPost.user?.reputation} className="px-1.5 py-0.5 text-3xs border font-bold rounded-full scale-90 origin-left" />
+                  </div>
+                  <p className="text-xs text-gray-400">Chi tiết bài thảo luận trong nhóm</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setSelectedDetailPost(null)}
+                className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-500 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-6 flex-grow">
+              {/* Post Markdown Text */}
+              <div className="text-gray-800 dark:text-gray-200 text-sm leading-relaxed prose prose-slate prose-sm max-w-none">
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    code({ inline, className, children, ...props }) {
+                      const match = /language-(\w+)/.exec(className || '')
+                      return !inline && match ? (
+                        <SyntaxHighlighter
+                          {...props}
+                          children={String(children).replace(/\n$/, '')}
+                          style={vscDarkPlus}
+                          language={match[1]}
+                          PreTag="div"
+                          className="rounded-md"
+                        />
+                      ) : (
+                        <code {...props} className={`${className || ''} bg-gray-150 text-red-500 px-1 py-0.5 rounded text-xs font-mono`}>
+                          {children}
+                        </code>
+                      )
+                    }
+                  }}
+                >
+                  {selectedDetailPost.text}
+                </ReactMarkdown>
+              </div>
+
+              {/* Code Snippet */}
+              {selectedDetailPost.codeSnippet && (
+                <div className="mt-3 border-t border-gray-150 dark:border-gray-700 pt-3">
+                  <span className="text-xs font-bold text-slate-500 block mb-1 uppercase tracking-wider">Mã nguồn ({selectedDetailPost.codeLanguage || 'javascript'}):</span>
+                  <SyntaxHighlighter
+                    children={selectedDetailPost.codeSnippet}
+                    style={vscDarkPlus}
+                    language={selectedDetailPost.codeLanguage || 'javascript'}
+                    PreTag="div"
+                    className="rounded-lg shadow-sm overflow-hidden text-xs"
+                  />
+                </div>
+              )}
+
+              {/* Comments Section inside Modal */}
+              <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
+                <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-4">Bình luận ({selectedDetailPost.comments?.length || 0})</h4>
+                <CommentSection
+                  postId={selectedDetailPost._id}
+                  post={selectedDetailPost}
+                  comments={selectedDetailPost.comments || []}
+                  onCommentsChange={(nextComments) => {
+                    setSelectedDetailPost(prev => prev ? { ...prev, comments: nextComments } : null);
+                    setPosts((prevPosts) =>
+                      prevPosts.map((p) =>
+                        p._id === selectedDetailPost._id ? { ...p, comments: nextComments } : p
+                      )
+                    );
+                  }}
+                />
+              </div>
             </div>
           </div>
         </div>
