@@ -14,6 +14,9 @@ export const profileApi = {
       },
     });
   },
+  deleteAvatar: () => {
+    return axiosClient.delete('/profile/avatar');
+  },
   getProfiles: () => {
     return axiosClient.get('/profile');
   },

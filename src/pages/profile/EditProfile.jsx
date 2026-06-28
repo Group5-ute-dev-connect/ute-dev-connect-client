@@ -15,6 +15,7 @@ const EditProfile = () => {
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState('');
   const [originalAvatarUrl, setOriginalAvatarUrl] = useState('');
+  const [shouldDeleteAvatar, setShouldDeleteAvatar] = useState(false);
 
   // Cleanup blob URL on unmount
   useEffect(() => {
@@ -113,6 +114,13 @@ const EditProfile = () => {
     // Hiển thị ảnh xem trước tạm thời bằng URL cục bộ
     const previewUrl = URL.createObjectURL(file);
     setAvatarPreview(previewUrl);
+    setShouldDeleteAvatar(false);
+  };
+
+  const handleDeleteAvatarClick = () => {
+    setAvatarFile(null);
+    setAvatarPreview('');
+    setShouldDeleteAvatar(true);
   };
 
   const handleChange = (e) => {
@@ -154,6 +162,11 @@ const EditProfile = () => {
         setOriginalAvatarUrl(newAvatarUrl);
         // Gửi sự kiện custom để cập nhật Navbar
         window.dispatchEvent(new CustomEvent('avatarUpdated', { detail: newAvatarUrl }));
+      } else if (shouldDeleteAvatar) {
+        // Nếu người dùng chọn xóa ảnh đại diện
+        await profileApi.deleteAvatar();
+        setOriginalAvatarUrl('');
+        window.dispatchEvent(new CustomEvent('avatarUpdated', { detail: '' }));
       }
 
       await profileApi.editProfile(formData);
@@ -255,6 +268,15 @@ const EditProfile = () => {
                 <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md">
                   Nhấn vào nút camera để chọn ảnh từ thiết bị của bạn. Hỗ trợ định dạng JPG, PNG, GIF, WebP. Dung lượng tối đa 10MB.
                 </p>
+                {avatarPreview && (
+                  <button
+                    type="button"
+                    onClick={handleDeleteAvatarClick}
+                    className="mt-2 text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    Xóa ảnh hiện tại
+                  </button>
+                )}
               </div>
             </div>
           </div>
