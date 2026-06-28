@@ -183,10 +183,21 @@ const CommentItem = ({ comment, post, onCommentsChange }) => {
   const isPostAuthor = currentUserId && postAuthorId?.toString() === currentUserId?.toString();
 
   return (
-    <div className={`flex gap-4 rounded-2xl border ${isAccepted ? 'border-green-300 dark:border-green-800 bg-green-50 dark:bg-green-900/20 shadow-md' : isTopVoted ? 'border-amber-250 dark:border-amber-800/50 bg-amber-50/20 dark:bg-amber-900/20 shadow-sm' : 'border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm dark:shadow-gray-900/50'} p-4 transition-all duration-300 relative`}>
+    <div className={`flex gap-4 rounded-2xl border ${isAccepted && isTopVoted ? 'border-emerald-350 dark:border-emerald-750 bg-gradient-to-br from-green-50/30 to-amber-50/20 dark:from-green-950/10 dark:to-amber-950/5 shadow-md' : isAccepted ? 'border-green-300 dark:border-green-800 bg-green-50 dark:bg-green-900/20 shadow-md' : isTopVoted ? 'border-amber-250 dark:border-amber-800/50 bg-amber-50/20 dark:bg-amber-900/20 shadow-sm' : 'border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm dark:shadow-gray-900/50'} p-4 transition-all duration-300 relative`}>
       {isAccepted && (
-        <div className="absolute -top-3 -right-2 bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-400 px-3 py-1 rounded-full text-xs font-bold border border-green-200 dark:border-green-800 flex items-center shadow-sm z-10">
-          <CheckCircle className="w-3.5 h-3.5 mr-1" /> Câu trả lời được chấp nhận
+        <div className={`absolute -top-3 -right-2 ${isTopVoted ? 'bg-gradient-to-r from-green-100 to-amber-100 dark:from-green-900/60 dark:to-amber-900/40 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700/60' : 'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800'} px-3 py-1 rounded-full text-xs font-bold border flex items-center shadow-sm z-10`}>
+          {isTopVoted ? (
+            <>
+              <CheckCircle className="w-3.5 h-3.5 mr-1 text-green-600 dark:text-green-400" />
+              <Star className="w-3.5 h-3.5 mr-1 fill-amber-500 text-amber-500" />
+              Câu trả lời được chấp nhận & tốt nhất
+            </>
+          ) : (
+            <>
+              <CheckCircle className="w-3.5 h-3.5 mr-1" />
+              Câu trả lời được chấp nhận
+            </>
+          )}
         </div>
       )}
       {isTopVoted && !isAccepted && (
