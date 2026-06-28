@@ -519,7 +519,7 @@ const ChatWidget = () => {
                         className={`flex items-center gap-3 px-4 py-3 hover:bg-slate-50/80 dark:hover:bg-gray-800/80 cursor-pointer transition-colors ${isUnread ? 'bg-blue-50/20 dark:bg-blue-900/20' : ''}`}
                       >
                         <div className="relative shrink-0">
-                          <Avatar src={participant.avatar} alt={participant.name} className="w-full h-full" />
+                          <Avatar src={participant.avatar} alt={participant.name} className="w-10 h-10" />
                           {isOnline && (
                             <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></span>
                           )}
