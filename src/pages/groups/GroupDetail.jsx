@@ -9,7 +9,7 @@ import {
   Users, ArrowLeft, Loader2, MessageSquare, ThumbsUp, 
   Shield, Calendar, SendHorizontal, AlertCircle, LogOut, Lock,
   HelpCircle, MessageSquarePlus, Eye, Edit2, CheckCircle, Clock3,
-  Crown, Mail, UserCheck, UserX, X
+  Crown, Mail, UserCheck, UserX, X, Trash2, Plus, Search, ShieldAlert
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -156,6 +156,11 @@ const GroupDetail = () => {
   const [joinSubmitting, setJoinSubmitting] = useState(false);
   const [hasLocalPendingJoinRequest, setHasLocalPendingJoinRequest] = useState(false);
   const [moderatorActionUserId, setModeratorActionUserId] = useState('');
+  const [groupBannedWords, setGroupBannedWords] = useState([]);
+  const [groupBannedWordsLoading, setGroupBannedWordsLoading] = useState(false);
+  const [newGroupWord, setNewGroupWord] = useState('');
+  const [groupWordSearch, setGroupWordSearch] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState({
     isOpen: false,
     type: '',
@@ -267,6 +272,57 @@ const GroupDetail = () => {
       toast.error(err.response?.data?.message || 'Không thể tải yêu cầu tham gia nhóm.');
     } finally {
       setJoinRequestsLoading(false);
+    }
+  };
+
+  const fetchGroupFilters = async () => {
+    try {
+      setGroupBannedWordsLoading(true);
+      const response = await groupApi.getGroupFilters(id);
+      setGroupBannedWords(response.data?.data || response.data || []);
+    } catch (err) {
+      console.error('Lỗi khi tải bộ lọc từ cấm của nhóm:', err);
+      toast.error(err.response?.data?.message || 'Không thể tải bộ lọc từ cấm của nhóm.');
+    } finally {
+      setGroupBannedWordsLoading(false);
+    }
+  };
+
+  const handleAddGroupWord = async (e) => {
+    e.preventDefault();
+    const cleanWord = newGroupWord.trim();
+    if (!cleanWord) return;
+
+    if (groupBannedWords.some(w => w.toLowerCase() === cleanWord.toLowerCase())) {
+      toast.warning('Từ cấm này đã tồn tại trong danh sách của nhóm.');
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      const res = await groupApi.addGroupFilter(id, cleanWord);
+      setGroupBannedWords(res.data?.data || res.data || []);
+      setNewGroupWord('');
+      toast.success(`Đã thêm từ cấm "${cleanWord}" thành công!`);
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || 'Lỗi khi thêm từ cấm.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeleteGroupWord = async (word) => {
+    setActionLoading(true);
+    try {
+      const res = await groupApi.deleteGroupFilter(id, word);
+      setGroupBannedWords(res.data?.data || res.data || []);
+      toast.success(`Đã xóa từ cấm "${word}" thành công!`);
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || 'Lỗi khi xóa từ cấm.');
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -613,6 +669,7 @@ const GroupDetail = () => {
     tabs.splice(1, 0,
       { id: 'pending', label: `Duyệt bài (${pendingPosts.length})` },
       { id: 'join-requests', label: `Yêu cầu tham gia (${joinRequests.length})` },
+      { id: 'group-filters', label: 'Bộ lọc từ cấm' }
     );
   }
 
@@ -824,6 +881,9 @@ const GroupDetail = () => {
                   }
                   if (tab.id === 'join-requests') {
                     fetchJoinRequests();
+                  }
+                  if (tab.id === 'group-filters') {
+                    fetchGroupFilters();
                   }
                 }}
                 className={`flex-grow py-2.5 text-center text-sm font-semibold rounded-lg transition-all ${
@@ -1445,6 +1505,95 @@ const GroupDetail = () => {
                           );
                         })
                       )}
+                    </div>
+                  )}
+
+                  {/* TAB 3.5: GROUP FILTERS */}
+                  {effectiveActiveTab === 'group-filters' && canModerate && (
+                    <div className="space-y-4 animate-fade-in">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-extrabold text-gray-800 dark:text-gray-200 uppercase tracking-wider">
+                          Bộ lọc từ cấm của nhóm
+                        </h3>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          {groupBannedWords.length} từ cấm
+                        </span>
+                      </div>
+
+                      {/* Add Word Form */}
+                      <form onSubmit={handleAddGroupWord} className="flex gap-2">
+                        <div className="relative flex-grow">
+                          <input
+                            type="text"
+                            placeholder="Nhập từ cấm mới (ví dụ: hack, toxic...)"
+                            value={newGroupWord}
+                            onChange={(e) => setNewGroupWord(e.target.value)}
+                            disabled={actionLoading}
+                            className="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:text-gray-100"
+                          />
+                        </div>
+                        <button
+                          type="submit"
+                          disabled={actionLoading || !newGroupWord.trim()}
+                          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-xl text-sm font-semibold flex items-center gap-1.5 transition-colors"
+                        >
+                          {actionLoading ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Plus className="w-4 h-4" />
+                          )}
+                          <span>Thêm</span>
+                        </button>
+                      </form>
+
+                      {/* Search & Word List */}
+                      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 space-y-4">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                          <input
+                            type="text"
+                            placeholder="Tìm kiếm từ cấm trong nhóm..."
+                            value={groupWordSearch}
+                            onChange={(e) => setGroupWordSearch(e.target.value)}
+                            className="pl-9 w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:text-gray-100"
+                          />
+                        </div>
+
+                        {groupBannedWordsLoading ? (
+                          <div className="text-center py-10">
+                            <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mx-auto mb-2" />
+                            <span className="text-sm text-gray-500 dark:text-gray-400">Đang tải bộ lọc từ cấm...</span>
+                          </div>
+                        ) : groupBannedWords.length === 0 ? (
+                          <div className="text-center py-10 text-gray-500 dark:text-gray-400 flex flex-col items-center">
+                            <ShieldAlert className="w-8 h-8 text-gray-300 dark:text-gray-600 mb-2" />
+                            <p className="text-sm font-medium">Chưa cấu hình từ cấm nào cho nhóm này.</p>
+                            <p className="text-xs text-gray-400 mt-1">Các bài viết và bình luận trong nhóm chỉ chịu sự kiểm duyệt của bộ lọc từ cấm hệ thống.</p>
+                          </div>
+                        ) : (
+                          <div className="flex flex-wrap gap-2 max-h-[300px] overflow-y-auto pr-1">
+                            {groupBannedWords
+                              .filter(word => word.toLowerCase().includes(groupWordSearch.toLowerCase()))
+                              .map((word, idx) => (
+                                <div
+                                  key={idx}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/50 rounded-xl text-sm font-semibold text-red-700 dark:text-red-400 animate-fade-in"
+                                >
+                                  <span>{word}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteGroupWord(word)}
+                                    disabled={actionLoading}
+                                    className="p-0.5 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-full transition-colors text-red-500"
+                                    title="Xóa từ cấm"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
 

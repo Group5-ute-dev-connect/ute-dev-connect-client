@@ -8,6 +8,7 @@ import {
 import { 
   getConversations, getMessages, setActiveConversation, addMessage, markMessagesAsRead 
 } from '../../store/chatSlice';
+import { addNotification } from '../../store/notificationSlice';
 import axiosClient from '../../services/api/axiosClient';
 import { toast } from 'react-toastify';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -121,6 +122,36 @@ const ChatWidget = () => {
       dispatch(markMessagesAsRead({ conversationId, userId }));
     });
 
+    socket.on('new_notification', (notification) => {
+      dispatch(addNotification(notification));
+      
+      const getNotifText = (notif) => {
+        const name = notif.sender?.name || 'Ai đó';
+        switch (notif.type) {
+          case 'like': return `${name} đã thích bài viết của bạn.`;
+          case 'comment': return `${name} đã bình luận về bài viết của bạn.`;
+          case 'follow': return `${name} đã bắt đầu theo dõi bạn.`;
+          default: return 'Bạn có thông báo mới';
+        }
+      };
+
+      toast.info(getNotifText(notification), {
+        position: "top-right",
+        autoClose: 5000,
+        closeOnClick: true,
+        pauseOnHover: true,
+      });
+    });
+
+    socket.on('new_pending_post_alert', (data) => {
+      toast.warn(data.message, {
+        position: "top-right",
+        autoClose: 7000,
+        closeOnClick: true,
+        pauseOnHover: true,
+      });
+    });
+
     return () => {
       socket.off('receive_message');
       socket.off('get-online-users');
@@ -129,6 +160,8 @@ const ChatWidget = () => {
       socket.off('typing');
       socket.off('stop-typing');
       socket.off('messages-read');
+      socket.off('new_notification');
+      socket.off('new_pending_post_alert');
     };
   }, [token, currentUserId, activeConversationId, isOpen, dispatch]);
 
