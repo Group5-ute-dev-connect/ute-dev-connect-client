@@ -19,10 +19,10 @@ const CommentList = ({ post, comments = [], onCommentsChange }) => {
     if (a.isAccepted && !b.isAccepted) return -1;
     if (!a.isAccepted && b.isAccepted) return 1;
 
-    // 2. Tiếp theo sắp xếp theo số lượt duyệt (approvals) giảm dần
-    const aApprovals = a.approvals?.length || 0;
-    const bApprovals = b.approvals?.length || 0;
-    return bApprovals - aApprovals;
+    // 2. Tiếp theo sắp xếp theo điểm uy tín (approvals - disapprovals) giảm dần
+    const aScore = (a.approvals?.length || 0) - (a.disapprovals?.length || 0);
+    const bScore = (b.approvals?.length || 0) - (b.disapprovals?.length || 0);
+    return bScore - aScore;
   });
 
   return (

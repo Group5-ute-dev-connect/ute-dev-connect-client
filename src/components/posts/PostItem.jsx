@@ -10,6 +10,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import Avatar from '../common/Avatar';
 import ReputationBadge from '../common/ReputationBadge';
+import RankBadge from '../common/RankBadge';
 
 /**
  * PostItem - Component thẻ bài viết thu gọn
@@ -323,13 +324,14 @@ const PostItem = ({ post, isDetail = false, onPostUpdate }) => {
           
           <div className="flex-1 min-w-0">
             {/* Tên tác giả */}
-            <div className="flex items-center gap-1.5 truncate">
+            <div className="flex items-center gap-1.5 flex-wrap truncate">
               <Link 
                 to={`/profile/${authorId}`} 
                 className="text-sm font-semibold text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate block"
               >
                 {name || 'Người dùng ẩn danh'}
               </Link>
+              <RankBadge score={authorReputation} className="px-1.5 py-0.5 text-3xs border font-bold rounded-full scale-90 origin-left" />
               <ReputationBadge score={authorReputation} className="px-1.5 py-0.2 text-3xs shadow-3xs" />
             </div>
             {/* Ngày đăng & Quyền riêng tư */}

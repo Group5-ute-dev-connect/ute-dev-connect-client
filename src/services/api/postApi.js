@@ -91,4 +91,9 @@ export const postApi = {
   approveComment: (postId, commentId) => {
     return axiosClient.put(`/posts/comment/${postId}/${commentId}/approve`);
   },
+
+  // Phản đối bình luận (Downvote)
+  disapproveComment: (postId, commentId) => {
+    return axiosClient.put(`/posts/comment/${postId}/${commentId}/disapprove`);
+  },
 };

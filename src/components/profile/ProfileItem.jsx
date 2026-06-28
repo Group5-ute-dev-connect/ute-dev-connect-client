@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { CheckCircle, MapPin, Briefcase, Users, Star, ArrowUpRight } from 'lucide-react';
 import Avatar from '../common/Avatar';
 import ReputationBadge from '../common/ReputationBadge';
+import RankBadge from '../common/RankBadge';
 
 const ProfileItem = ({ profile }) => {
   const { user, status, company, location, skills } = profile;
@@ -28,6 +29,7 @@ const ProfileItem = ({ profile }) => {
             {user?.name || 'Người dùng ẩn danh'}
           </h3>
           <ReputationBadge score={user?.reputation} className="px-2 py-0.5 text-[10px] shadow-3xs gap-0.5" />
+          <RankBadge score={user?.reputation} className="text-[9px] px-2 py-0.5 border font-bold rounded-full" />
         </div>
 
         <p className="text-xs text-gray-650 dark:text-gray-400 flex items-center justify-center md:justify-start gap-1.5 mb-2">

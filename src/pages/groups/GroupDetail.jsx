@@ -16,6 +16,7 @@ import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import CommentSection from '../../components/interactions/CommentSection';
+import RankBadge from '../../components/common/RankBadge';
 
 // Helper to decode token
 const parseJwt = (token) => {
@@ -1085,8 +1086,9 @@ const GroupDetail = () => {
                                     />
                                   </div>
                                   <div>
-                                    <div className="flex items-center gap-1.5">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
                                       <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100">{post.name || 'Thành viên'}</h4>
+                                      <RankBadge score={post.user?.reputation} className="px-1.5 py-0.5 text-3xs border font-bold rounded-full scale-90 origin-left" />
                                       {post.user?.reputation !== undefined && (
                                         <span className="inline-flex items-center px-1.5 py-0.2 rounded-full text-3xs font-bold bg-amber-50 text-amber-700 border border-amber-100 shadow-3xs" title="Điểm uy tín">
                                           ★ {post.user.reputation}
@@ -1259,8 +1261,9 @@ const GroupDetail = () => {
                                     />
                                   </div>
                                   <div>
-                                    <div className="flex items-center gap-1.5">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
                                       <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100">{post.name || 'Thành viên'}</h4>
+                                      <RankBadge score={post.user?.reputation} className="px-1.5 py-0.5 text-3xs border font-bold rounded-full scale-90 origin-left" />
                                       {post.user?.reputation !== undefined && (
                                         <span className="inline-flex items-center px-1.5 py-0.2 rounded-full text-3xs font-bold bg-amber-50 text-amber-700 border border-amber-100 shadow-3xs" title="Điểm uy tín">
                                           ★ {post.user.reputation}
