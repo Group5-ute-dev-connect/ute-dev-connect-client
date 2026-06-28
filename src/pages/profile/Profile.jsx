@@ -8,6 +8,7 @@ import PostItem from '../../components/posts/PostItem';
 import Avatar from '../../components/common/Avatar';
 import ReputationBadge from '../../components/common/ReputationBadge';
 import FollowModal from '../../components/profile/FollowModal';
+import RankBadge from '../../components/common/RankBadge';
 import { MapPin, Briefcase, GraduationCap, Globe, Code, Video, MessageCircle, Users, Camera, Link as LinkIcon, MessageSquare, User, UserPlus, UserMinus, X } from 'lucide-react';
 
 // Helper to decode token
@@ -251,7 +252,10 @@ const Profile = () => {
             <div className="text-center md:text-left">
               <div className="flex flex-col md:flex-row items-center md:items-baseline gap-2.5 justify-center md:justify-start">
                 <h1 className="text-3xl font-extrabold text-gray-900 dark:text-gray-100">{user?.name}</h1>
-                <ReputationBadge score={user?.reputation} className="px-2 py-0.5 text-xs shadow-3xs" />
+                <div className="flex items-center gap-1.5">
+                  <ReputationBadge score={user?.reputation} className="px-2 py-0.5 text-xs shadow-3xs" />
+                  <RankBadge score={user?.reputation} className="text-2xs px-2.5 py-0.5 border font-bold rounded-full" />
+                </div>
               </div>
               <p className="text-xl text-gray-600 dark:text-gray-400 mt-1 font-medium">{status} {company && `tại ${company}`}</p>
               

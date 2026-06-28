@@ -7,6 +7,7 @@ import TopTrending from '../../components/posts/TopTrending';
 import Navbar from '../../components/layout/Navbar';
 import { profileApi } from '../../services/api/profileApi';
 import Avatar from '../../components/common/Avatar';
+import RankBadge from '../../components/common/RankBadge';
 import { Search, Loader2, Newspaper, AlertCircle, RefreshCw, Star, ChevronRight, GraduationCap, Briefcase } from 'lucide-react';
 
 /**
@@ -289,9 +290,7 @@ const Dashboard = () => {
                             <p className="text-sm font-extrabold text-indigo-700 dark:text-indigo-400">{profile.user?.reputation || 0} điểm</p>
                           </div>
                         </div>
-                        <span className="text-3xs px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400 font-bold rounded-full">
-                          Thành viên
-                        </span>
+                        <RankBadge score={profile.user?.reputation} className="text-3xs px-2 py-0.5 border font-bold rounded-full" />
                       </div>
 
                       <a 
