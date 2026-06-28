@@ -12,9 +12,18 @@ import { toast } from 'react-toastify';
 const EditProfile = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState('');
   const [originalAvatarUrl, setOriginalAvatarUrl] = useState('');
+
+  // Cleanup blob URL on unmount
+  useEffect(() => {
+    return () => {
+      if (avatarPreview && avatarPreview.startsWith('blob:')) {
+        URL.revokeObjectURL(avatarPreview);
+      }
+    };
+  }, [avatarPreview]);
 
   const [formData, setFormData] = useState({
     status: '',
@@ -84,7 +93,7 @@ const EditProfile = () => {
     fetchProfile();
   }, [navigate]);
 
-  const handleAvatarChange = async (e) => {
+  const handleAvatarChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
@@ -98,31 +107,12 @@ const EditProfile = () => {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setAvatarPreview(reader.result);
-    };
-    reader.readAsDataURL(file);
+    // Thiết lập file để upload khi submit
+    setAvatarFile(file);
 
-    setUploading(true);
-    const formDataObj = new FormData();
-    formDataObj.append('avatar', file);
-
-    try {
-      const res = await profileApi.uploadAvatar(formDataObj);
-      toast.success('Cập nhật ảnh đại diện thành công!');
-      const newAvatarUrl = res.data.avatar;
-      setAvatarPreview(newAvatarUrl);
-      setOriginalAvatarUrl(newAvatarUrl);
-      
-      window.dispatchEvent(new CustomEvent('avatarUpdated', { detail: newAvatarUrl }));
-    } catch (err) {
-      console.error('Lỗi khi tải ảnh đại diện:', err);
-      toast.error(err.response?.data?.msg || 'Có lỗi xảy ra khi tải ảnh lên.');
-      setAvatarPreview(originalAvatarUrl);
-    } finally {
-      setUploading(false);
-    }
+    // Hiển thị ảnh xem trước tạm thời bằng URL cục bộ
+    const previewUrl = URL.createObjectURL(file);
+    setAvatarPreview(previewUrl);
   };
 
   const handleChange = (e) => {
@@ -153,6 +143,19 @@ const EditProfile = () => {
 
     setLoading(true);
     try {
+      // Nếu có chọn file ảnh đại diện mới, tiến hành upload lên server trước
+      if (avatarFile) {
+        const formDataObj = new FormData();
+        formDataObj.append('avatar', avatarFile);
+        const uploadRes = await profileApi.uploadAvatar(formDataObj);
+        const newAvatarUrl = uploadRes.data.avatar;
+        
+        // Cập nhật lại originalAvatarUrl
+        setOriginalAvatarUrl(newAvatarUrl);
+        // Gửi sự kiện custom để cập nhật Navbar
+        window.dispatchEvent(new CustomEvent('avatarUpdated', { detail: newAvatarUrl }));
+      }
+
       await profileApi.editProfile(formData);
       toast.success('Cập nhật hồ sơ thành công!');
       setTimeout(() => navigate('/'), 2000);
@@ -225,7 +228,7 @@ const EditProfile = () => {
                       <User size={48} />
                     </div>
                   )}
-                  {uploading && (
+                  {loading && (
                     <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
                     </div>
@@ -243,7 +246,7 @@ const EditProfile = () => {
                   className="hidden" 
                   accept="image/*" 
                   onChange={handleAvatarChange}
-                  disabled={uploading}
+                  disabled={loading}
                 />
               </div>
               
