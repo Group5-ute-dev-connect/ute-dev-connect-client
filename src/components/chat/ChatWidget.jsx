@@ -131,25 +131,44 @@ const ChatWidget = () => {
           case 'like': return `${name} đã thích bài viết của bạn.`;
           case 'comment': return `${name} đã bình luận về bài viết của bạn.`;
           case 'follow': return `${name} đã bắt đầu theo dõi bạn.`;
+          case 'post_pending': return `${name} đã đăng một bài viết cần duyệt trong nhóm học tập.`;
+          case 'post_approved': return `${name} đã phê duyệt bài viết của bạn.`;
+          case 'post_rejected': return `${name} đã từ chối bài viết của bạn vì vi phạm tiêu chuẩn.`;
           default: return 'Bạn có thông báo mới';
         }
       };
 
-      toast.info(getNotifText(notification), {
-        position: "top-right",
-        autoClose: 5000,
-        closeOnClick: true,
-        pauseOnHover: true,
-      });
-    });
+      const msg = getNotifText(notification);
 
-    socket.on('new_pending_post_alert', (data) => {
-      toast.warn(data.message, {
-        position: "top-right",
-        autoClose: 7000,
-        closeOnClick: true,
-        pauseOnHover: true,
-      });
+      if (notification.type === 'post_pending') {
+        toast.warn(msg, {
+          position: "top-right",
+          autoClose: 7000,
+          closeOnClick: true,
+          pauseOnHover: true,
+        });
+      } else if (notification.type === 'post_approved') {
+        toast.success(msg, {
+          position: "top-right",
+          autoClose: 5000,
+          closeOnClick: true,
+          pauseOnHover: true,
+        });
+      } else if (notification.type === 'post_rejected') {
+        toast.error(msg, {
+          position: "top-right",
+          autoClose: 5000,
+          closeOnClick: true,
+          pauseOnHover: true,
+        });
+      } else {
+        toast.info(msg, {
+          position: "top-right",
+          autoClose: 5000,
+          closeOnClick: true,
+          pauseOnHover: true,
+        });
+      }
     });
 
     return () => {
@@ -161,7 +180,6 @@ const ChatWidget = () => {
       socket.off('stop-typing');
       socket.off('messages-read');
       socket.off('new_notification');
-      socket.off('new_pending_post_alert');
     };
   }, [token, currentUserId, activeConversationId, isOpen, dispatch]);
 
