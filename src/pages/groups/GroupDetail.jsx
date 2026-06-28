@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
@@ -7,8 +7,9 @@ import groupApi from '../../services/api/groupApi';
 import { postApi } from '../../services/api/postApi';
 import { 
   Users, ArrowLeft, Loader2, MessageSquare, ThumbsUp, 
-  Send, Shield, Calendar, SendHorizontal, AlertCircle, LogOut, Lock,
-  HelpCircle, MessageSquarePlus, Eye, Edit2, CheckCircle
+  Shield, Calendar, SendHorizontal, AlertCircle, LogOut, Lock,
+  HelpCircle, MessageSquarePlus, Eye, Edit2, CheckCircle, Clock3,
+  Crown, Mail, UserCheck, UserX, X
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -20,9 +21,97 @@ import CommentSection from '../../components/interactions/CommentSection';
 const parseJwt = (token) => {
   try {
     return JSON.parse(atob(token.split('.')[1]));
-  } catch (e) {
+  } catch {
     return null;
   }
+};
+
+const DEFAULT_AVATAR = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
+
+const getEntityId = (entity) => {
+  if (!entity) return '';
+  if (typeof entity === 'string' || typeof entity === 'number') {
+    return entity.toString();
+  }
+
+  return (entity._id || entity.id || entity.userId || '').toString();
+};
+
+const getMemberUser = (member) => {
+  if (!member) return null;
+  if (member.user && typeof member.user === 'object') return member.user;
+  if (member.member && typeof member.member === 'object') return member.member;
+  if (
+    typeof member === 'object' &&
+    ('_id' in member || 'name' in member || 'avatar' in member || 'email' in member)
+  ) {
+    return member;
+  }
+
+  return null;
+};
+
+const getJoinRequestUser = (request) => {
+  if (!request) return null;
+  if (request.user && typeof request.user === 'object') return request.user;
+  if (request.requester && typeof request.requester === 'object') return request.requester;
+  if (request.member && typeof request.member === 'object') return request.member;
+  if (
+    typeof request === 'object' &&
+    ('_id' in request || 'name' in request || 'avatar' in request || 'email' in request)
+  ) {
+    return request;
+  }
+
+  return null;
+};
+
+const extractArrayPayload = (response) => {
+  const payload = response?.data?.data ?? response?.data ?? [];
+
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.items)) return payload.items;
+  if (Array.isArray(payload?.requests)) return payload.requests;
+  if (Array.isArray(payload?.joinRequests)) return payload.joinRequests;
+
+  return [];
+};
+
+const isUserMemberOfGroup = (groupData, currentUserId) => {
+  if (!groupData || !currentUserId) return false;
+  if (typeof groupData.isMember === 'boolean') return groupData.isMember;
+
+  return groupData.members?.some(
+    (member) => getEntityId(member?.user || member) === currentUserId.toString()
+  );
+};
+
+const isUserGroupAdmin = (groupData, currentUserId) => {
+  if (!groupData || !currentUserId) return false;
+  if (typeof groupData.isAdmin === 'boolean') return groupData.isAdmin;
+
+  return getEntityId(groupData.admin) === currentUserId.toString();
+};
+
+const isUserGroupMod = (groupData, currentUserId) => {
+  if (!groupData || !currentUserId) return false;
+  if (typeof groupData.isMod === 'boolean') return groupData.isMod;
+
+  return groupData.moderators?.some((moderator) => getEntityId(moderator) === currentUserId.toString());
+};
+
+const getJoinRequestStatus = (groupData) => {
+  if (!groupData) return '';
+
+  if (groupData.joinRequestStatus) {
+    return String(groupData.joinRequestStatus).toLowerCase();
+  }
+
+  if (typeof groupData.hasPendingJoinRequest === 'boolean') {
+    return groupData.hasPendingJoinRequest ? 'pending' : '';
+  }
+
+  return '';
 };
 
 const GroupDetail = () => {
@@ -51,47 +140,76 @@ const GroupDetail = () => {
   const [isPreview, setIsPreview] = useState(false);
 
   // Tabs
-  const [activeTab, setActiveTab] = useState('feed'); // 'feed' or 'members' or 'pending'
+  const [activeTab, setActiveTab] = useState('feed'); // 'feed' or 'pending' or 'join-requests' or 'members'
   const [pendingPosts, setPendingPosts] = useState([]);
   const [pendingLoading, setPendingLoading] = useState(false);
+  const [pendingPostAction, setPendingPostAction] = useState({ postId: '', type: '' });
+  const [joinRequests, setJoinRequests] = useState([]);
+  const [joinRequestsLoading, setJoinRequestsLoading] = useState(false);
+  const [joinRequestAction, setJoinRequestAction] = useState({ userId: '', type: '' });
+  const [joinSubmitting, setJoinSubmitting] = useState(false);
+  const [hasLocalPendingJoinRequest, setHasLocalPendingJoinRequest] = useState(false);
+  const [moderatorActionUserId, setModeratorActionUserId] = useState('');
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    type: '',
+    payload: null,
+    title: '',
+    message: '',
+    confirmText: '',
+  });
+  const [confirmLoading, setConfirmLoading] = useState(false);
 
   // Fetch Group Info & Feed
-  const fetchGroupData = async () => {
+  const fetchGroupData = async ({ showPageLoader = true } = {}) => {
     try {
-      setLoading(true);
+      if (showPageLoader) {
+        setLoading(true);
+      }
       const response = await groupApi.getGroupById(id);
       const groupData = response.data?.data || response.data || null;
       setGroup(groupData);
       
-      // Calculate membership in frontend
-      const isMember = userId && groupData?.members?.some(
-        (m) => (m.user?._id || m.user || '').toString() === userId.toString()
-      );
-      const isAdmin = userId && (groupData?.admin?._id || groupData?.admin || '').toString() === userId.toString();
-      const isUserMod = userId && groupData?.moderators?.some(
-        (m) => (m._id || m || '').toString() === userId.toString()
-      );
+      const isMember = isUserMemberOfGroup(groupData, userId);
+      const isAdmin = isUserGroupAdmin(groupData, userId);
+      const isMod = isUserGroupMod(groupData, userId);
+      const requestStatus = getJoinRequestStatus(groupData);
+
+      if (requestStatus === 'pending') {
+        setHasLocalPendingJoinRequest(true);
+      } else if (isMember || isAdmin || ['approved', 'rejected', 'none'].includes(requestStatus)) {
+        setHasLocalPendingJoinRequest(false);
+      }
 
       // If member/admin, fetch internal feed
       if (groupData && (isMember || isAdmin)) {
         await fetchFeed();
         
         // If admin/mod, fetch pending posts count
-        if (isAdmin || isUserMod) {
+        if (isAdmin || isMod) {
           try {
             const pendingResponse = await groupApi.getPendingPosts(id);
-            setPendingPosts(pendingResponse.data?.data || pendingResponse.data || []);
+            setPendingPosts(extractArrayPayload(pendingResponse));
           } catch (e) {
             console.error('Lỗi khi lấy số lượng bài viết chờ duyệt:', e);
           }
+        } else {
+          setPendingPosts([]);
+          setJoinRequests([]);
         }
+      } else {
+        setPosts([]);
+        setPendingPosts([]);
+        setJoinRequests([]);
       }
       setError('');
     } catch (err) {
       console.error('Lỗi khi tải chi tiết nhóm:', err);
       setError(err.response?.data?.message || 'Không thể tải thông tin nhóm học tập.');
     } finally {
-      setLoading(false);
+      if (showPageLoader) {
+        setLoading(false);
+      }
     }
   };
 
@@ -113,55 +231,192 @@ const GroupDetail = () => {
     try {
       setPendingLoading(true);
       const response = await groupApi.getPendingPosts(id);
-      setPendingPosts(response.data?.data || response.data || []);
+      setPendingPosts(extractArrayPayload(response));
     } catch (err) {
       console.error('Lỗi khi tải bài đăng chờ duyệt:', err);
-      toast.error('Không thể tải bài đăng chờ duyệt.');
+      toast.error(err.response?.data?.message || 'Không thể tải bài đăng chờ duyệt.');
     } finally {
       setPendingLoading(false);
     }
   };
 
+  const fetchJoinRequests = async () => {
+    try {
+      setJoinRequestsLoading(true);
+      const response = await groupApi.getJoinRequests(id);
+      setJoinRequests(extractArrayPayload(response));
+    } catch (err) {
+      console.error('Lỗi khi tải yêu cầu tham gia nhóm:', err);
+      toast.error(err.response?.data?.message || 'Không thể tải yêu cầu tham gia nhóm.');
+    } finally {
+      setJoinRequestsLoading(false);
+    }
+  };
+
+  const openConfirmDialog = ({ type, payload = null, title, message, confirmText }) => {
+    setConfirmDialog({
+      isOpen: true,
+      type,
+      payload,
+      title,
+      message,
+      confirmText,
+    });
+  };
+
+  const closeConfirmDialog = (force = false) => {
+    if (confirmLoading && !force) return;
+
+    setConfirmDialog({
+      isOpen: false,
+      type: '',
+      payload: null,
+      title: '',
+      message: '',
+      confirmText: '',
+    });
+  };
+
   const handleToggleModerator = async (targetUserId) => {
     try {
+      setModeratorActionUserId(targetUserId);
       const res = await groupApi.toggleModerator(id, targetUserId);
       if (res.data) {
         toast.success(res.data.message || 'Cập nhật quyền kiểm duyệt viên thành công');
-        fetchGroupData();
+        await fetchGroupData({ showPageLoader: false });
       }
     } catch (err) {
       console.error(err);
       toast.error(err.response?.data?.message || 'Không thể cập nhật quyền kiểm duyệt viên.');
+    } finally {
+      setModeratorActionUserId('');
     }
   };
 
   const handleApprovePost = async (postId) => {
     try {
+      setPendingPostAction({ postId, type: 'approve' });
       const res = await groupApi.approvePost(id, postId);
       if (res.data) {
-        toast.success('Đã phê duyệt bài viết.');
-        setPendingPosts(prev => prev.filter(p => p._id !== postId));
-        fetchFeed();
+        toast.success(res.data.message || '�� ph� duy?t b�i vi?t.');
+        setPendingPosts((prev) => prev.filter((post) => post._id !== postId));
+        await fetchFeed();
+        await fetchGroupData({ showPageLoader: false });
       }
     } catch (err) {
       console.error(err);
-      toast.error('Không thể phê duyệt bài viết.');
+      toast.error(err.response?.data?.message || 'Không thể phê duyệt bài viết.');
+    } finally {
+      setPendingPostAction({ postId: '', type: '' });
     }
   };
 
-  const handleRejectPost = async (postId) => {
-    if (!window.confirm('Bạn có chắc muốn từ chối và xóa bài viết này?')) {
-      return;
-    }
+  const handleRejectPost = (postId) => {
+    openConfirmDialog({
+      type: 'reject-post',
+      payload: { postId },
+      title: 'Từ chối bài viết',
+      message: 'Bạn có chắc muốn từ chối và xóa bài viết này khỏi danh sách chờ duyệt không?',
+      confirmText: 'Xác nhận từ chối',
+    });
+  };
+
+  const handleApproveJoinRequest = async (targetUserId) => {
     try {
-      const res = await groupApi.rejectPost(id, postId);
+      setJoinRequestAction({ userId: targetUserId, type: 'approve' });
+      const res = await groupApi.approveJoinRequest(id, targetUserId);
       if (res.data) {
-        toast.success('Đã từ chối bài viết.');
-        setPendingPosts(prev => prev.filter(p => p._id !== postId));
+        toast.success(res.data.message || '�� duy?t y�u c?u tham gia nh�m.');
+        setJoinRequests((prev) =>
+          prev.filter((request) => getEntityId(getJoinRequestUser(request)) !== targetUserId.toString())
+        );
+        await fetchGroupData({ showPageLoader: false });
       }
     } catch (err) {
       console.error(err);
-      toast.error('Không thể từ chối bài viết.');
+      toast.error(err.response?.data?.message || 'Không thể duyệt yêu cầu tham gia nhóm.');
+    } finally {
+      setJoinRequestAction({ userId: '', type: '' });
+    }
+  };
+
+  const handleRejectJoinRequest = async (targetUserId) => {
+    try {
+      setJoinRequestAction({ userId: targetUserId, type: 'reject' });
+      const res = await groupApi.rejectJoinRequest(id, targetUserId);
+      if (res.data) {
+        toast.success(res.data.message || '�� t? ch?i y�u c?u tham gia nh�m.');
+        setJoinRequests((prev) =>
+          prev.filter((request) => getEntityId(getJoinRequestUser(request)) !== targetUserId.toString())
+        );
+        await fetchGroupData({ showPageLoader: false });
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || 'Không thể từ chối yêu cầu tham gia nhóm.');
+    } finally {
+      setJoinRequestAction({ userId: '', type: '' });
+    }
+  };
+
+  const handleTransferAdmin = (memberUser) => {
+    openConfirmDialog({
+      type: 'transfer-admin',
+      payload: { memberUser },
+      title: 'Chuyển quyền quản trị nhóm',
+      message: `Bạn có chắc muốn chuyển quyền quản trị nhóm cho ${memberUser?.name || 'thành viên này'}? Sau khi chuyển, bạn sẽ không còn là chủ nhóm.`,
+      confirmText: 'Xác nhận chuyển quyền',
+    });
+  };
+
+  const handleConfirmDialog = async () => {
+    try {
+      setConfirmLoading(true);
+
+      if (confirmDialog.type === 'reject-post') {
+        const postId = confirmDialog.payload?.postId;
+        if (!postId) return;
+
+        setPendingPostAction({ postId, type: 'reject' });
+        const res = await groupApi.rejectPost(id, postId);
+        if (res.data) {
+          toast.success(res.data.message || '�� t? ch?i b�i vi?t.');
+          setPendingPosts((prev) => prev.filter((post) => post._id !== postId));
+          await fetchGroupData({ showPageLoader: false });
+        }
+      }
+
+      if (confirmDialog.type === 'leave-group') {
+        const response = await groupApi.leaveGroup(id);
+        if (response.success || response.data) {
+          toast.success('�� r?i kh?i nh�m h?c t?p.');
+          closeConfirmDialog(true);
+          navigate('/groups');
+          return;
+        }
+      }
+
+      if (confirmDialog.type === 'transfer-admin') {
+        const targetMember = confirmDialog.payload?.memberUser;
+        const newAdminId = getEntityId(targetMember);
+        if (!newAdminId) return;
+
+        const response = await groupApi.transferGroupAdmin(id, newAdminId);
+        if (response.success || response.data) {
+          toast.success(response.data?.message || '�� chuy?n quy?n qu?n tr? nh�m th�nh c�ng.');
+          await fetchGroupData({ showPageLoader: false });
+        }
+      }
+
+      closeConfirmDialog(true);
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || 'Không thể thực hiện thao tác này.');
+    } finally {
+      if (confirmDialog.type === 'reject-post') {
+        setPendingPostAction({ postId: '', type: '' });
+      }
+      setConfirmLoading(false);
     }
   };
 
@@ -178,33 +433,39 @@ const GroupDetail = () => {
       navigate('/login');
       return;
     }
+
     try {
-      const response = await groupApi.joinGroup(id);
+      setJoinSubmitting(true);
+      const response = await groupApi.requestJoinGroup(id);
       if (response.success || response.data) {
-        toast.success(`Đã tham gia nhóm thành công!`);
-        fetchGroupData();
+        setHasLocalPendingJoinRequest(true);
+        setGroup((prevGroup) => (
+          prevGroup
+            ? {
+                ...prevGroup,
+                hasPendingJoinRequest: true,
+                joinRequestStatus: 'pending',
+              }
+            : prevGroup
+        ));
+        toast.success('�� g?i y�u c?u tham gia nh�m, vui l�ng ch? duy?t');
       }
     } catch (err) {
-      console.error('Lỗi tham gia nhóm:', err);
-      toast.error(err.response?.data?.message || 'Không thể tham gia nhóm.');
+      console.error('Lỗi gửi yêu cầu tham gia nhóm:', err);
+      toast.error(err.response?.data?.message || 'Không thể gửi yêu cầu tham gia nhóm.');
+    } finally {
+      setJoinSubmitting(false);
     }
   };
 
   // Handle Leave Group
-  const handleLeave = async () => {
-    if (!window.confirm(`Bạn có chắc chắn muốn rời khỏi nhóm này không?`)) {
-      return;
-    }
-    try {
-      const response = await groupApi.leaveGroup(id);
-      if (response.success || response.data) {
-        toast.success('Đã rời khỏi nhóm học tập.');
-        navigate('/groups');
-      }
-    } catch (err) {
-      console.error('Lỗi rời nhóm:', err);
-      toast.error(err.response?.data?.message || 'Không thể rời nhóm.');
-    }
+  const handleLeave = () => {
+    openConfirmDialog({
+      type: 'leave-group',
+      title: 'Rời nhóm học tập',
+      message: 'Bạn có chắc chắn muốn rời khỏi nhóm này không?',
+      confirmText: 'Xác nhận rời nhóm',
+    });
   };
 
   // Handle Create Post
@@ -304,29 +565,142 @@ const GroupDetail = () => {
     );
   }
 
-  const isUserMember = userId && group.members?.some(
-    (m) => (m.user?._id || m.user || '').toString() === userId.toString()
-  );
-  const isUserAdmin = userId && (group.admin?._id || group.admin || '').toString() === userId.toString();
-  const isUserMod = userId && group.moderators?.some(
-    (m) => (m._id || m || '').toString() === userId.toString()
-  );
+  const isUserMember = isUserMemberOfGroup(group, userId);
+  const isUserAdmin = isUserGroupAdmin(group, userId);
+  const isUserMod = isUserGroupMod(group, userId);
   const canModerate = isUserAdmin || isUserMod;
+  const joinRequestStatus = getJoinRequestStatus(group) || (hasLocalPendingJoinRequest ? 'pending' : '');
+  const isJoinRequestPending = joinRequestStatus === 'pending';
+  const effectiveActiveTab =
+    !canModerate && (activeTab === 'pending' || activeTab === 'join-requests')
+      ? 'feed'
+      : activeTab;
+  const members = Array.isArray(group.members) ? group.members : [];
+  const memberCount = group.membersCount ?? members.length ?? 0;
 
-  // Format Date
-  const formattedDate = new Date(group.date).toLocaleDateString('vi-VN', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
+  const groupDate = group.date || group.createdAt;
+  const formattedDate = groupDate
+    ? new Date(groupDate).toLocaleDateString('vi-VN', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })
+    : 'Không rõ';
 
   const tabs = [
     { id: 'feed', label: 'Thảo luận' },
-    { id: 'members', label: `Thành viên (${group.members?.length || 0})` }
+    { id: 'members', label: `Thành viên (${memberCount})` },
   ];
+
   if (canModerate) {
-    tabs.splice(1, 0, { id: 'pending', label: `Duyệt bài (${pendingPosts.length})` });
+    tabs.splice(1, 0,
+      { id: 'pending', label: `Duyệt bài (${pendingPosts.length})` },
+      { id: 'join-requests', label: `Yêu cầu tham gia (${joinRequests.length})` },
+    );
   }
+
+  const getMemberRoleMeta = (memberUser) => {
+    const memberId = getEntityId(memberUser);
+    const isMemberAdmin = getEntityId(group.admin) === memberId;
+    const isMemberMod = !isMemberAdmin && group.moderators?.some((moderator) => getEntityId(moderator) === memberId);
+
+    if (isMemberAdmin) {
+      return {
+        isMemberAdmin,
+        isMemberMod,
+        label: 'Admin nhóm',
+        badgeClassName: 'bg-purple-50 text-purple-700 border border-purple-100',
+      };
+    }
+
+    if (isMemberMod) {
+      return {
+        isMemberAdmin,
+        isMemberMod,
+        label: 'Kiểm duyệt viên / Admin phụ',
+        badgeClassName: 'bg-blue-50 text-blue-700 border border-blue-100',
+      };
+    }
+
+    return {
+      isMemberAdmin,
+      isMemberMod,
+      label: 'Thành viên',
+      badgeClassName: 'bg-gray-100 text-gray-600 border border-gray-200',
+    };
+  };
+
+  const renderMemberRow = (member, compact = false) => {
+    const memberUser = getMemberUser(member);
+    if (!memberUser) return null;
+
+    const memberId = getEntityId(memberUser);
+    const { isMemberAdmin, isMemberMod, label, badgeClassName } = getMemberRoleMeta(memberUser);
+    const isTogglingModerator = moderatorActionUserId === memberId;
+    const actionButtonClassName = compact
+      ? 'text-3xs px-1.5 py-0.5'
+      : 'text-3xs px-2 py-1';
+
+    return (
+      <div
+        key={memberId}
+        className={`flex ${compact ? 'items-start' : 'items-center'} justify-between gap-3 ${compact ? 'border-b border-gray-50 pb-3 last:border-b-0 last:pb-0' : ''}`}
+      >
+        <div className="flex items-center space-x-2.5 min-w-0">
+          <div className="h-8 w-8 bg-gray-100 rounded-full flex-shrink-0 flex items-center justify-center overflow-hidden border border-gray-200">
+            <img
+              src={memberUser.avatar || DEFAULT_AVATAR}
+              alt={memberUser.name}
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = DEFAULT_AVATAR;
+              }}
+            />
+          </div>
+          <div className="min-w-0">
+            <Link
+              to={`/profile/${memberId}`}
+              className="text-xs font-semibold text-gray-900 hover:text-indigo-600 transition-colors truncate block"
+            >
+              {memberUser.name || 'Thành viên'}
+            </Link>
+            {!compact && memberUser.email && (
+              <span className="text-3xs text-gray-400 truncate block">{memberUser.email}</span>
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-end gap-1.5 flex-shrink-0 max-w-[58%]">
+          <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-3xs font-semibold whitespace-nowrap ${badgeClassName}`}>
+            {label}
+          </span>
+
+          {isUserAdmin && !isMemberAdmin && (
+            <button
+              onClick={() => handleToggleModerator(memberId)}
+              disabled={isTogglingModerator || confirmLoading}
+              className={`${actionButtonClassName} text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 disabled:opacity-60 disabled:cursor-not-allowed rounded transition-colors font-bold inline-flex items-center`}
+            >
+              {isTogglingModerator && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
+              {isMemberMod ? 'Hạ quyền mod' : 'Thăng mod'}
+            </button>
+          )}
+
+          {isUserAdmin && !isMemberAdmin && (
+            <button
+              onClick={() => handleTransferAdmin(memberUser)}
+              disabled={confirmLoading}
+              className={`${actionButtonClassName} text-amber-700 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 disabled:opacity-60 disabled:cursor-not-allowed rounded transition-colors font-bold inline-flex items-center`}
+            >
+              <Crown className="w-3 h-3 mr-1" />
+              Chuyển quyền
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -373,7 +747,7 @@ const GroupDetail = () => {
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-4 text-xs text-gray-500">
                     <span className="flex items-center gap-1">
                       <Users className="w-4 h-4" />
-                      <strong>{group.membersCount || 0}</strong> thành viên
+                      <strong>{memberCount}</strong> thành viên
                     </span>
                     <span>•</span>
                     <span>Tạo ngày {formattedDate}</span>
@@ -397,11 +771,22 @@ const GroupDetail = () => {
                         Chủ nhóm học tập
                       </span>
                     )
+                  ) : isJoinRequestPending ? (
+                    <button
+                      type="button"
+                      disabled
+                      className="inline-flex items-center px-4 py-2.5 bg-amber-50 text-amber-700 font-semibold rounded-xl text-sm border border-amber-100 cursor-not-allowed"
+                    >
+                      <Clock3 className="w-4 h-4 mr-2" />
+                      Đang chờ duyệt
+                    </button>
                   ) : (
                     <button
                       onClick={handleJoin}
-                      className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition-colors shadow-md shadow-indigo-500/10"
+                      disabled={joinSubmitting}
+                      className="inline-flex items-center px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 disabled:cursor-not-allowed text-white font-semibold rounded-xl text-sm transition-colors shadow-md shadow-indigo-500/10"
                     >
+                      {joinSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                       Tham gia nhóm
                     </button>
                   )}
@@ -420,9 +805,12 @@ const GroupDetail = () => {
                   if (tab.id === 'pending') {
                     fetchPendingPosts();
                   }
+                  if (tab.id === 'join-requests') {
+                    fetchJoinRequests();
+                  }
                 }}
                 className={`flex-grow py-2.5 text-center text-sm font-semibold rounded-lg transition-all ${
-                  activeTab === tab.id 
+                  effectiveActiveTab === tab.id 
                     ? 'bg-indigo-600 text-white shadow-sm' 
                     : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50/50'
                 }`}
@@ -436,7 +824,7 @@ const GroupDetail = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             
             {/* Left Content Area (Feed or Pending Posts) */}
-            <div className={`md:col-span-2 ${activeTab === 'members' ? 'hidden md:block' : ''}`}>
+            <div className={`md:col-span-2 ${effectiveActiveTab === 'members' ? 'hidden md:block' : ''}`}>
               
               {/* Check if member */}
               {!isUserMember ? (
@@ -446,19 +834,28 @@ const GroupDetail = () => {
                   </div>
                   <h3 className="text-lg font-bold text-gray-900 mb-1">Nhóm Riêng Tư</h3>
                   <p className="text-sm text-gray-500 mb-6 max-w-sm mx-auto">
-                    Nội dung bảng tin, mã nguồn thảo luận chỉ hiển thị với thành viên trong nhóm này.
+                    N?i dung b?ng tin, m� ngu?n th?o lu?n ch? hi?n th? v?i th�nh vi�n trong nh�m n�y.
                   </p>
-                  <button
-                    onClick={handleJoin}
-                    className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition-colors"
-                  >
-                    Tham gia nhóm thảo luận
-                  </button>
+                  {isJoinRequestPending ? (
+                    <div className="inline-flex items-center px-4 py-2 rounded-xl text-sm font-semibold bg-amber-50 text-amber-700 border border-amber-100">
+                      <Clock3 className="w-4 h-4 mr-2" />
+                      Yêu cầu tham gia của bạn đang chờ duyệt
+                    </div>
+                  ) : (
+                    <button
+                      onClick={handleJoin}
+                      disabled={joinSubmitting}
+                      className="inline-flex items-center px-6 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 disabled:cursor-not-allowed text-white rounded-xl text-sm font-semibold transition-colors"
+                    >
+                      {joinSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                      Tham gia nhóm thảo luận
+                    </button>
+                  )}
                 </div>
               ) : (
                 <>
                   {/* TAB 1: DISCUSSION FEED */}
-                  {activeTab === 'feed' && (
+                  {effectiveActiveTab === 'feed' && (
                     <>
                       {/* Create Post Form */}
                       <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm mb-6">
@@ -566,7 +963,7 @@ const GroupDetail = () => {
                                 <ReactMarkdown
                                   remarkPlugins={[remarkGfm]}
                                   components={{
-                                    code({node, inline, className, children, ...props}) {
+                                    code({ inline, className, children, ...props }) {
                                       const match = /language-(\w+)/.exec(className || '')
                                       return !inline && match ? (
                                         <SyntaxHighlighter
@@ -706,7 +1103,7 @@ const GroupDetail = () => {
                                     <ReactMarkdown
                                       remarkPlugins={[remarkGfm]}
                                       components={{
-                                        code({node, inline, className, children, ...props}) {
+                                        code({ inline, className, children, ...props }) {
                                           const match = /language-(\w+)/.exec(className || '')
                                           return !inline && match ? (
                                             <SyntaxHighlighter
@@ -801,7 +1198,7 @@ const GroupDetail = () => {
                   )}
 
                   {/* TAB 2: PENDING POSTS FOR MODERATORS */}
-                  {activeTab === 'pending' && canModerate && (
+                  {effectiveActiveTab === 'pending' && canModerate && (
                     <div className="space-y-4">
                       <h3 className="text-sm font-extrabold text-gray-800 uppercase tracking-wider">
                         Bài viết đang chờ duyệt ({pendingPosts.length})
@@ -853,14 +1250,22 @@ const GroupDetail = () => {
                                 <div className="flex gap-2">
                                   <button
                                     onClick={() => handleApprovePost(post._id)}
-                                    className="px-3.5 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-bold transition-colors shadow-sm"
+                                    disabled={pendingPostAction.postId === post._id}
+                                    className="px-3.5 py-1.5 bg-green-600 hover:bg-green-700 disabled:bg-green-400 disabled:cursor-not-allowed text-white rounded-lg text-xs font-bold transition-colors shadow-sm inline-flex items-center"
                                   >
+                                    {pendingPostAction.postId === post._id && pendingPostAction.type === 'approve' && (
+                                      <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                                    )}
                                     Phê duyệt
                                   </button>
                                   <button
                                     onClick={() => handleRejectPost(post._id)}
-                                    className="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition-colors shadow-sm"
+                                    disabled={pendingPostAction.postId === post._id || confirmLoading}
+                                    className="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed text-white rounded-lg text-xs font-bold transition-colors shadow-sm inline-flex items-center"
                                   >
+                                    {pendingPostAction.postId === post._id && pendingPostAction.type === 'reject' && (
+                                      <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                                    )}
                                     Từ chối
                                   </button>
                                 </div>
@@ -878,7 +1283,7 @@ const GroupDetail = () => {
                                   <ReactMarkdown
                                     remarkPlugins={[remarkGfm]}
                                     components={{
-                                      code({node, inline, className, children, ...props}) {
+                                      code({ inline, className, children, ...props }) {
                                         const match = /language-(\w+)/.exec(className || '')
                                         return !inline && match ? (
                                           <SyntaxHighlighter
@@ -920,63 +1325,110 @@ const GroupDetail = () => {
                     </div>
                   )}
 
-                  {/* TAB 3: MEMBERS DETAILED VIEW (ONLY VISIBLE ON MOBILE IF ACTIVE, OR OPTIONAL ON DESKTOP) */}
-                  {activeTab === 'members' && (
-                    <div className="space-y-4 block md:hidden">
+                  {/* TAB 3: JOIN REQUESTS */}
+                  {effectiveActiveTab === 'join-requests' && canModerate && (
+                    <div className="space-y-4">
                       <h3 className="text-sm font-extrabold text-gray-800 uppercase tracking-wider">
-                        Thành viên nhóm ({group.members?.length || 0})
+                        Yêu cầu tham gia ({joinRequests.length})
                       </h3>
-                      <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-4">
-                        {group.members?.map((m) => {
-                          const memberUser = m.user;
-                          if (!memberUser) return null;
-                          const isMemberAdmin = group.admin?._id?.toString() === memberUser._id?.toString();
-                          const isMemberMod = group.moderators && group.moderators.some(
-                            (mod) => (mod._id || mod || '').toString() === memberUser._id?.toString()
-                          );
+
+                      {joinRequestsLoading ? (
+                        <div className="text-center py-10">
+                          <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mx-auto mb-2" />
+                          <span className="text-sm text-gray-500">Đang tải yêu cầu tham gia...</span>
+                        </div>
+                      ) : joinRequests.length === 0 ? (
+                        <div className="bg-white rounded-2xl border border-gray-150 p-10 text-center shadow-sm text-gray-500">
+                          Chưa có yêu cầu tham gia nào.
+                        </div>
+                      ) : (
+                        joinRequests.map((request) => {
+                          const requestUser = getJoinRequestUser(request);
+                          if (!requestUser) return null;
+
+                          const requestUserId = getEntityId(requestUser);
+                          const isProcessingRequest = joinRequestAction.userId === requestUserId;
+                          const requestDate = request.createdAt || request.requestedAt || request.date || request.updatedAt;
 
                           return (
-                            <div key={memberUser._id} className="flex items-center justify-between gap-2 border-b border-gray-50 pb-3 last:border-b-0 last:pb-0">
-                              <div className="flex items-center space-x-2.5 min-w-0">
-                                <div className="h-8 w-8 bg-gray-100 rounded-full flex-shrink-0 flex items-center justify-center overflow-hidden border border-gray-200">
-                                  <img 
-                                    src={memberUser.avatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} 
-                                    alt={memberUser.name} 
-                                    className="w-full h-full object-cover" 
-                                    onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
+                            <div key={requestUserId} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className="h-11 w-11 rounded-full overflow-hidden border border-gray-200 bg-gray-100 flex-shrink-0">
+                                  <img
+                                    src={requestUser.avatar || DEFAULT_AVATAR}
+                                    alt={requestUser.name}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      e.target.onerror = null;
+                                      e.target.src = DEFAULT_AVATAR;
+                                    }}
                                   />
                                 </div>
-                                <Link 
-                                  to={`/profile/${memberUser._id}`} 
-                                  className="text-xs font-semibold text-gray-900 hover:text-indigo-600 transition-colors truncate block"
-                                >
-                                  {memberUser.name}
-                                </Link>
+                                <div className="min-w-0">
+                                  <div className="text-sm font-bold text-gray-900 truncate">{requestUser.name || 'Người dùng'}</div>
+                                  {requestUser.email && (
+                                    <div className="text-xs text-gray-500 flex items-center gap-1 truncate mt-0.5">
+                                      <Mail className="w-3.5 h-3.5 flex-shrink-0" />
+                                      <span className="truncate">{requestUser.email}</span>
+                                    </div>
+                                  )}
+                                  <div className="text-xs text-gray-400 flex items-center gap-1 mt-1">
+                                    <Clock3 className="w-3.5 h-3.5 flex-shrink-0" />
+                                    <span>
+                                      {requestDate
+                                        ? new Date(requestDate).toLocaleString('vi-VN', {
+                                            month: 'short',
+                                            day: 'numeric',
+                                            hour: '2-digit',
+                                            minute: '2-digit',
+                                          })
+                                        : 'Không rõ thời gian gửi'}
+                                    </span>
+                                  </div>
+                                </div>
                               </div>
 
-                              <div className="flex items-center gap-1.5 flex-shrink-0">
-                                {isMemberAdmin && (
-                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-3xs font-semibold bg-purple-50 text-purple-700 border border-purple-100 whitespace-nowrap">
-                                    Admin
-                                  </span>
-                                )}
-                                {isMemberMod && (
-                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-3xs font-semibold bg-blue-600 text-white whitespace-nowrap">
-                                    Mod
-                                  </span>
-                                )}
-                                {isUserAdmin && !isMemberAdmin && (
-                                  <button
-                                    onClick={() => handleToggleModerator(memberUser._id)}
-                                    className="text-3xs text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-1.5 py-0.5 rounded transition-colors font-bold"
-                                  >
-                                    {isMemberMod ? 'Bãi chức Mod' : 'Thăng chức Mod'}
-                                  </button>
-                                )}
+                              <div className="flex items-center gap-2 sm:justify-end">
+                                <button
+                                  onClick={() => handleApproveJoinRequest(requestUserId)}
+                                  disabled={isProcessingRequest}
+                                  className="px-3.5 py-1.5 bg-green-600 hover:bg-green-700 disabled:bg-green-400 disabled:cursor-not-allowed text-white rounded-lg text-xs font-bold transition-colors shadow-sm inline-flex items-center"
+                                >
+                                  {isProcessingRequest && joinRequestAction.type === 'approve' ? (
+                                    <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                                  ) : (
+                                    <UserCheck className="w-3.5 h-3.5 mr-1" />
+                                  )}
+                                  Duyệt
+                                </button>
+                                <button
+                                  onClick={() => handleRejectJoinRequest(requestUserId)}
+                                  disabled={isProcessingRequest}
+                                  className="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed text-white rounded-lg text-xs font-bold transition-colors shadow-sm inline-flex items-center"
+                                >
+                                  {isProcessingRequest && joinRequestAction.type === 'reject' ? (
+                                    <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                                  ) : (
+                                    <UserX className="w-3.5 h-3.5 mr-1" />
+                                  )}
+                                  Từ chối
+                                </button>
                               </div>
                             </div>
                           );
-                        })}
+                        })
+                      )}
+                    </div>
+                  )}
+
+                  {/* TAB 4: MEMBERS DETAILED VIEW */}
+                  {effectiveActiveTab === 'members' && (
+                    <div className="space-y-4 block md:hidden">
+                      <h3 className="text-sm font-extrabold text-gray-800 uppercase tracking-wider">
+                        Thành viên nhóm ({memberCount})
+                      </h3>
+                      <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-4">
+                        {members.map((member) => renderMemberRow(member, true))}
                       </div>
                     </div>
                   )}
@@ -985,64 +1437,15 @@ const GroupDetail = () => {
             </div>
 
             {/* Sidebar Section (Members List - Desktop Only) */}
-            <div className={`md:col-span-1 ${activeTab !== 'members' ? 'hidden md:block' : ''}`}>
+            <div className={`md:col-span-1 ${effectiveActiveTab !== 'members' ? 'hidden md:block' : ''}`}>
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sticky top-24">
                 <h3 className="text-sm font-extrabold text-gray-800 uppercase tracking-wider mb-4 flex items-center justify-between">
-                  <span>Thành viên ({group.members?.length || 0})</span>
+                  <span>Thành viên ({memberCount})</span>
                   <Users className="w-4 h-4 text-indigo-500" />
                 </h3>
-                
+
                 <div className="space-y-4 max-h-[450px] overflow-y-auto pr-1">
-                  {group.members?.map((m) => {
-                    const memberUser = m.user;
-                    if (!memberUser) return null;
-                    const isMemberAdmin = group.admin?._id?.toString() === memberUser._id?.toString();
-                    const isMemberMod = group.moderators && group.moderators.some(
-                      (mod) => (mod._id || mod || '').toString() === memberUser._id?.toString()
-                    );
-
-                    return (
-                      <div key={memberUser._id} className="flex items-center justify-between gap-2">
-                        <div className="flex items-center space-x-2.5 min-w-0">
-                          <div className="h-8 w-8 bg-gray-100 rounded-full flex-shrink-0 flex items-center justify-center overflow-hidden border border-gray-200">
-                            <img 
-                              src={memberUser.avatar || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} 
-                              alt={memberUser.name} 
-                              className="w-full h-full object-cover" 
-                              onError={(e) => { e.target.onerror = null; e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }}
-                            />
-                          </div>
-                          <Link 
-                            to={`/profile/${memberUser._id}`} 
-                            className="text-xs font-semibold text-gray-900 hover:text-indigo-600 transition-colors truncate block"
-                          >
-                            {memberUser.name}
-                          </Link>
-                        </div>
-
-                        <div className="flex items-center gap-1.5 flex-shrink-0">
-                          {isMemberAdmin && (
-                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-3xs font-semibold bg-purple-50 text-purple-700 border border-purple-100 whitespace-nowrap">
-                              Admin
-                            </span>
-                          )}
-                          {isMemberMod && (
-                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-3xs font-semibold bg-blue-600 text-white whitespace-nowrap">
-                              Mod
-                            </span>
-                          )}
-                          {isUserAdmin && !isMemberAdmin && (
-                            <button
-                              onClick={() => handleToggleModerator(memberUser._id)}
-                              className="text-3xs text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-1.5 py-0.5 rounded transition-colors font-bold"
-                            >
-                              {isMemberMod ? 'Bãi chức' : 'Thăng chức'}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+                  {members.map((member) => renderMemberRow(member))}
                 </div>
               </div>
             </div>
@@ -1051,8 +1454,64 @@ const GroupDetail = () => {
 
         </div>
       </main>
+
+      {confirmDialog.isOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-white rounded-2xl border border-gray-100 shadow-2xl overflow-hidden">
+            <div className="px-6 py-4 bg-gray-50 border-b border-gray-100 flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-base font-bold text-gray-900">{confirmDialog.title}</h3>
+                <p className="text-xs text-gray-500 mt-1">Xác nhận trước khi tiếp tục.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => closeConfirmDialog()}
+                disabled={confirmLoading}
+                className="text-gray-400 hover:text-gray-600 disabled:opacity-50"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="px-6 py-5">
+              <p className="text-sm text-gray-600 leading-relaxed">{confirmDialog.message}</p>
+            </div>
+
+            <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-3 bg-white">
+              <button
+                type="button"
+                onClick={() => closeConfirmDialog()}
+                disabled={confirmLoading}
+                className="px-4 py-2 text-sm font-semibold text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-xl transition-colors disabled:opacity-50"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDialog}
+                disabled={confirmLoading}
+                className={`px-4 py-2 text-sm font-semibold text-white rounded-xl transition-colors inline-flex items-center ${confirmDialog.type === 'transfer-admin' ? 'bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400' : 'bg-red-600 hover:bg-red-700 disabled:bg-red-400'}`}
+              >
+                {confirmLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                {confirmDialog.confirmText}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default GroupDetail;
+
+
+
+
+
+
+
+
+
+
+

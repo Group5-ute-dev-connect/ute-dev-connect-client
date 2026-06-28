@@ -16,7 +16,12 @@ export const groupApi = {
     return axiosClient.get(`/groups/${id}`);
   },
 
-  // Tham gia nhóm
+  // Gửi yêu cầu tham gia nhóm
+  requestJoinGroup: (id) => {
+    return axiosClient.put(`/groups/${id}/join`);
+  },
+
+  // Tương thích ngược với các màn hình đang dùng tên cũ
   joinGroup: (id) => {
     return axiosClient.put(`/groups/${id}/join`);
   },
@@ -53,6 +58,26 @@ export const groupApi = {
   // Thăng chức / hạ chức Moderator (chỉ Admin của nhóm)
   toggleModerator: (groupId, userId) => {
     return axiosClient.put(`/groups/${groupId}/moderator`, { userId });
+  },
+
+  // Lấy danh sách yêu cầu tham gia nhóm (chỉ Admin / Mod nhóm)
+  getJoinRequests: (groupId) => {
+    return axiosClient.get(`/groups/${groupId}/join-requests`);
+  },
+
+  // Duyệt yêu cầu tham gia nhóm (chỉ Admin / Mod nhóm)
+  approveJoinRequest: (groupId, userId) => {
+    return axiosClient.put(`/groups/${groupId}/join-requests/${userId}/approve`);
+  },
+
+  // Từ chối yêu cầu tham gia nhóm (chỉ Admin / Mod nhóm)
+  rejectJoinRequest: (groupId, userId) => {
+    return axiosClient.put(`/groups/${groupId}/join-requests/${userId}/reject`);
+  },
+
+  // Chuyển quyền Admin nhóm
+  transferGroupAdmin: (groupId, newAdminId) => {
+    return axiosClient.put(`/groups/${groupId}/transfer-admin`, { newAdminId });
   },
 
   // Lấy danh sách bài đăng chờ duyệt (chỉ Admin / Mod nhóm)

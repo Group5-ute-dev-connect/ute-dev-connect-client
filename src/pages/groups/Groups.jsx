@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
@@ -6,16 +6,39 @@ import Navbar from '../../components/layout/Navbar';
 import groupApi from '../../services/api/groupApi';
 import { 
   Users, Plus, Search, Loader2, Trash2, LogOut, 
-  ArrowRight, Shield, User, Info, FolderGit2, AlertCircle
+  ArrowRight, Shield, User, FolderGit2, AlertCircle
 } from 'lucide-react';
 
 // Helper to decode token
 const parseJwt = (token) => {
   try {
     return JSON.parse(atob(token.split('.')[1]));
-  } catch (e) {
+  } catch {
     return null;
   }
+};
+
+const getEntityId = (entity) => {
+  if (!entity) return '';
+  if (typeof entity === 'string' || typeof entity === 'number') {
+    return entity.toString();
+  }
+
+  return (entity._id || entity.id || entity.userId || '').toString();
+};
+
+const getJoinRequestStatus = (group) => {
+  if (!group) return '';
+
+  if (group.joinRequestStatus) {
+    return String(group.joinRequestStatus).toLowerCase();
+  }
+
+  if (typeof group.hasPendingJoinRequest === 'boolean') {
+    return group.hasPendingJoinRequest ? 'pending' : '';
+  }
+
+  return '';
 };
 
 const Groups = () => {
@@ -31,6 +54,8 @@ const Groups = () => {
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('explore'); // 'explore' or 'my-groups'
+  const [joiningGroupId, setJoiningGroupId] = useState('');
+  const [localPendingJoinRequests, setLocalPendingJoinRequests] = useState({});
   
   // Modal States
   const [showModal, setShowModal] = useState(false);
@@ -88,21 +113,36 @@ const Groups = () => {
   };
 
   // Handle Join Group
-  const handleJoin = async (id, groupName) => {
+  const handleJoin = async (id) => {
     if (!token) {
       toast.info('Vui lòng đăng nhập để tham gia nhóm.');
       navigate('/login');
       return;
     }
+
     try {
-      const response = await groupApi.joinGroup(id);
+      setJoiningGroupId(id);
+      const response = await groupApi.requestJoinGroup(id);
       if (response.success || response.data) {
-        toast.success(`Đã tham gia nhóm "${groupName}" thành công!`);
-        fetchGroups();
+        setLocalPendingJoinRequests((prev) => ({ ...prev, [id]: true }));
+        setGroups((prevGroups) =>
+          prevGroups.map((group) =>
+            group._id === id
+              ? {
+                  ...group,
+                  hasPendingJoinRequest: true,
+                  joinRequestStatus: 'pending',
+                }
+              : group
+          )
+        );
+        toast.success('�� g?i y�u c?u tham gia nh�m, vui l�ng ch? duy?t');
       }
     } catch (err) {
-      console.error('Lỗi tham gia nhóm:', err);
-      toast.error(err.response?.data?.message || 'Không thể tham gia nhóm.');
+      console.error('Lỗi gửi yêu cầu tham gia nhóm:', err);
+      toast.error(err.response?.data?.message || 'Không thể gửi yêu cầu tham gia nhóm.');
+    } finally {
+      setJoiningGroupId('');
     }
   };
 
@@ -143,15 +183,23 @@ const Groups = () => {
   // Helpers to check status
   const isMember = (group) => {
     if (!userId) return false;
-    return group.members?.some(
-      (m) => (m.user?._id || m.user || '').toString() === userId.toString()
-    );
+    if (typeof group.isMember === 'boolean') return group.isMember;
+
+    return group.members?.some((member) => getEntityId(member?.user || member) === userId.toString());
   };
 
   const isAdmin = (group) => {
     if (!userId) return false;
-    const adminId = group.admin?._id || group.admin || '';
-    return adminId.toString() === userId.toString();
+    if (typeof group.isAdmin === 'boolean') return group.isAdmin;
+
+    return getEntityId(group.admin) === userId.toString();
+  };
+
+  const hasPendingJoinRequest = (group) => {
+    const backendStatus = getJoinRequestStatus(group);
+    if (backendStatus === 'pending') return true;
+
+    return Boolean(localPendingJoinRequests[group._id]);
   };
 
   // Filter groups based on activeTab
@@ -292,10 +340,12 @@ const Groups = () => {
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {filteredGroups.map((group) => {
                 const groupAdmin = group.admin;
-                const adminName = groupAdmin?.name || 'Ẩn danh';
-                const memberCount = group.members?.length || 0;
+                const adminName = groupAdmin?.name || group.adminName || 'Ẩn danh';
+                const memberCount = group.membersCount ?? group.members?.length ?? 0;
                 const joined = isMember(group);
                 const ownGroup = isAdmin(group);
+                const pendingRequest = hasPendingJoinRequest(group);
+                const joinActionLoading = joiningGroupId === group._id;
 
                 return (
                   <div 
@@ -317,6 +367,11 @@ const Groups = () => {
                         {!ownGroup && joined && (
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-2xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100 whitespace-nowrap">
                             Thành viên
+                          </span>
+                        )}
+                        {!ownGroup && !joined && pendingRequest && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-2xs font-semibold bg-amber-50 text-amber-700 border border-amber-100 whitespace-nowrap">
+                            Chờ duyệt
                           </span>
                         )}
                       </div>
@@ -370,11 +425,21 @@ const Groups = () => {
                           Truy cập nhóm
                           <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
                         </button>
+                      ) : pendingRequest ? (
+                        <button
+                          type="button"
+                          disabled
+                          className="inline-flex items-center px-4 py-2 bg-amber-50 text-amber-700 border border-amber-100 rounded-xl text-xs font-bold cursor-not-allowed"
+                        >
+                          Đang chờ duyệt
+                        </button>
                       ) : (
                         <button
-                          onClick={() => handleJoin(group._id, group.name)}
-                          className="px-4 py-2 bg-white hover:bg-gray-100 text-gray-700 border border-gray-200 rounded-xl text-xs font-bold transition-colors"
+                          onClick={() => handleJoin(group._id)}
+                          disabled={joinActionLoading}
+                          className="inline-flex items-center px-4 py-2 bg-white hover:bg-gray-100 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed text-gray-700 border border-gray-200 rounded-xl text-xs font-bold transition-colors"
                         >
+                          {joinActionLoading && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
                           Tham gia
                         </button>
                       )}
@@ -474,3 +539,6 @@ const Groups = () => {
 };
 
 export default Groups;
+
+
+
