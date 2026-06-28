@@ -9,7 +9,7 @@ import {
   Users, ArrowLeft, Loader2, MessageSquare, ThumbsUp, 
   Shield, Calendar, SendHorizontal, AlertCircle, LogOut, Lock,
   HelpCircle, MessageSquarePlus, Eye, Edit2, CheckCircle, Clock3,
-  Crown, Mail, UserCheck, UserX, X, Trash2, Plus, Search, ShieldAlert
+  Crown, Mail, UserCheck, UserX, X, Trash2, Plus, Search, ShieldAlert, Settings
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -173,6 +173,9 @@ const GroupDetail = () => {
     confirmText: '',
   });
   const [confirmLoading, setConfirmLoading] = useState(false);
+  const [privacyType, setPrivacyType] = useState('private');
+  const [postModerationType, setPostModerationType] = useState('auto');
+  const [settingsLoading, setSettingsLoading] = useState(false);
 
   // Fetch Group Info & Feed
   const fetchGroupData = async ({ showPageLoader = true } = {}) => {
@@ -183,6 +186,10 @@ const GroupDetail = () => {
       const response = await groupApi.getGroupById(id);
       const groupData = response.data?.data || response.data || null;
       setGroup(groupData);
+      if (groupData) {
+        setPrivacyType(groupData.privacyType || 'private');
+        setPostModerationType(groupData.postModerationType || 'auto');
+      }
       
       const isMember = isUserMemberOfGroup(groupData, userId);
       const isAdmin = isUserGroupAdmin(groupData, userId);
@@ -199,13 +206,19 @@ const GroupDetail = () => {
       if (groupData && (isMember || isAdmin)) {
         await fetchFeed();
         
-        // If admin/mod, fetch pending posts count
+        // If admin/mod, fetch pending posts & join requests counts
         if (isAdmin || isMod) {
           try {
             const pendingResponse = await groupApi.getPendingPosts(id);
             setPendingPosts(extractArrayPayload(pendingResponse));
           } catch (e) {
             console.error('Lỗi khi lấy số lượng bài viết chờ duyệt:', e);
+          }
+          try {
+            const requestsResponse = await groupApi.getJoinRequests(id);
+            setJoinRequests(extractArrayPayload(requestsResponse));
+          } catch (e) {
+            console.error('Lỗi khi lấy số lượng yêu cầu tham gia:', e);
           }
         } else {
           setPendingPosts([]);
@@ -513,18 +526,28 @@ const GroupDetail = () => {
     try {
       setJoinSubmitting(true);
       const response = await groupApi.requestJoinGroup(id);
-      if (response.success || response.data) {
-        setHasLocalPendingJoinRequest(true);
-        setGroup((prevGroup) => (
-          prevGroup
-            ? {
-                ...prevGroup,
-                hasPendingJoinRequest: true,
-                joinRequestStatus: 'pending',
-              }
-            : prevGroup
-        ));
-        toast.success('Đã gửi yêu cầu tham gia nhóm, vui lòng chờ duyệt');
+      const resPayload = response.data || response;
+      const resData = resPayload.data || resPayload;
+      if (resData) {
+        const joinStatus = resData.status || resPayload.status;
+        const joinMessage = resData.message || resPayload.message;
+
+        if (joinStatus === 'approved') {
+          toast.success(joinMessage || 'Tham gia nhóm thành công!');
+          fetchGroupData({ showPageLoader: false });
+        } else {
+          setHasLocalPendingJoinRequest(true);
+          setGroup((prevGroup) => (
+            prevGroup
+              ? {
+                  ...prevGroup,
+                  hasPendingJoinRequest: true,
+                  joinRequestStatus: 'pending',
+                }
+              : prevGroup
+          ));
+          toast.success(joinMessage || 'Đã gửi yêu cầu tham gia nhóm, vui lòng chờ duyệt');
+        }
       }
     } catch (err) {
       console.error('Lỗi gửi yêu cầu tham gia nhóm:', err);
@@ -713,7 +736,8 @@ const GroupDetail = () => {
   const joinRequestStatus = getJoinRequestStatus(group) || (hasLocalPendingJoinRequest ? 'pending' : '');
   const isJoinRequestPending = joinRequestStatus === 'pending';
   const effectiveActiveTab =
-    !canModerate && (activeTab === 'pending' || activeTab === 'join-requests')
+    (!canModerate && (activeTab === 'pending' || activeTab === 'join-requests' || activeTab === 'group-filters')) ||
+    (!isUserAdmin && activeTab === 'settings')
       ? 'feed'
       : activeTab;
   const members = Array.isArray(group.members) ? group.members : [];
@@ -739,6 +763,9 @@ const GroupDetail = () => {
       { id: 'join-requests', label: `Yêu cầu tham gia (${joinRequests.length})` },
       { id: 'group-filters', label: 'Bộ lọc từ cấm' }
     );
+    if (isUserAdmin) {
+      tabs.push({ id: 'settings', label: 'Cài đặt' });
+    }
   }
 
   const getMemberRoleMeta = (memberUser) => {
@@ -796,6 +823,29 @@ const GroupDetail = () => {
       } finally {
         setActionLoading(false);
       }
+    }
+  };
+
+  const handleSaveSettings = async (e) => {
+    e.preventDefault();
+    setSettingsLoading(true);
+    try {
+      const response = await groupApi.updateGroupSettings(id, {
+        privacyType,
+        postModerationType
+      });
+      toast.success(response.data?.message || 'Cập nhật cấu hình cài đặt nhóm thành công!');
+      const updatedGroup = response.data?.data || response.data;
+      if (updatedGroup) {
+        setGroup(updatedGroup);
+        setPrivacyType(updatedGroup.privacyType || 'private');
+        setPostModerationType(updatedGroup.postModerationType || 'auto');
+      }
+    } catch (err) {
+      console.error('Lỗi lưu cài đặt nhóm:', err);
+      toast.error(err.response?.data?.message || 'Không thể lưu cài đặt nhóm.');
+    } finally {
+      setSettingsLoading(false);
     }
   };
 
@@ -1759,6 +1809,117 @@ const GroupDetail = () => {
                           </div>
                         )}
                       </div>
+                    </div>
+                  )}
+
+                  {/* TAB 3.75: GROUP SETTINGS */}
+                  {effectiveActiveTab === 'settings' && isUserAdmin && (
+                    <div className="space-y-6 animate-fade-in">
+                      <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-4">
+                        <div>
+                          <h3 className="text-base font-extrabold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                            <Settings className="w-5 h-5 text-indigo-500" />
+                            Cài đặt nhóm học tập
+                          </h3>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Cấu hình chế độ tham gia và phê duyệt bài thảo luận của nhóm.</p>
+                        </div>
+                      </div>
+
+                      <form onSubmit={handleSaveSettings} className="space-y-6">
+                        
+                        {/* Privacy Selection */}
+                        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-6 space-y-4 shadow-3xs">
+                          <label className="text-sm font-bold text-gray-800 dark:text-gray-200 block">
+                            Chế độ tham gia nhóm (Privacy)
+                          </label>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            
+                            <label className={`flex items-start gap-3 p-4 rounded-2xl border-2 transition-all cursor-pointer ${privacyType === 'public' ? 'border-indigo-500 bg-indigo-50/20 dark:bg-indigo-950/20' : 'border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600'}`}>
+                              <input
+                                type="radio"
+                                name="privacyType"
+                                value="public"
+                                checked={privacyType === 'public'}
+                                onChange={() => setPrivacyType('public')}
+                                className="mt-1 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                              />
+                              <div>
+                                <span className="text-sm font-bold text-gray-900 dark:text-gray-100 block">Nhóm cộng đồng (Công khai)</span>
+                                <span className="text-xs text-gray-500 dark:text-gray-400 block mt-0.5">Mọi người dùng đều có thể tự do tham gia nhóm ngay lập tức mà không cần phê duyệt từ quản trị viên.</span>
+                              </div>
+                            </label>
+
+                            <label className={`flex items-start gap-3 p-4 rounded-2xl border-2 transition-all cursor-pointer ${privacyType === 'private' ? 'border-indigo-500 bg-indigo-50/20 dark:bg-indigo-950/20' : 'border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600'}`}>
+                              <input
+                                type="radio"
+                                name="privacyType"
+                                value="private"
+                                checked={privacyType === 'private'}
+                                onChange={() => setPrivacyType('private')}
+                                className="mt-1 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                              />
+                              <div>
+                                <span className="text-sm font-bold text-gray-900 dark:text-gray-100 block">Nhóm riêng tư</span>
+                                <span className="text-xs text-gray-500 dark:text-gray-400 block mt-0.5">Yêu cầu người dùng gửi đơn tham gia. Admin hoặc Kiểm duyệt viên cần phê duyệt thủ công trước khi vào nhóm.</span>
+                              </div>
+                            </label>
+
+                          </div>
+                        </div>
+
+                        {/* Post Moderation Selection */}
+                        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-6 space-y-4 shadow-3xs">
+                          <label className="text-sm font-bold text-gray-800 dark:text-gray-200 block">
+                            Chế độ phê duyệt bài thảo luận (Moderation)
+                          </label>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            
+                            <label className={`flex items-start gap-3 p-4 rounded-2xl border-2 transition-all cursor-pointer ${postModerationType === 'auto' ? 'border-indigo-500 bg-indigo-50/20 dark:bg-indigo-950/20' : 'border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600'}`}>
+                              <input
+                                type="radio"
+                                name="postModerationType"
+                                value="auto"
+                                checked={postModerationType === 'auto'}
+                                onChange={() => setPostModerationType('auto')}
+                                className="mt-1 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                              />
+                              <div>
+                                <span className="text-sm font-bold text-gray-900 dark:text-gray-100 block">Tự động duyệt bài viết</span>
+                                <span className="text-xs text-gray-500 dark:text-gray-400 block mt-0.5">Bài viết được đăng trực tiếp. Chỉ chuyển sang hàng chờ duyệt nếu bài đăng chứa từ cấm trong bộ lọc từ khóa của nhóm/hệ thống.</span>
+                              </div>
+                            </label>
+
+                            <label className={`flex items-start gap-3 p-4 rounded-2xl border-2 transition-all cursor-pointer ${postModerationType === 'manual' ? 'border-indigo-500 bg-indigo-50/20 dark:bg-indigo-950/20' : 'border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600'}`}>
+                              <input
+                                type="radio"
+                                name="postModerationType"
+                                value="manual"
+                                checked={postModerationType === 'manual'}
+                                onChange={() => setPostModerationType('manual')}
+                                className="mt-1 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                              />
+                              <div>
+                                <span className="text-sm font-bold text-gray-900 dark:text-gray-100 block">Kiểm duyệt tất cả bài viết</span>
+                                <span className="text-xs text-gray-500 dark:text-gray-400 block mt-0.5">Mọi bài đăng của thành viên bình thường bắt buộc phải được Admin/Mod phê duyệt thủ công trước khi xuất hiện trên bảng tin.</span>
+                              </div>
+                            </label>
+
+                          </div>
+                        </div>
+
+                        {/* Save Button */}
+                        <div className="flex justify-end">
+                          <button
+                            type="submit"
+                            disabled={settingsLoading}
+                            className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition-colors disabled:bg-indigo-400 flex items-center gap-2 shadow-sm"
+                          >
+                            {settingsLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                            Lưu cấu hình cài đặt
+                          </button>
+                        </div>
+
+                      </form>
                     </div>
                   )}
 

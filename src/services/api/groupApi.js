@@ -113,6 +113,11 @@ export const groupApi = {
   // Xóa thành viên khỏi nhóm (chỉ Admin nhóm)
   kickMember: (groupId, userId) => {
     return axiosClient.delete(`/groups/${groupId}/members/${userId}`);
+  },
+
+  // Cập nhật cấu hình cài đặt nhóm (chỉ Admin nhóm)
+  updateGroupSettings: (groupId, settings) => {
+    return axiosClient.put(`/groups/${groupId}/settings`, settings);
   }
 };
 
