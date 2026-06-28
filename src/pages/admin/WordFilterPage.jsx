@@ -28,6 +28,9 @@ const WordFilterPage = () => {
 
   const [bannedWords, setBannedWords] = useState([]);
   const [aiEnabled, setAiEnabled] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [isSavingPrompt, setIsSavingPrompt] = useState(false);
+  const [isResettingPrompt, setIsResettingPrompt] = useState(false);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [newWord, setNewWord] = useState('');
@@ -56,6 +59,7 @@ const WordFilterPage = () => {
         if (res.data?.success) {
           setBannedWords(res.data.data.bannedWords || []);
           setAiEnabled(res.data.data.aiFilterEnabled || false);
+          setAiPrompt(res.data.data.aiPrompt || '');
         }
       } catch (err) {
         console.error('Lỗi tải cấu hình bộ lọc:', err);
@@ -201,6 +205,47 @@ const WordFilterPage = () => {
     }
   };
 
+  // Lưu Prompt AI mới
+  const handleSavePrompt = async () => {
+    const cleanPrompt = aiPrompt.trim();
+    if (!cleanPrompt) return;
+
+    setIsSavingPrompt(true);
+    try {
+      const res = await filterApi.updateAiPrompt(cleanPrompt);
+      if (res.data?.success) {
+        setAiPrompt(res.data.data.aiPrompt || '');
+        toast.success('Đã cập nhật prompt bộ lọc AI thành công!');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || 'Lỗi khi cập nhật prompt bộ lọc AI.');
+    } finally {
+      setIsSavingPrompt(false);
+    }
+  };
+
+  // Khôi phục Prompt AI về mặc định
+  const handleResetPrompt = async () => {
+    if (!window.confirm('Bạn có chắc chắn muốn khôi phục Prompt AI về cấu hình mặc định (chỉ chặn thông tin cá độ/cờ bạc)?')) {
+      return;
+    }
+
+    setIsResettingPrompt(true);
+    try {
+      const res = await filterApi.resetAiPrompt();
+      if (res.data?.success) {
+        setAiPrompt(res.data.data.aiPrompt || '');
+        toast.success('Đã khôi phục prompt bộ lọc AI mẫu thành công!');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || 'Lỗi khi khôi phục prompt bộ lọc AI.');
+    } finally {
+      setIsResettingPrompt(false);
+    }
+  };
+
   // Lọc danh sách từ cấm theo ô tìm kiếm
   const filteredWords = bannedWords.filter(word => 
     word.toLowerCase().includes(searchQuery.toLowerCase())
@@ -320,6 +365,52 @@ const WordFilterPage = () => {
                     </div>
                   </div>
                 )}
+
+                {/* AI prompt editor section */}
+                <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-700">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                    <div className="flex items-center gap-1.5 text-sm font-bold text-gray-700 dark:text-gray-300">
+                      <Settings className="h-4 w-4 text-gray-500" />
+                      <span>Cấu hình Prompt hệ thống cho AI</span>
+                    </div>
+                    
+                    <button
+                      type="button"
+                      onClick={handleResetPrompt}
+                      disabled={actionLoading || isSavingPrompt || isResettingPrompt}
+                      className="text-xs font-semibold text-rose-600 hover:text-rose-700 hover:underline transition-all flex items-center gap-1 disabled:opacity-50 disabled:no-underline"
+                    >
+                      Khôi phục bộ lọc AI mẫu
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <textarea
+                      rows={5}
+                      value={aiPrompt}
+                      onChange={(e) => setAiPrompt(e.target.value)}
+                      disabled={actionLoading || isSavingPrompt || isResettingPrompt}
+                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-600 rounded-2xl text-xs placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 focus:bg-white dark:focus:bg-gray-800 transition-all duration-200 resize-y font-mono"
+                      placeholder="Nhập Prompt hướng dẫn AI kiểm duyệt nội dung..."
+                    />
+                    
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={handleSavePrompt}
+                        disabled={actionLoading || isSavingPrompt || isResettingPrompt || !aiPrompt.trim()}
+                        className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-semibold shadow-md shadow-emerald-500/10 hover:shadow-lg transition-all duration-200 flex items-center gap-1.5 disabled:opacity-50"
+                      >
+                        {isSavingPrompt ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <CheckCircle className="h-3.5 w-3.5" />
+                        )}
+                        <span>Cập nhật bộ lọc AI</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Banned Words Management Panel */}

@@ -25,7 +25,7 @@ const PostItem = ({ post, isDetail = false, onPostUpdate }) => {
   
   const parseJwt = (t) => { try { return JSON.parse(atob(t.split('.')[1])); } catch { return null; } };
   
-  const { _id, text, name, avatar, user, likes, comments, tags, date, isSaved, isQuestion, acceptedAnswer, visibility, isHidden, views } = post || {};
+  const { _id, text, name, avatar, user, likes, comments, tags, date, isSaved, isQuestion, acceptedAnswer, visibility, isHidden, views, codeSnippet, codeLanguage } = post || {};
   
   const currentUserId = token ? parseJwt(token)?.user?.id || parseJwt(token)?.id : null;
   const isLiked = Array.isArray(likes) && currentUserId && likes.some(like => {
@@ -304,6 +304,18 @@ const PostItem = ({ post, isDetail = false, onPostUpdate }) => {
           </ReactMarkdown>
         </div>
       </div>
+      {codeSnippet && (
+        <div className="mt-3 border-t border-gray-100 dark:border-gray-800 pt-3" onClick={(e) => e.stopPropagation()}>
+          <span className="text-xs font-bold text-slate-500 dark:text-slate-400 block mb-1 uppercase tracking-wider">Mã nguồn ({codeLanguage || 'javascript'}):</span>
+          <SyntaxHighlighter
+            children={codeSnippet}
+            style={vscDarkPlus}
+            language={codeLanguage || 'javascript'}
+            PreTag="div"
+            className="rounded-lg shadow-sm overflow-hidden text-xs"
+          />
+        </div>
+      )}
     </>
   );
 

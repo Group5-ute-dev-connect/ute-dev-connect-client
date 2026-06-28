@@ -22,6 +22,12 @@ export const filterApi = {
         'Content-Type': 'multipart/form-data'
       }
     });
+  },
+  updateAiPrompt: (aiPrompt) => {
+    return axiosClient.put('/filters/ai-prompt', { aiPrompt });
+  },
+  resetAiPrompt: () => {
+    return axiosClient.post('/filters/ai-prompt/reset');
   }
 };
 
