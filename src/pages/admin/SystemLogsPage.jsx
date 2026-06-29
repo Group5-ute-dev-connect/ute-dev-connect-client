@@ -44,6 +44,53 @@ const SystemLogsPage = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
+  const getSubactionOptions = () => {
+    switch (activeTab) {
+      case 'post':
+        return [
+          { value: 'create', label: 'Tạo mới (Create)' },
+          { value: 'update', label: 'Chỉnh sửa (Update)' },
+          { value: 'delete', label: 'Xóa (Delete)' }
+        ];
+      case 'comment':
+        return [
+          { value: 'create', label: 'Tạo mới (Create)' },
+          { value: 'update', label: 'Chỉnh sửa (Update)' },
+          { value: 'delete', label: 'Xóa (Delete)' }
+        ];
+      case 'like':
+        return [
+          { value: 'like', label: 'Thích (Like)' },
+          { value: 'unlike', label: 'Bỏ thích (Unlike)' }
+        ];
+      case 'group':
+        return [
+          { value: 'create', label: 'Tạo mới (Create)' },
+          { value: 'join', label: 'Tham gia (Join)' },
+          { value: 'leave', label: 'Rời nhóm (Leave)' },
+          { value: 'delete', label: 'Xóa (Delete)' }
+        ];
+      default:
+        return [
+          { value: 'create', label: 'Tạo mới (Create)' },
+          { value: 'update', label: 'Chỉnh sửa (Update)' },
+          { value: 'delete', label: 'Xóa (Delete)' },
+          { value: 'like', label: 'Thích (Like)' },
+          { value: 'unlike', label: 'Bỏ thích (Unlike)' },
+          { value: 'join', label: 'Tham gia nhóm (Join)' },
+          { value: 'leave', label: 'Rời nhóm (Leave)' }
+        ];
+    }
+  };
+
+  // Reset actionFilter if it is not valid for the activeTab
+  useEffect(() => {
+    const validOptions = getSubactionOptions().map(opt => opt.value);
+    if (actionFilter && !validOptions.includes(actionFilter)) {
+      setActionFilter('');
+    }
+  }, [activeTab]);
+
   // Security check: Redirect if not admin
   useEffect(() => {
     if (!token) {
@@ -308,13 +355,11 @@ const SystemLogsPage = () => {
                   className="w-full bg-gray-50 dark:bg-gray-700/40 border border-gray-100 dark:border-gray-750 rounded-2xl px-3.5 py-2.5 text-xs text-gray-700 dark:text-gray-200 outline-none focus:border-indigo-500 dark:focus:border-indigo-400 transition-all font-semibold"
                 >
                   <option value="">Tất cả</option>
-                  <option value="create">Tạo mới (Create)</option>
-                  <option value="update">Chỉnh sửa (Update)</option>
-                  <option value="delete">Xóa (Delete)</option>
-                  <option value="like">Thích (Like)</option>
-                  <option value="unlike">Bỏ thích (Unlike)</option>
-                  <option value="join">Tham gia nhóm (Join)</option>
-                  <option value="leave">Rời nhóm (Leave)</option>
+                  {getSubactionOptions().map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -425,33 +470,21 @@ const SystemLogsPage = () => {
                             {/* Links/Badges */}
                             <td className="px-6 py-4 text-center whitespace-nowrap">
                               {log.type === 'post' && log.post && (
-                                <>
-                                  {isPostDeleted ? (
-                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold rounded-lg bg-orange-50 dark:bg-orange-950/20 text-orange-600 dark:text-orange-400 border border-orange-100 dark:border-orange-900/30">
-                                      <EyeOff size={11} /> Đã xóa mềm
-                                    </span>
-                                  ) : (
-                                    <button
-                                      onClick={() => navigate(`/post/${log.post._id}`)}
-                                      className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 inline-flex items-center gap-1 text-[11px] font-bold"
-                                    >
-                                      Xem bài gốc <ExternalLink size={12} />
-                                    </button>
-                                  )}
-                                </>
+                                <button
+                                  onClick={() => navigate(`/post/${log.post._id}`)}
+                                  className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 inline-flex items-center gap-1 text-[11px] font-bold"
+                                >
+                                  Xem bài gốc {isPostDeleted && '(Đã xóa)'} <ExternalLink size={12} />
+                                </button>
                               )}
                               {log.type === 'comment' && log.post && (
                                 <>
-                                  {isPostDeleted ? (
-                                    <span className="text-[10px] text-gray-400">Bài gốc đã xóa</span>
-                                  ) : (
-                                    <button
-                                      onClick={() => navigate(`/post/${log.post._id}`)}
-                                      className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 inline-flex items-center gap-1 text-[11px] font-bold"
-                                    >
-                                      Xem bài đăng <ExternalLink size={12} />
-                                    </button>
-                                  )}
+                                  <button
+                                    onClick={() => navigate(`/post/${log.post._id}`)}
+                                    className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 inline-flex items-center gap-1 text-[11px] font-bold"
+                                  >
+                                    Xem bài đăng {isPostDeleted && '(Đã xóa)'} <ExternalLink size={12} />
+                                  </button>
                                   {log.action === 'delete' && log.details?.text && (
                                     <div className="text-[9px] text-gray-400 mt-1 truncate max-w-[150px] mx-auto italic" title={log.details.text}>
                                       Log comment: "{log.details.text}"
@@ -544,31 +577,20 @@ const SystemLogsPage = () => {
                         </div>
                         <div>
                           {log.type === 'post' && log.post && (
-                            <>
-                              {isPostDeleted ? (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-bold rounded bg-orange-50 dark:bg-orange-950/20 text-orange-600 dark:text-orange-400 border border-orange-100 dark:border-orange-900/30">
-                                  Đã xóa mềm
-                                </span>
-                              ) : (
-                                <button
-                                  onClick={() => navigate(`/post/${log.post._id}`)}
-                                  className="text-indigo-600 dark:text-indigo-400 hover:underline inline-flex items-center gap-1 text-[11px] font-bold"
-                                >
-                                  Xem bài đăng <ExternalLink size={12} />
-                                </button>
-                              )}
-                            </>
-                          )}
-                          {log.type === 'comment' && log.post && !isPostDeleted && (
                             <button
                               onClick={() => navigate(`/post/${log.post._id}`)}
                               className="text-indigo-600 dark:text-indigo-400 hover:underline inline-flex items-center gap-1 text-[11px] font-bold"
                             >
-                              Xem bài đăng <ExternalLink size={12} />
+                              Xem bài gốc {isPostDeleted && '(Đã xóa)'} <ExternalLink size={12} />
                             </button>
                           )}
-                          {log.type === 'comment' && isPostDeleted && (
-                            <span className="text-[10px] text-gray-400">Bài viết đã xóa</span>
+                          {log.type === 'comment' && log.post && (
+                            <button
+                              onClick={() => navigate(`/post/${log.post._id}`)}
+                              className="text-indigo-600 dark:text-indigo-400 hover:underline inline-flex items-center gap-1 text-[11px] font-bold"
+                            >
+                              Xem bài đăng {isPostDeleted && '(Đã xóa)'} <ExternalLink size={12} />
+                            </button>
                           )}
                           {log.type === 'group' && log.group && (
                             <>
