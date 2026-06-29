@@ -423,7 +423,7 @@ const SystemLogsPage = () => {
                         <th className="px-6 py-4 text-2xs font-extrabold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Thành viên</th>
                         <th className="px-6 py-4 text-2xs font-extrabold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Hành động</th>
                         <th className="px-6 py-4 text-2xs font-extrabold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Mô tả chi tiết</th>
-                        <th className="px-6 py-4 text-2xs font-extrabold text-gray-400 dark:text-gray-500 uppercase tracking-wider text-center">Gốc / Soft-Delete</th>
+                        <th className="px-6 py-4 text-2xs font-extrabold text-gray-400 dark:text-gray-500 uppercase tracking-wider text-center">Liên kết nguồn</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60">
@@ -477,7 +477,7 @@ const SystemLogsPage = () => {
                                   Xem bài gốc {isPostDeleted && '(Đã xóa)'} <ExternalLink size={12} />
                                 </button>
                               )}
-                              {log.type === 'comment' && log.post && (
+                              {(log.type === 'comment' || log.type === 'like') && log.post && (
                                 <>
                                   <button
                                     onClick={() => navigate(`/post/${log.post._id}`)}
@@ -485,7 +485,7 @@ const SystemLogsPage = () => {
                                   >
                                     Xem bài đăng {isPostDeleted && '(Đã xóa)'} <ExternalLink size={12} />
                                   </button>
-                                  {log.action === 'delete' && log.details?.text && (
+                                  {log.type === 'comment' && log.action === 'delete' && log.details?.text && (
                                     <div className="text-[9px] text-gray-400 mt-1 truncate max-w-[150px] mx-auto italic" title={log.details.text}>
                                       Log comment: "{log.details.text}"
                                     </div>
@@ -584,7 +584,7 @@ const SystemLogsPage = () => {
                               Xem bài gốc {isPostDeleted && '(Đã xóa)'} <ExternalLink size={12} />
                             </button>
                           )}
-                          {log.type === 'comment' && log.post && (
+                          {(log.type === 'comment' || log.type === 'like') && log.post && (
                             <button
                               onClick={() => navigate(`/post/${log.post._id}`)}
                               className="text-indigo-600 dark:text-indigo-400 hover:underline inline-flex items-center gap-1 text-[11px] font-bold"
