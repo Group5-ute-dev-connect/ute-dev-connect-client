@@ -21,6 +21,7 @@ import GroupDetail from "./pages/groups/GroupDetail";
 import SearchPage from "./pages/search/SearchPage";
 import WordFilterPage from "./pages/admin/WordFilterPage";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import SystemLogsPage from "./pages/admin/SystemLogsPage";
 
 function App() {
   const location = useLocation();
@@ -55,6 +56,7 @@ function App() {
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/filters" element={<WordFilterPage />} />
+          <Route path="/admin/logs" element={<SystemLogsPage />} />
         </Route>
 
         {/* Route mặc định: Điều hướng về trang chủ */}

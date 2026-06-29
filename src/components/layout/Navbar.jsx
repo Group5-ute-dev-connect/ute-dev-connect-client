@@ -350,6 +350,14 @@ const Navbar = () => {
                             <FolderGit2 size={16} className="text-rose-400 dark:text-rose-500" />
                             <span>Quản lý Bộ Lọc</span>
                           </Link>
+                          <Link
+                            to="/admin/logs"
+                            onClick={() => setShowUserDropdown(false)}
+                            className="flex items-center gap-2.5 px-4 py-2 text-sm text-amber-600 dark:text-amber-400 hover:bg-amber-50/50 dark:hover:bg-amber-900/20 font-medium transition-colors"
+                          >
+                            <Shield size={16} className="text-amber-400 dark:text-amber-500" />
+                            <span>Nhật ký hoạt động</span>
+                          </Link>
                         </>
                       )}
 
@@ -522,6 +530,14 @@ const Navbar = () => {
                       >
                         <FolderGit2 size={18} className="text-rose-500 dark:text-rose-400" />
                         Quản lý Bộ Lọc
+                      </Link>
+                      <Link 
+                        to="/admin/logs" 
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center gap-3 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 px-3 py-2.5 rounded-lg text-sm font-bold transition-colors"
+                      >
+                        <Shield size={18} className="text-amber-500 dark:text-amber-400" />
+                        Nhật ký hoạt động
                       </Link>
                     </>
                   )}
