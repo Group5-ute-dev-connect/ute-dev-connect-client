@@ -238,12 +238,30 @@ const Chat = () => {
   useEffect(() => {
     if (!currentUserId) return;
 
-    peerRef.current = new Peer(currentUserId, {
+    // Cấu hình PeerJS Client tự động theo VITE_API_URL
+    const apiUrl = import.meta.env.VITE_API_URL;
+    let peerConfig = {
       host: 'localhost',
       port: 5000,
       path: '/peer',
       secure: false
-    });
+    };
+
+    if (apiUrl) {
+      try {
+        const url = new URL(apiUrl);
+        peerConfig = {
+          host: url.hostname,
+          port: url.port ? parseInt(url.port) : (url.protocol === 'https:' ? 443 : 80),
+          path: '/peer',
+          secure: url.protocol === 'https:'
+        };
+      } catch (e) {
+        console.error("Invalid URL in VITE_API_URL for PeerJS configuration");
+      }
+    }
+
+    peerRef.current = new Peer(currentUserId, peerConfig);
 
     peerRef.current.on('open', (id) => {
       console.log('✅ PeerJS Client kết nối với ID:', id);
