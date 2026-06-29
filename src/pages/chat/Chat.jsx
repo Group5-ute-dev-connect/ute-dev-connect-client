@@ -267,11 +267,6 @@ const Chat = () => {
       console.log('✅ PeerJS Client kết nối với ID:', id);
     });
 
-    peerRef.current.on('disconnected', () => {
-      console.log('❌ PeerJS Client bị mất kết nối với server. Đang thử kết nối lại...');
-      peerRef.current.reconnect();
-    });
-
     peerRef.current.on('error', (err) => {
       console.error('❌ Lỗi PeerJS Client:', err);
     });
@@ -279,15 +274,6 @@ const Chat = () => {
     peerRef.current.on('call', async (incomingCall) => {
       console.log('📞 Nhận cuộc gọi PeerJS từ:', incomingCall.peer);
       currentCallRef.current = incomingCall;
-      
-      // Nếu đã có local stream (đã ấn Chấp nhận), trả lời cuộc gọi ngay
-      if (localStreamRef.current) {
-        incomingCall.answer(localStreamRef.current);
-        incomingCall.on('stream', (userRemoteStream) => {
-          remoteStreamRef.current = userRemoteStream;
-          setRemoteStreamReceived(true);
-        });
-      }
     });
 
     return () => {
@@ -457,20 +443,7 @@ const Chat = () => {
     });
 
     return () => {
-      if (socketRef.current) {
-        socketRef.current.off('connect');
-        socketRef.current.off('receive_message');
-        socketRef.current.off('get-online-users');
-        socketRef.current.off('user-online');
-        socketRef.current.off('user-offline');
-        socketRef.current.off('typing');
-        socketRef.current.off('stop-typing');
-        socketRef.current.off('messages-read');
-        socketRef.current.off('incoming-call');
-        socketRef.current.off('call-response');
-        socketRef.current.off('call-ended');
-        socketRef.current.disconnect();
-      }
+      if (socketRef.current) socketRef.current.disconnect();
       stopRingtone();
       stopStream(localStreamRef);
       stopStream(remoteStreamRef);
@@ -508,15 +481,6 @@ const Chat = () => {
         video: type === 'video',
         audio: true
       });
-
-      // Nếu người dùng đã hủy cuộc gọi trong lúc đang mở camera/mic, giải phóng stream ngay lập tức và dừng lại
-      if (callStateRef.current === 'idle') {
-        stream.getTracks().forEach(track => {
-          try { track.stop(); } catch (e) {}
-        });
-        return;
-      }
-
       localStreamRef.current = stream;
 
       socketRef.current.emit('call-user', {
@@ -543,15 +507,6 @@ const Chat = () => {
         video: callType === 'video',
         audio: true
       });
-
-      // Nếu người dùng đã từ chối/hủy cuộc gọi trong lúc đang mở camera/mic, giải phóng stream ngay lập tức
-      if (callStateRef.current === 'idle') {
-        stream.getTracks().forEach(track => {
-          try { track.stop(); } catch (e) {}
-        });
-        return;
-      }
-
       localStreamRef.current = stream;
       setCallState('connected');
 
@@ -566,6 +521,15 @@ const Chat = () => {
         currentCallRef.current.on('stream', (userRemoteStream) => {
           remoteStreamRef.current = userRemoteStream;
           setRemoteStreamReceived(true);
+        });
+      } else {
+        peerRef.current.on('call', (incomingCall) => {
+          currentCallRef.current = incomingCall;
+          incomingCall.answer(stream);
+          incomingCall.on('stream', (userRemoteStream) => {
+            remoteStreamRef.current = userRemoteStream;
+            setRemoteStreamReceived(true);
+          });
         });
       }
     } catch (err) {
