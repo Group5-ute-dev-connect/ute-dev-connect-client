@@ -748,7 +748,7 @@ const Chat = () => {
 
   return (
     <div className="chat-container">
-      <div className="chat-wrapper">
+      <div className={`chat-wrapper ${activeConversationId ? 'has-active-chat' : ''}`}>
         {/* Sidebar */}
         <div className="chat-sidebar">
           <div className="chat-sidebar-header">
@@ -817,6 +817,14 @@ const Chat = () => {
           {activeConversationId && otherUser ? (
             <>
               <div className="chat-main-header">
+                <button 
+                  type="button"
+                  className="chat-back-button"
+                  onClick={() => dispatch(setActiveConversation(null))}
+                  title="Quay lại danh sách"
+                >
+                  <ArrowLeft size={22} />
+                </button>
                 <div className="avatar-container">
                   <Avatar 
                     src={otherUser.avatar} 
@@ -831,7 +839,7 @@ const Chat = () => {
                     {onlineUsers.includes(otherUser._id) ? 'Đang hoạt động' : 'Ngoại tuyến'}
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: '20px', color: '#0084ff' }}>
+                <div className="chat-header-actions">
                   <Phone size={24} style={{cursor: 'pointer'}} onClick={() => startCall('audio')} title="Gọi thoại" />
                   <Video size={24} style={{cursor: 'pointer'}} onClick={() => startCall('video')} title="Gọi video" />
                   <MoreVertical size={24} style={{cursor: 'pointer'}} color="#666" />
