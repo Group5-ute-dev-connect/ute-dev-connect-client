@@ -18,6 +18,14 @@ const PostDetail = ({ isModal = false }) => {
     navigate(-1);
   };
 
+  const handleBack = () => {
+    if (window.history.state && window.history.state.idx > 0) {
+      navigate(-1);
+    } else {
+      navigate('/dashboard');
+    }
+  };
+
   useEffect(() => {
     if (isModal) {
       document.body.style.overflow = 'hidden';
@@ -110,9 +118,9 @@ const PostDetail = ({ isModal = false }) => {
     return (
       <div className="max-w-3xl mx-auto mt-10 px-4">
         <Alert type="error" message={error} />
-        <Link to="/dashboard" className="inline-flex items-center mt-4 text-blue-600 dark:text-blue-400 hover:underline">
+        <button onClick={handleBack} className="inline-flex items-center mt-4 text-blue-600 dark:text-blue-400 hover:underline bg-transparent border-none cursor-pointer">
           <ArrowLeft className="w-4 h-4 mr-1" /> Quay lại trang chủ
-        </Link>
+        </button>
       </div>
     );
   }
@@ -151,9 +159,9 @@ const PostDetail = ({ isModal = false }) => {
 
   return (
     <div className="max-w-3xl mx-auto mt-8 px-4 pb-12">
-      <Link to="/dashboard" className="inline-flex items-center mb-6 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+      <button onClick={handleBack} className="inline-flex items-center mb-6 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors bg-transparent border-none cursor-pointer">
         <ArrowLeft className="w-4 h-4 mr-1" /> Quay lại
-      </Link>
+      </button>
       
       <PostItem post={post} isDetail={true} onPostUpdate={handlePostUpdate} />
       <PostInteractions post={post} setPost={setPost} />

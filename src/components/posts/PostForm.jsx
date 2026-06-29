@@ -7,8 +7,7 @@ import { MessageSquarePlus, HelpCircle, Eye, Edit2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import CodeBlock from '../common/CodeBlock';
 
 const PostForm = () => {
   const [text, setText] = useState('');
@@ -171,16 +170,15 @@ const PostForm = () => {
                   code({node, inline, className, children, ...props}) {
                     const match = /language-(\w+)/.exec(className || '')
                     return !inline && match ? (
-                      <SyntaxHighlighter
+                      <CodeBlock
                         {...props}
-                        children={String(children).replace(/\n$/, '')}
-                        style={vscDarkPlus}
                         language={match[1]}
-                        PreTag="div"
                         className="rounded-md my-2"
-                      />
+                      >
+                        {String(children).replace(/\n$/, '')}
+                      </CodeBlock>
                     ) : (
-                      <code {...props} className={`${className} bg-gray-100 dark:bg-gray-800 text-red-500 dark:text-red-400 px-1 py-0.5 rounded text-xs font-mono`}>
+                      <code {...props} className={`${className || ''} bg-gray-100 dark:bg-gray-800 text-red-500 dark:text-red-400 px-1 py-0.5 rounded text-xs font-mono`}>
                         {children}
                       </code>
                     )
@@ -196,13 +194,12 @@ const PostForm = () => {
             {showCodeSnippet && codeSnippet && (
               <div className="mt-4 border-t border-gray-200 dark:border-gray-700 pt-4">
                 <span className="text-xs font-bold text-slate-500 dark:text-slate-400 block mb-1">Mã nguồn ({codeLanguage}):</span>
-                <SyntaxHighlighter
-                  children={codeSnippet}
-                  style={vscDarkPlus}
+                <CodeBlock
                   language={codeLanguage}
-                  PreTag="div"
                   className="rounded-md my-2 text-xs"
-                />
+                >
+                  {codeSnippet}
+                </CodeBlock>
               </div>
             )}
           </div>

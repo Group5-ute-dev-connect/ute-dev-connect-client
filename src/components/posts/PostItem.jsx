@@ -1,13 +1,12 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { useSelector, useDispatch } from 'react-redux';
-import { User, Calendar, MessageSquare, ThumbsUp, Tag, Bookmark, HelpCircle, CheckCircle, Edit2, Trash2, Eye, EyeOff, Globe, Lock, Users, UserCheck } from 'lucide-react';
+import { User, Calendar, MessageSquare, ThumbsUp, Tag, Bookmark, HelpCircle, CheckCircle, Edit2, Trash2, Eye, EyeOff, Globe, Lock, Users, UserCheck, Share2 } from 'lucide-react';
 import { savePost, deletePost, updatePost, hidePost, likePost } from '../../store/postSlice';
 import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import CodeBlock from '../common/CodeBlock';
 import Avatar from '../common/Avatar';
 import ReputationBadge from '../common/ReputationBadge';
 import RankBadge from '../common/RankBadge';
@@ -211,6 +210,20 @@ const PostItem = ({ post, isDetail = false, onPostUpdate }) => {
     }
   };
 
+  const handleShareClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const postLink = `${window.location.origin}/post/${_id}`;
+    navigator.clipboard.writeText(postLink)
+      .then(() => {
+        toast.success('Đã sao chép liên kết bài viết vào bộ nhớ tạm!');
+      })
+      .catch((err) => {
+        console.error('Không thể sao chép liên kết:', err);
+        toast.error('Không thể sao chép liên kết.');
+      });
+  };
+
   const handleLikeToggle = async (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -284,14 +297,13 @@ const PostItem = ({ post, isDetail = false, onPostUpdate }) => {
               code({node, inline, className, children, ...props}) {
                 const match = /language-(\w+)/.exec(className || '')
                 return !inline && match ? (
-                  <SyntaxHighlighter
+                  <CodeBlock
                     {...props}
-                    children={String(children).replace(/\n$/, '')}
-                    style={vscDarkPlus}
                     language={match[1]}
-                    PreTag="div"
                     className="rounded-md my-2"
-                  />
+                  >
+                    {String(children).replace(/\n$/, '')}
+                  </CodeBlock>
                 ) : (
                   <code {...props} className={`${className || ''} bg-gray-100 dark:bg-gray-800 text-red-500 dark:text-red-400 px-1 py-0.5 rounded text-xs font-mono`}>
                     {children}
@@ -307,13 +319,12 @@ const PostItem = ({ post, isDetail = false, onPostUpdate }) => {
       {codeSnippet && (
         <div className="mt-3 border-t border-gray-100 dark:border-gray-800 pt-3" onClick={(e) => e.stopPropagation()}>
           <span className="text-xs font-bold text-slate-500 dark:text-slate-400 block mb-1 uppercase tracking-wider">Mã nguồn ({codeLanguage || 'javascript'}):</span>
-          <SyntaxHighlighter
-            children={codeSnippet}
-            style={vscDarkPlus}
+          <CodeBlock
             language={codeLanguage || 'javascript'}
-            PreTag="div"
-            className="rounded-lg shadow-sm overflow-hidden text-xs"
-          />
+            className="rounded-md shadow-xs max-h-96 overflow-y-auto"
+          >
+            {codeSnippet}
+          </CodeBlock>
         </div>
       )}
     </>
@@ -474,6 +485,18 @@ const PostItem = ({ post, isDetail = false, onPostUpdate }) => {
             <MessageSquare className="w-3.5 h-3.5" />
             <span className="font-medium text-gray-600 dark:text-gray-300">
               {comments?.length || 0}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleShareClick}
+            className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all duration-200"
+            title="Chia sẻ bài viết"
+          >
+            <Share2 className="w-3.5 h-3.5" />
+            <span className="font-medium text-gray-600 dark:text-gray-300">
+              Chia sẻ
             </span>
           </button>
         </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import Navbar from '../../components/layout/Navbar';
 import searchApi from '../../services/api/searchApi';
 import { 
@@ -9,13 +9,14 @@ import {
 } from 'lucide-react';
 
 const SearchPage = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  // Search Param States
-  const [q, setQ] = useState('');
-  const [type, setType] = useState('posts'); // 'posts' | 'groups' | 'developers'
-  const [tag, setTag] = useState('');
-  const [skill, setSkill] = useState('');
+  // Search Param States initialized from URL params
+  const [q, setQ] = useState(searchParams.get('q') || '');
+  const [type, setType] = useState(searchParams.get('type') || 'posts'); // 'posts' | 'groups' | 'developers'
+  const [tag, setTag] = useState(searchParams.get('tag') || '');
+  const [skill, setSkill] = useState(searchParams.get('skill') || '');
   
   // Results States
   const [results, setResults] = useState([]);
@@ -25,6 +26,15 @@ const SearchPage = () => {
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
+
+  const updateUrlParams = (newQ, newType, newTag, newSkill) => {
+    const params = {};
+    if (newQ.trim()) params.q = newQ.trim();
+    if (newType) params.type = newType;
+    if (newType === 'posts' && newTag.trim()) params.tag = newTag.trim();
+    if (newType === 'developers' && newSkill.trim()) params.skill = newSkill.trim();
+    setSearchParams(params);
+  };
 
   // Perform search
   const performSearch = async (pageNum = 1, append = false) => {
@@ -36,17 +46,22 @@ const SearchPage = () => {
     setError('');
 
     try {
+      const currentQ = searchParams.get('q') || '';
+      const currentType = searchParams.get('type') || 'posts';
+      const currentTag = searchParams.get('tag') || '';
+      const currentSkill = searchParams.get('skill') || '';
+
       const params = {
-        q: q.trim(),
-        type,
+        q: currentQ.trim(),
+        type: currentType,
         page: pageNum,
         limit: 10
       };
 
-      if (type === 'posts' && tag.trim()) {
-        params.tag = tag.trim();
-      } else if (type === 'developers' && skill.trim()) {
-        params.skill = skill.trim();
+      if (currentType === 'posts' && currentTag.trim()) {
+        params.tag = currentTag.trim();
+      } else if (currentType === 'developers' && currentSkill.trim()) {
+        params.skill = currentSkill.trim();
       }
 
       const response = await searchApi.search(params);
@@ -77,7 +92,7 @@ const SearchPage = () => {
   // Trigger search on submit
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    performSearch(1, false);
+    updateUrlParams(q, type, tag, skill);
   };
 
   // Reset fields
@@ -85,16 +100,23 @@ const SearchPage = () => {
     setQ('');
     setTag('');
     setSkill('');
-    setResults([]);
-    setTotal(0);
-    setPage(1);
-    setHasMore(false);
+    setSearchParams({}); // Trigger useEffect with empty params
   };
 
-  // Fetch initial posts on page load
+  // Listen to searchParams changes to perform search
   useEffect(() => {
+    const currentQ = searchParams.get('q') || '';
+    const currentType = searchParams.get('type') || 'posts';
+    const currentTag = searchParams.get('tag') || '';
+    const currentSkill = searchParams.get('skill') || '';
+
+    setQ(currentQ);
+    setType(currentType);
+    setTag(currentTag);
+    setSkill(currentSkill);
+
     performSearch(1, false);
-  }, [type]); // Re-search when tab type changes
+  }, [searchParams]);
 
   // Load more pagination
   const handleLoadMore = () => {
@@ -147,7 +169,7 @@ const SearchPage = () => {
               <div className="flex bg-gray-100 dark:bg-gray-700 p-1 rounded-xl w-fit mb-5">
                 <button
                   type="button"
-                  onClick={() => setType('posts')}
+                  onClick={() => updateUrlParams(q, 'posts', tag, skill)}
                   className={`flex items-center px-4 py-2 rounded-lg text-xs font-bold transition-all ${
                     type === 'posts'
                       ? 'bg-white dark:bg-gray-800 text-blue-600 shadow-xs'
@@ -159,7 +181,7 @@ const SearchPage = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setType('groups')}
+                  onClick={() => updateUrlParams(q, 'groups', tag, skill)}
                   className={`flex items-center px-4 py-2 rounded-lg text-xs font-bold transition-all ${
                     type === 'groups'
                       ? 'bg-white dark:bg-gray-800 text-indigo-600 shadow-xs'
@@ -171,7 +193,7 @@ const SearchPage = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setType('developers')}
+                  onClick={() => updateUrlParams(q, 'developers', tag, skill)}
                   className={`flex items-center px-4 py-2 rounded-lg text-xs font-bold transition-all ${
                     type === 'developers'
                       ? 'bg-white dark:bg-gray-800 text-purple-600 shadow-xs'

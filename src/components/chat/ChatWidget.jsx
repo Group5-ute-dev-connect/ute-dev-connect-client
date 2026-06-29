@@ -19,6 +19,11 @@ const ChatWidget = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const socketRef = useRef(null);
+
+  const locationRef = useRef(location);
+  useEffect(() => {
+    locationRef.current = location;
+  }, [location]);
   
   const token = useSelector((state) => state.auth?.token);
   const chatState = useSelector((state) => state.chat) || {};
@@ -122,6 +127,13 @@ const ChatWidget = () => {
       dispatch(markMessagesAsRead({ conversationId, userId }));
     });
 
+    socket.on('incoming-call', (data) => {
+      console.log('📞 ChatWidget nhận incoming-call:', data);
+      if (locationRef.current.pathname !== '/chat') {
+        navigate('/chat', { state: { incomingCall: data } });
+      }
+    });
+
     socket.on('new_notification', (notification) => {
       dispatch(addNotification(notification));
       
@@ -179,6 +191,7 @@ const ChatWidget = () => {
       socket.off('typing');
       socket.off('stop-typing');
       socket.off('messages-read');
+      socket.off('incoming-call');
       socket.off('new_notification');
     };
   }, [token, currentUserId, activeConversationId, isOpen, dispatch]);

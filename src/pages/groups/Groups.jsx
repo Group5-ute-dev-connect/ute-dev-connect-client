@@ -149,7 +149,6 @@ const Groups = () => {
       setCreating(false);
     }
   };
-
   // Handle Join Group
   const handleJoin = async (id) => {
     if (!token) {
@@ -161,7 +160,27 @@ const Groups = () => {
     try {
       setJoiningGroupId(id);
       const response = await groupApi.requestJoinGroup(id);
-      if (response.success || response.data) {
+      const resPayload = response.data || response;
+      const resData = resPayload.data || resPayload;
+      const joinStatus = resData?.status || resPayload?.status;
+      const joinMessage = resData?.message || resPayload?.message;
+
+      if (joinStatus === 'approved') {
+        setGroups((prevGroups) =>
+          prevGroups.map((group) =>
+            group._id === id
+              ? {
+                  ...group,
+                  isMember: true,
+                  hasPendingJoinRequest: false,
+                  joinRequestStatus: 'approved',
+                  membersCount: resData?.membersCount || (group.membersCount || 0) + 1,
+                }
+              : group
+          )
+        );
+        toast.success(joinMessage || 'Tham gia nhóm thành công!');
+      } else if (response.success || response.data) {
         setLocalPendingJoinRequests((prev) => ({ ...prev, [id]: true }));
         setGroups((prevGroups) =>
           prevGroups.map((group) =>
@@ -174,7 +193,7 @@ const Groups = () => {
               : group
           )
         );
-        toast.success('Đã gửi yêu cầu tham gia nhóm, vui lòng chờ duyệt');
+        toast.success(joinMessage || 'Đã gửi yêu cầu tham gia nhóm, vui lòng chờ duyệt');
       }
     } catch (err) {
       console.error('Lỗi gửi yêu cầu tham gia nhóm:', err);

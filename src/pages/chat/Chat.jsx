@@ -7,7 +7,7 @@ import { getConversations, getMessages, setActiveConversation, addMessage, markM
 import Peer from 'peerjs';
 import { toast } from 'react-toastify';
 import { profileApi } from '../../services/api/profileApi';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import axiosClient from '../../services/api/axiosClient';
 import Avatar from '../../components/common/Avatar';
 
@@ -25,6 +25,7 @@ const SOCKET_URL = 'http://localhost:5000';
 const Chat = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const socketRef = useRef(null);
   const [inputValue, setInputValue] = useState('');
   
@@ -264,6 +265,21 @@ const Chat = () => {
       }
     };
   }, [currentUserId]);
+
+  // Handle incoming call from other pages redirected via location state
+  useEffect(() => {
+    if (location.state?.incomingCall) {
+      const data = location.state.incomingCall;
+      console.log('📞 Chat.jsx nhận incomingCall từ navigation state:', data);
+      if (callStateRef.current === 'idle') {
+        setCallState('ringing');
+        setCallType(data.callType);
+        setCallerInfo(data);
+      }
+      // Clear location state to avoid call loops on refresh
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state]);
 
   // 1. Khởi tạo Socket và Fetch danh sách Conversations ban đầu, cùng sự kiện gọi điện
   useEffect(() => {

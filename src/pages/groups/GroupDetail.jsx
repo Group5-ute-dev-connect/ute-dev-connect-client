@@ -13,8 +13,7 @@ import {
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import CodeBlock from '../../components/common/CodeBlock';
 import CommentSection from '../../components/interactions/CommentSection';
 import RankBadge from '../../components/common/RankBadge';
 
@@ -118,6 +117,14 @@ const getJoinRequestStatus = (groupData) => {
 const GroupDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+
+  const handleBack = () => {
+    if (window.history.state && window.history.state.idx > 0) {
+      navigate(-1);
+    } else {
+      navigate('/groups');
+    }
+  };
   const { token } = useSelector((state) => state.auth);
 
   const userPayload = token ? parseJwt(token) : null;
@@ -721,9 +728,9 @@ const GroupDetail = () => {
             <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
             <span>{error || 'Nhóm học tập không tồn tại hoặc đã bị xóa.'}</span>
           </div>
-          <Link to="/groups" className="inline-flex items-center text-indigo-600 font-semibold hover:underline">
+          <button onClick={handleBack} className="inline-flex items-center text-indigo-600 font-semibold hover:underline bg-transparent border-none cursor-pointer">
             <ArrowLeft className="w-4 h-4 mr-1.5" /> Quay lại danh sách nhóm
-          </Link>
+          </button>
         </div>
       </div>
     );
@@ -939,9 +946,9 @@ const GroupDetail = () => {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           
           {/* Back button */}
-          <Link to="/groups" className="inline-flex items-center mb-6 text-gray-500 dark:text-gray-400 hover:text-indigo-600 transition-colors font-medium text-sm">
+          <button onClick={handleBack} className="inline-flex items-center mb-6 text-gray-500 dark:text-gray-400 hover:text-indigo-600 transition-colors font-medium text-sm bg-transparent border-none cursor-pointer">
             <ArrowLeft className="w-4 h-4 mr-1.5" /> Quay lại danh sách nhóm
-          </Link>
+          </button>
 
           {/* Group Banner */}
           <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden mb-8">
@@ -1198,16 +1205,15 @@ const GroupDetail = () => {
                                     code({ inline, className, children, ...props }) {
                                       const match = /language-(\w+)/.exec(className || '')
                                       return !inline && match ? (
-                                        <SyntaxHighlighter
+                                        <CodeBlock
                                           {...props}
-                                          children={String(children).replace(/\n$/, '')}
-                                          style={vscDarkPlus}
                                           language={match[1]}
-                                          PreTag="div"
                                           className="rounded-md my-2"
-                                        />
+                                        >
+                                          {String(children).replace(/\n$/, '')}
+                                        </CodeBlock>
                                       ) : (
-                                        <code {...props} className={`${className} bg-gray-150 text-red-500 px-1 py-0.5 rounded text-xs font-mono`}>
+                                        <code {...props} className={`${className || ''} bg-gray-150 text-red-500 px-1 py-0.5 rounded text-xs font-mono`}>
                                           {children}
                                         </code>
                                       )
@@ -1223,13 +1229,12 @@ const GroupDetail = () => {
                               {showCodeSnippet && codeSnippet && (
                                 <div className="mt-3 border-t border-gray-200 dark:border-gray-600 pt-3">
                                   <span className="text-xs font-bold text-slate-500 block mb-1">Mã nguồn ({codeLanguage}):</span>
-                                  <SyntaxHighlighter
-                                    children={codeSnippet}
-                                    style={vscDarkPlus}
+                                  <CodeBlock
                                     language={codeLanguage}
-                                    PreTag="div"
                                     className="rounded-md my-2 text-xs"
-                                  />
+                                  >
+                                    {codeSnippet}
+                                  </CodeBlock>
                                 </div>
                               )}
                             </div>
@@ -1397,14 +1402,13 @@ const GroupDetail = () => {
                                             code({ inline, className, children, ...props }) {
                                               const match = /language-(\w+)/.exec(className || '')
                                               return !inline && match ? (
-                                                <SyntaxHighlighter
+                                                <CodeBlock
                                                   {...props}
-                                                  children={String(children).replace(/\n$/, '')}
-                                                  style={vscDarkPlus}
                                                   language={match[1]}
-                                                  PreTag="div"
                                                   className="rounded-md"
-                                                />
+                                                >
+                                                  {String(children).replace(/\n$/, '')}
+                                                </CodeBlock>
                                               ) : (
                                                 <code {...props} className={`${className || ''} bg-gray-150 text-red-500 px-1 py-0.5 rounded text-xs font-mono`}>
                                                   {children}
@@ -1420,13 +1424,12 @@ const GroupDetail = () => {
                                       {post.codeSnippet && (
                                         <div className="mt-3 border-t border-gray-100 dark:border-gray-700 pt-3">
                                           <span className="text-xs font-bold text-slate-500 block mb-1 uppercase tracking-wider">Mã nguồn ({post.codeLanguage || 'javascript'}):</span>
-                                          <SyntaxHighlighter
-                                            children={post.codeSnippet}
-                                            style={vscDarkPlus}
+                                          <CodeBlock
                                             language={post.codeLanguage || 'javascript'}
-                                            PreTag="div"
                                             className="rounded-lg shadow-sm overflow-hidden text-xs"
-                                          />
+                                          >
+                                            {post.codeSnippet}
+                                          </CodeBlock>
                                         </div>
                                       )}
                                     </>
@@ -1588,14 +1591,13 @@ const GroupDetail = () => {
                                       code({ inline, className, children, ...props }) {
                                         const match = /language-(\w+)/.exec(className || '')
                                         return !inline && match ? (
-                                          <SyntaxHighlighter
+                                          <CodeBlock
                                             {...props}
-                                            children={String(children).replace(/\n$/, '')}
-                                            style={vscDarkPlus}
                                             language={match[1]}
-                                            PreTag="div"
                                             className="rounded-md"
-                                          />
+                                          >
+                                            {String(children).replace(/\n$/, '')}
+                                          </CodeBlock>
                                         ) : (
                                           <code {...props} className={`${className || ''} bg-gray-150 text-red-500 px-1 py-0.5 rounded text-xs font-mono`}>
                                             {children}
@@ -1610,13 +1612,12 @@ const GroupDetail = () => {
                                 {post.codeSnippet && (
                                   <div className="mt-3 border-t border-gray-100 dark:border-gray-700 pt-3">
                                     <span className="text-xs font-bold text-slate-500 block mb-1 uppercase tracking-wider">Mã nguồn ({post.codeLanguage || 'javascript'}):</span>
-                                    <SyntaxHighlighter
-                                      children={post.codeSnippet}
-                                      style={vscDarkPlus}
+                                    <CodeBlock
                                       language={post.codeLanguage || 'javascript'}
-                                      PreTag="div"
                                       className="rounded-lg shadow-sm overflow-hidden text-xs"
-                                    />
+                                    >
+                                      {post.codeSnippet}
+                                    </CodeBlock>
                                   </div>
                                 )}
                               </div>
@@ -2041,14 +2042,13 @@ const GroupDetail = () => {
                     code({ inline, className, children, ...props }) {
                       const match = /language-(\w+)/.exec(className || '')
                       return !inline && match ? (
-                        <SyntaxHighlighter
+                        <CodeBlock
                           {...props}
-                          children={String(children).replace(/\n$/, '')}
-                          style={vscDarkPlus}
                           language={match[1]}
-                          PreTag="div"
                           className="rounded-md"
-                        />
+                        >
+                          {String(children).replace(/\n$/, '')}
+                        </CodeBlock>
                       ) : (
                         <code {...props} className={`${className || ''} bg-gray-150 text-red-500 px-1 py-0.5 rounded text-xs font-mono`}>
                           {children}
@@ -2065,13 +2065,12 @@ const GroupDetail = () => {
               {selectedDetailPost.codeSnippet && (
                 <div className="mt-3 border-t border-gray-150 dark:border-gray-700 pt-3">
                   <span className="text-xs font-bold text-slate-500 block mb-1 uppercase tracking-wider">Mã nguồn ({selectedDetailPost.codeLanguage || 'javascript'}):</span>
-                  <SyntaxHighlighter
-                    children={selectedDetailPost.codeSnippet}
-                    style={vscDarkPlus}
+                  <CodeBlock
                     language={selectedDetailPost.codeLanguage || 'javascript'}
-                    PreTag="div"
                     className="rounded-lg shadow-sm overflow-hidden text-xs"
-                  />
+                  >
+                    {selectedDetailPost.codeSnippet}
+                  </CodeBlock>
                 </div>
               )}
 

@@ -5,8 +5,7 @@ import { toast } from 'react-toastify';
 import { postApi } from '../../services/api/postApi';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import CodeBlock from '../common/CodeBlock';
 import Avatar from '../common/Avatar';
 import ReputationBadge from '../common/ReputationBadge';
 import RankBadge from '../common/RankBadge';
@@ -284,14 +283,13 @@ const CommentItem = ({ comment, post, onCommentsChange }) => {
                     code({node, inline, className, children, ...props}) {
                       const match = /language-(\w+)/.exec(className || '')
                       return !inline && match ? (
-                        <SyntaxHighlighter
+                        <CodeBlock
                           {...props}
-                          children={String(children).replace(/\n$/, '')}
-                          style={vscDarkPlus}
                           language={match[1]}
-                          PreTag="div"
                           className="rounded-md"
-                        />
+                        >
+                          {String(children).replace(/\n$/, '')}
+                        </CodeBlock>
                       ) : (
                         <code {...props} className={`${className || ''} bg-gray-100 dark:bg-gray-800 text-red-500 dark:text-red-400 px-1 py-0.5 rounded text-xs font-mono`}>
                           {children}
@@ -307,13 +305,12 @@ const CommentItem = ({ comment, post, onCommentsChange }) => {
               {comment?.codeSnippet && (
                 <div className="mt-3 border-t border-gray-100 dark:border-gray-800 pt-3">
                   <span className="text-xs font-bold text-slate-500 dark:text-slate-400 block mb-1 uppercase tracking-wider">Mã nguồn ({comment.codeLanguage || 'javascript'}):</span>
-                  <SyntaxHighlighter
-                    children={comment.codeSnippet}
-                    style={vscDarkPlus}
+                  <CodeBlock
                     language={comment.codeLanguage || 'javascript'}
-                    PreTag="div"
                     className="rounded-lg shadow-sm overflow-hidden text-xs"
-                  />
+                  >
+                    {comment.codeSnippet}
+                  </CodeBlock>
                 </div>
               )}
             </>
