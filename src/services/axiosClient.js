@@ -1,15 +1,19 @@
 import axios from "axios";
 
-const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-let apiPath = "/api";
-try {
-  apiPath = new URL(apiUrl).pathname;
-} catch (e) {
-  apiPath = apiUrl;
+const apiUrl = import.meta.env.VITE_API_URL;
+let baseURL = apiUrl || '/api';
+
+// Ở môi trường dev, lấy phần pathname (VD: '/api') để request đi qua proxy của Vite nhằm tránh CORS
+if (import.meta.env.DEV && apiUrl && apiUrl.startsWith('http')) {
+  try {
+    baseURL = new URL(apiUrl).pathname;
+  } catch (e) {
+    console.error("Invalid URL in VITE_API_URL");
+  }
 }
 
 const axiosClient = axios.create({
-  baseURL: apiPath,
+  baseURL: baseURL,
   headers: {
     "Content-Type": "application/json",
   },
