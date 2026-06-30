@@ -51,7 +51,9 @@ export const addPost = createAsyncThunk(
   "post/addPost",
   async (formData, { rejectWithValue }) => {
     try {
-      const response = await axiosClient.post("/posts", formData);
+      const response = await axiosClient.post("/posts", formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
       const postData = response.data?.data || response.data || response;
       return postData;
     } catch (error) {
@@ -95,7 +97,9 @@ export const updatePost = createAsyncThunk(
   "post/updatePost",
   async ({ id, formData }, { rejectWithValue }) => {
     try {
-      const response = await axiosClient.put(`/posts/${id}`, formData);
+      const response = await axiosClient.put(`/posts/${id}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
       return response.data?.data || response.data;
     } catch (error) {
       return rejectWithValue(

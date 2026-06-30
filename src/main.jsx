@@ -9,10 +9,12 @@ import { ThemeProvider } from './components/common/ThemeProvider'
 import './index.css'
 import App from './App.jsx'
 import ErrorBoundary from './components/common/ErrorBoundary.jsx'
+import { GoogleOAuthProvider } from '@react-oauth/google'
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <Provider store={store}>
+    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
+      <Provider store={store}>
       <ThemeProvider>
         <BrowserRouter>
           <ErrorBoundary>
@@ -22,5 +24,6 @@ createRoot(document.getElementById("root")).render(
         </BrowserRouter>
       </ThemeProvider>
     </Provider>
+    </GoogleOAuthProvider>
   </StrictMode>
 );

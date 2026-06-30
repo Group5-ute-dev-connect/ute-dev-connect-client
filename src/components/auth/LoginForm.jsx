@@ -6,6 +6,8 @@ import Input from "../common/Input";
 import Button from "../common/Button";
 import Alert from "../common/Alert";
 import { Mail, Lock, Eye, EyeOff, LogIn } from "lucide-react";
+import { useGoogleLogin } from "@react-oauth/google";
+import { googleLoginUser } from "../../store/authSlice";
 
 const initialFormData = {
   email: "",
@@ -79,6 +81,15 @@ function LoginForm() {
 
     dispatch(loginUser(formData));
   };
+
+  const handleGoogleSuccess = async (tokenResponse) => {
+    dispatch(googleLoginUser(tokenResponse.access_token));
+  };
+
+  const loginGoogle = useGoogleLogin({
+    onSuccess: handleGoogleSuccess,
+    onError: (error) => console.log('Google Login Failed:', error)
+  });
 
   return (
     <div>
@@ -172,6 +183,17 @@ function LoginForm() {
           >
             Tạo tài khoản mới
           </Link>
+        </div>
+        
+        <div className="mt-4">
+          <button
+            type="button"
+            onClick={() => loginGoogle()}
+            className="w-full flex justify-center items-center py-2.5 px-4 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          >
+            <img className="h-5 w-5 mr-2" src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google logo" />
+            Đăng nhập với Google
+          </button>
         </div>
       </div>
     </div>

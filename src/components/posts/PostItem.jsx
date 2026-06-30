@@ -25,7 +25,7 @@ const PostItem = ({ post, isDetail = false, onPostUpdate }) => {
   const location = useLocation();
   const { token } = useSelector((state) => state.auth);
   
-  const { _id, text, name, avatar, user, likes, comments, tags, date, isSaved, isQuestion, acceptedAnswer, visibility, isHidden, views, codeSnippet, codeLanguage } = post || {};
+  const { _id, text, name, avatar, user, likes, comments, tags, date, isSaved, isQuestion, acceptedAnswer, visibility, isHidden, views, codeSnippet, codeLanguage, media } = post || {};
   
   const currentUserId = getCurrentUserId(token);
   const isLiked = Array.isArray(likes) && currentUserId && likes.some(like => {
@@ -346,6 +346,38 @@ const PostItem = ({ post, isDetail = false, onPostUpdate }) => {
           </ReactMarkdown>
         </div>
       </div>
+      
+      {/* Hiển thị Media */}
+      {media && media.length > 0 && (
+        <div className="mb-3">
+          <div className={`grid gap-2 ${media.length === 1 ? 'grid-cols-1' : media.length === 2 ? 'grid-cols-2' : media.length === 3 ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3'}`}>
+            {media.map((item, index) => (
+              <div 
+                key={index} 
+                className={`relative rounded-xl overflow-hidden border border-gray-100 dark:border-gray-800 ${media.length === 3 && index === 0 ? 'col-span-2' : ''}`}
+                style={{ maxHeight: '400px' }}
+                onClick={(e) => e.stopPropagation()} // Ngăn click vào thẻ cha (navigate)
+              >
+                {item.type === 'image' ? (
+                  <img 
+                    src={item.url} 
+                    alt="Media content" 
+                    className="w-full h-full object-cover transition-transform hover:scale-105 duration-300"
+                    loading="lazy"
+                  />
+                ) : (
+                  <video 
+                    src={item.url} 
+                    controls 
+                    className="w-full h-full object-contain bg-black"
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {codeSnippet && (
         <div className="mt-3 border-t border-gray-100 dark:border-gray-800 pt-3" onClick={(e) => e.stopPropagation()}>
           <span className="text-xs font-bold text-slate-500 dark:text-slate-400 block mb-1 uppercase tracking-wider">Mã nguồn ({codeLanguage || 'javascript'}):</span>

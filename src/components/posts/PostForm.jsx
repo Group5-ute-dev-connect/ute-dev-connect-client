@@ -3,7 +3,7 @@ import Textarea from '../common/Textarea';
 import Button from '../common/Button';
 import Alert from '../common/Alert';
 import { postApi } from '../../services/api/postApi';
-import { MessageSquarePlus, HelpCircle, Eye, Edit2 } from 'lucide-react';
+import { MessageSquarePlus, HelpCircle, Eye, Edit2, Image, Video, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -21,6 +21,8 @@ const PostForm = () => {
   const [codeLanguage, setCodeLanguage] = useState('javascript');
   const [showCodeSnippet, setShowCodeSnippet] = useState(false);
   const [visibility, setVisibility] = useState('public');
+  const [mediaFiles, setMediaFiles] = useState([]);
+  const [mediaPreviews, setMediaPreviews] = useState([]);
   const navigate = useNavigate();
 
   const validateForm = () => {
@@ -39,26 +41,69 @@ const PostForm = () => {
     if (apiSuccess) setApiSuccess('');
   };
 
+  const handleFileChange = (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length + mediaFiles.length > 5) {
+      setError('Chỉ được chọn tối đa 5 file media.');
+      return;
+    }
+    
+    // Check file sizes
+    const invalidFiles = files.filter(f => f.size > 20 * 1024 * 1024); // max 20MB
+    if (invalidFiles.length > 0) {
+      setError('Kích thước file không được vượt quá 20MB.');
+      return;
+    }
+
+    setMediaFiles(prev => [...prev, ...files]);
+    
+    // Generate previews
+    const newPreviews = files.map(file => ({
+      url: URL.createObjectURL(file),
+      type: file.type.startsWith('video/') ? 'video' : 'image'
+    }));
+    setMediaPreviews(prev => [...prev, ...newPreviews]);
+  };
+
+  const removeMedia = (index) => {
+    setMediaFiles(prev => prev.filter((_, i) => i !== index));
+    // Revoke object URL to avoid memory leaks
+    URL.revokeObjectURL(mediaPreviews[index].url);
+    setMediaPreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
 
     setIsLoading(true);
     try {
-      const response = await postApi.createPost(
-        text, 
-        isQuestion, 
-        null, 
-        showCodeSnippet ? codeSnippet : '', 
-        showCodeSnippet ? codeLanguage : 'javascript',
-        visibility
-      );
+      const formData = new FormData();
+      formData.append('text', text);
+      formData.append('isQuestion', isQuestion);
+      formData.append('visibility', visibility);
+      
+      if (showCodeSnippet && codeSnippet) {
+        formData.append('codeSnippet', codeSnippet);
+        formData.append('codeLanguage', codeLanguage);
+      }
+
+      // Add files
+      mediaFiles.forEach(file => {
+        formData.append('media', file);
+      });
+
+      const response = await postApi.createPost(formData);
+      
       if (response.success || response.status === 201 || (response.data && response.data.success)) {
         setApiSuccess('Đăng bài thành công!');
         setText('');
         setCodeSnippet('');
         setShowCodeSnippet(false);
         setVisibility('public');
+        setMediaFiles([]);
+        mediaPreviews.forEach(p => URL.revokeObjectURL(p.url));
+        setMediaPreviews([]);
         
         // Chuyển hướng đến trang chi tiết bài viết (nếu cần)
         const newPostId = response.data?._id || (response.data?.data?._id);
@@ -160,6 +205,54 @@ const PostForm = () => {
                 />
               </div>
             )}
+
+            {/* Media Previews */}
+            {mediaPreviews.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {mediaPreviews.map((preview, index) => (
+                  <div key={index} className="relative w-24 h-24 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                    {preview.type === 'image' ? (
+                      <img src={preview.url} alt={`preview-${index}`} className="w-full h-full object-cover" />
+                    ) : (
+                      <video src={preview.url} className="w-full h-full object-cover" />
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => removeMedia(index)}
+                      className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1 hover:bg-black/70 transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Media Upload Buttons */}
+            <div className="mt-3 flex gap-2">
+              <label className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-md cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                <Image className="w-4 h-4 text-green-500" />
+                Thêm ảnh
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  multiple 
+                  className="hidden" 
+                  onChange={handleFileChange} 
+                />
+              </label>
+              <label className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-md cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                <Video className="w-4 h-4 text-red-500" />
+                Thêm video
+                <input 
+                  type="file" 
+                  accept="video/*" 
+                  multiple 
+                  className="hidden" 
+                  onChange={handleFileChange} 
+                />
+              </label>
+            </div>
           </>
         ) : (
           <div className="p-4 border dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-800 min-h-[136px] max-w-none text-sm text-slate-800 dark:text-slate-200 prose prose-slate dark:prose-invert prose-sm prose-p:my-1 prose-pre:my-2 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1">

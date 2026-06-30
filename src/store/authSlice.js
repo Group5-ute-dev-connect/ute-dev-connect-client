@@ -82,6 +82,26 @@ export const loginUser = createAsyncThunk(
   }
 );
 
+export const googleLoginUser = createAsyncThunk(
+  "auth/googleLoginUser",
+  async (token, { rejectWithValue }) => {
+    try {
+      const response = await axiosClient.post("/auth/google", { token });
+
+      if (response.token) {
+        localStorage.setItem("token", response.token);
+      }
+      if (response.role) {
+        localStorage.setItem("role", response.role);
+      }
+
+      return response;
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
 const authSlice = createSlice({
   name: "auth",
   initialState,
@@ -190,6 +210,26 @@ const authSlice = createSlice({
         state.loginSuccess = false;
         state.loginError =
           action.payload || "Đăng nhập thất bại, vui lòng thử lại.";
+      })
+      .addCase(googleLoginUser.pending, (state) => {
+        state.loginLoading = true;
+        state.loginSuccess = false;
+        state.loginMessage = "";
+        state.loginError = "";
+      })
+      .addCase(googleLoginUser.fulfilled, (state, action) => {
+        state.loginLoading = false;
+        state.loginSuccess = true;
+        state.loginMessage =
+          action.payload?.message || "Đăng nhập Google thành công!";
+        state.token = action.payload?.token || null;
+        state.role = action.payload?.role || null;
+      })
+      .addCase(googleLoginUser.rejected, (state, action) => {
+        state.loginLoading = false;
+        state.loginSuccess = false;
+        state.loginError =
+          action.payload || "Đăng nhập Google thất bại, vui lòng thử lại.";
       });
   },
 });
