@@ -387,17 +387,17 @@ const Profile = () => {
             <div ref={observerTarget} className="h-4 w-full"></div>
           </div>
         </div>
-
-        <FollowModal 
-          isOpen={modalConfig.isOpen} 
-          onClose={() => setModalConfig({ ...modalConfig, isOpen: false })} 
-          type={modalConfig.type} 
-          userId={user?._id}
-          loggedInUserId={loggedInUserId}
-          currentFollowing={user?.following}
-          onFollowToggle={() => fetchProfileAndPosts()}
-        />
       </div>
+
+      <FollowModal 
+        isOpen={modalConfig.isOpen} 
+        onClose={() => setModalConfig({ ...modalConfig, isOpen: false })} 
+        type={modalConfig.type} 
+        userId={user?._id}
+        loggedInUserId={loggedInUserId}
+        currentFollowing={user?.following}
+        onFollowToggle={() => fetchProfileAndPosts()}
+      />
 
       {/* Lightbox for Avatar Zoom */}
       {isAvatarZoomed && (
