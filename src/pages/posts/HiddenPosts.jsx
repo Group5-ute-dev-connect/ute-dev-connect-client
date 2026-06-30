@@ -3,6 +3,7 @@ import { EyeOff, Loader2 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import PostItem from '../../components/posts/PostItem';
 import { getHiddenPosts } from '../../store/postSlice';
+import Navbar from '../../components/layout/Navbar';
 
 const HiddenPosts = () => {
   const dispatch = useDispatch();
@@ -40,9 +41,11 @@ const HiddenPosts = () => {
   }, [hasMoreHidden, loading, loadingMore, page, dispatch]);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
-      <div className="max-w-3xl mx-auto px-4">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-6">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col font-sans">
+      <Navbar />
+      <div className="py-8 flex-grow">
+        <div className="max-w-3xl mx-auto px-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-6">
           <div className="flex items-center gap-3">
             <div className="h-11 w-11 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center">
               <EyeOff className="h-5 w-5 text-indigo-600" />
@@ -103,6 +106,7 @@ const HiddenPosts = () => {
           {/* Intersection Observer Target */}
           <div ref={observerTarget} className="h-4 w-full"></div>
         </div>
+      </div>
       </div>
     </div>
   );
