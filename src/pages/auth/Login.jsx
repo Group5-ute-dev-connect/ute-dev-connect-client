@@ -1,9 +1,24 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 import LoginForm from '../../components/auth/LoginForm';
 
 const Login = () => {
+  const navigate = useNavigate();
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative">
+      {/* Back Button */}
+      <div className="absolute top-6 left-6">
+        <button 
+          onClick={() => navigate(-1)} 
+          className="group flex items-center gap-2.5 px-4 py-2.5 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-800 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
+        >
+          <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform duration-200" />
+          <span>Quay lại</span>
+        </button>
+      </div>
+
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         {/* Logo */}
         <div className="flex justify-center mb-6">
