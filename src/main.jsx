@@ -8,14 +8,17 @@ import { store } from './store'
 import { ThemeProvider } from './components/common/ThemeProvider'
 import './index.css'
 import App from './App.jsx'
+import ErrorBoundary from './components/common/ErrorBoundary.jsx'
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <Provider store={store}>
       <ThemeProvider>
         <BrowserRouter>
-          <App />
-          <ToastContainer position="top-right" autoClose={3000} />
+          <ErrorBoundary>
+            <App />
+            <ToastContainer position="top-right" autoClose={3000} />
+          </ErrorBoundary>
         </BrowserRouter>
       </ThemeProvider>
     </Provider>

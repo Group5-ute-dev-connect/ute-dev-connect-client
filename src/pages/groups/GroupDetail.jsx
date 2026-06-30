@@ -17,14 +17,7 @@ import CodeBlock from '../../components/common/CodeBlock';
 import CommentSection from '../../components/interactions/CommentSection';
 import RankBadge from '../../components/common/RankBadge';
 
-// Helper to decode token
-const parseJwt = (token) => {
-  try {
-    return JSON.parse(atob(token.split('.')[1]));
-  } catch {
-    return null;
-  }
-};
+import { getCurrentUserId } from '../../utils/jwt';
 
 const DEFAULT_AVATAR = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
 
@@ -127,8 +120,7 @@ const GroupDetail = () => {
   };
   const { token } = useSelector((state) => state.auth);
 
-  const userPayload = token ? parseJwt(token) : null;
-  const userId = userPayload ? userPayload.id : null;
+  const userId = getCurrentUserId(token);
 
   // States
   const [group, setGroup] = useState(null);
@@ -492,6 +484,28 @@ const GroupDetail = () => {
         }
       }
 
+      if (confirmDialog.type === 'delete-post') {
+        const postId = confirmDialog.payload?.postId;
+        if (!postId) return;
+        const response = await postApi.deletePost(postId);
+        toast.success(response.data?.message || 'Đã xóa bài thảo luận thành công!');
+        setPosts((prevPosts) => prevPosts.filter((p) => p._id !== postId));
+      }
+
+      if (confirmDialog.type === 'kick-member') {
+        const memberId = confirmDialog.payload?.memberId;
+        if (!memberId) return;
+        const response = await groupApi.kickMember(id, memberId);
+        toast.success(response.data?.message || 'Đã xóa thành viên thành công.');
+        setGroup(prevGroup => {
+          if (!prevGroup) return null;
+          return {
+            ...prevGroup,
+            members: prevGroup.members.filter(m => getEntityId(getMemberUser(m)) !== memberId)
+          };
+        });
+      }
+
       if (confirmDialog.type === 'transfer-admin') {
         const targetMember = confirmDialog.payload?.memberUser;
         const newAdminId = getEntityId(targetMember);
@@ -692,19 +706,13 @@ const GroupDetail = () => {
   };
 
   const handleDeletePost = async (postId) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa bài thảo luận này?')) {
-      setActionLoading(true);
-      try {
-        const response = await postApi.deletePost(postId);
-        toast.success(response.data?.message || 'Đã xóa bài thảo luận thành công!');
-        setPosts((prevPosts) => prevPosts.filter((p) => p._id !== postId));
-      } catch (err) {
-        console.error('Lỗi khi xóa bài viết:', err);
-        toast.error(err.response?.data?.message || 'Không thể xóa bài thảo luận.');
-      } finally {
-        setActionLoading(false);
-      }
-    }
+    openConfirmDialog({
+      type: 'delete-post',
+      payload: { postId },
+      title: 'Xóa bài viết',
+      message: 'Bạn có chắc chắn muốn xóa bài thảo luận này?',
+      confirmText: 'Xác nhận xóa',
+    });
   };
 
   if (loading) {
@@ -810,27 +818,13 @@ const GroupDetail = () => {
     const memberId = getEntityId(memberUser);
     const memberName = memberUser.name || 'Thành viên';
     
-    if (window.confirm(`Bạn có chắc chắn muốn xóa thành viên "${memberName}" khỏi nhóm?`)) {
-      setActionLoading(true);
-      try {
-        const response = await groupApi.kickMember(id, memberId);
-        toast.success(response.data?.message || 'Đã xóa thành viên thành công.');
-        
-        // Cập nhật lại thông tin nhóm
-        setGroup(prevGroup => {
-          if (!prevGroup) return null;
-          return {
-            ...prevGroup,
-            members: prevGroup.members.filter(m => getEntityId(getMemberUser(m)) !== memberId)
-          };
-        });
-      } catch (err) {
-        console.error('Lỗi khi xóa thành viên:', err);
-        toast.error(err.response?.data?.message || 'Không thể xóa thành viên.');
-      } finally {
-        setActionLoading(false);
-      }
-    }
+    openConfirmDialog({
+      type: 'kick-member',
+      payload: { memberId },
+      title: 'Xóa thành viên',
+      message: `Bạn có chắc chắn muốn xóa thành viên "${memberName}" khỏi nhóm?`,
+      confirmText: 'Xác nhận xóa',
+    });
   };
 
   const handleSaveSettings = async (e) => {

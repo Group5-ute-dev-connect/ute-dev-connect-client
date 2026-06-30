@@ -10,24 +10,18 @@ import ReputationBadge from '../../components/common/ReputationBadge';
 import FollowModal from '../../components/profile/FollowModal';
 import RankBadge from '../../components/common/RankBadge';
 import Navbar from '../../components/layout/Navbar';
+import { PostSkeleton } from '../../components/common/Skeleton';
+import { ProfileSkeleton } from '../../components/profile/ProfileSkeleton';
 import { MapPin, Briefcase, GraduationCap, Globe, Code, Video, MessageCircle, Users, Camera, Link as LinkIcon, MessageSquare, User, UserPlus, UserMinus, X, ArrowLeft } from 'lucide-react';
 
-// Helper to decode token
-const parseJwt = (token) => {
-  try {
-    return JSON.parse(atob(token.split('.')[1]));
-  } catch (e) {
-    return null;
-  }
-};
+import { getCurrentUserId } from '../../utils/jwt';
 
 const Profile = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { token } = useSelector((state) => state.auth);
-  const userPayload = token ? parseJwt(token) : null;
-  const loggedInUserId = userPayload ? userPayload.id : null;
+  const loggedInUserId = getCurrentUserId(token);
 
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -171,11 +165,11 @@ const Profile = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col justify-between transition-colors duration-200">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col transition-colors duration-200">
         <Navbar />
-        <div className="flex-grow flex justify-center items-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        </div>
+        <main className="flex-grow py-8 px-4">
+          <ProfileSkeleton />
+        </main>
       </div>
     );
   }
@@ -364,8 +358,10 @@ const Profile = () => {
 
             {/* Real user posts or loader or placeholder */}
             {postsLoading ? (
-              <div className="flex justify-center items-center py-10">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <div className="space-y-4">
+                {[1, 2].map((n) => (
+                  <PostSkeleton key={n} />
+                ))}
               </div>
             ) : posts.length > 0 ? (
               <div className="space-y-4">

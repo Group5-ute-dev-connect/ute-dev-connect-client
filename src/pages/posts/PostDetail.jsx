@@ -7,6 +7,7 @@ import { ArrowLeft, X } from 'lucide-react';
 import PostItem from '../../components/posts/PostItem';
 import PostInteractions from '../../components/interactions/PostInteractions';
 import Navbar from '../../components/layout/Navbar';
+import { PostSkeleton } from '../../components/common/Skeleton';
 
 const PostDetail = ({ isModal = false }) => {
   const { id } = useParams();
@@ -71,7 +72,7 @@ const PostDetail = ({ isModal = false }) => {
           onClick={handleClose}
         >
           <div 
-            className="bg-white dark:bg-gray-800 rounded-3xl max-w-3xl w-full min-h-[300px] flex items-center justify-center shadow-2xl relative p-6"
+            className="bg-white dark:bg-gray-800 rounded-3xl max-w-3xl w-full min-h-[300px] flex flex-col shadow-2xl relative p-6"
             onClick={(e) => e.stopPropagation()}
           >
             <button 
@@ -81,14 +82,17 @@ const PostDetail = ({ isModal = false }) => {
             >
               <X className="w-5 h-5" />
             </button>
-            <Spinner size="lg" />
+            <PostSkeleton />
           </div>
         </div>
       );
     }
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <Spinner size="lg" />
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col font-sans">
+        <Navbar />
+        <div className="flex-grow max-w-3xl mx-auto mt-8 px-4 w-full">
+          <PostSkeleton />
+        </div>
       </div>
     );
   }

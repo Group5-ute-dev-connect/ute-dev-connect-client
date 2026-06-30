@@ -8,6 +8,7 @@ import Navbar from '../../components/layout/Navbar';
 import { profileApi } from '../../services/api/profileApi';
 import Avatar from '../../components/common/Avatar';
 import RankBadge from '../../components/common/RankBadge';
+import { Skeleton, PostSkeleton } from '../../components/common/Skeleton';
 import { Search, Loader2, Newspaper, AlertCircle, RefreshCw, Star, ChevronRight, GraduationCap, Briefcase } from 'lucide-react';
 
 /**
@@ -245,16 +246,12 @@ const Dashboard = () => {
                 <PostForm />
               )}
 
-              {/* Mục 1: Trạng thái Loading với icon xoay */}
+              {/* Mục 1: Trạng thái Loading với Skeleton */}
               {loading ? (
-                <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
-                  <div className="relative">
-                    <div className="h-16 w-16 rounded-full border-4 border-gray-100 dark:border-gray-700"></div>
-                    <Loader2 className="h-16 w-16 text-blue-500 animate-spin absolute top-0 left-0" />
-                  </div>
-                  <p className="mt-4 text-gray-500 dark:text-gray-400 text-sm font-medium animate-pulse">
-                    Đang tải bài viết...
-                  </p>
+                <div className="space-y-4">
+                  {[1, 2, 3].map((n) => (
+                    <PostSkeleton key={n} />
+                  ))}
                 </div>
               ) : error ? (
                 /* Trạng thái lỗi */
@@ -323,8 +320,16 @@ const Dashboard = () => {
               {token && (
                 <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-5 shadow-sm">
                   {profileLoading ? (
-                    <div className="flex justify-center py-4">
-                      <Loader2 className="h-6 w-6 text-blue-500 animate-spin" />
+                    <div className="space-y-4">
+                      <div className="flex items-center space-x-3">
+                        <Skeleton variant="circular" width="46px" height="46px" />
+                        <div className="flex-1 space-y-2">
+                          <Skeleton variant="text" width="60%" height="14px" />
+                          <Skeleton variant="text" width="40%" height="12px" />
+                        </div>
+                      </div>
+                      <Skeleton variant="rectangular" width="100%" height="60px" />
+                      <Skeleton variant="text" width="100%" height="24px" />
                     </div>
                   ) : profile ? (
                     <div>

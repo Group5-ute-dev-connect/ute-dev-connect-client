@@ -1,5 +1,5 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import Navbar from './components/layout/Navbar';
 import PostForm from './components/posts/PostForm';
 import { useSelector } from 'react-redux';
@@ -7,6 +7,17 @@ import { ArrowRight } from 'lucide-react';
 
 const Home = () => {
   const { token } = useSelector((state) => state.auth);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (token) {
+      navigate('/dashboard');
+    }
+  }, [token, navigate]);
+
+  if (token) {
+    return null; // Redirecting to dashboard...
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col transition-colors duration-300">
@@ -27,19 +38,7 @@ const Home = () => {
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            {token ? (
-              <div className="w-full max-w-2xl text-left bg-white dark:bg-gray-800 p-6 rounded-3xl border border-gray-100 dark:border-gray-700/60 shadow-xl shadow-gray-200/10 dark:shadow-none transition-all">
-                <PostForm />
-                <div className="flex justify-center mt-6">
-                  <Link 
-                    to="/edit-profile"
-                    className="px-8 py-3.5 text-base font-bold rounded-2xl text-white bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-600/30 dark:shadow-indigo-500/10 transition-all hover:scale-[1.02] inline-flex items-center gap-2"
-                  >
-                    Chỉnh sửa hồ sơ của tôi <ArrowRight size={18} />
-                  </Link>
-                </div>
-              </div>
-            ) : (
+            {!token && (
               <Link 
                 to="/login"
                 className="px-10 py-4 text-lg font-bold rounded-2xl text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg shadow-blue-600/30 dark:shadow-blue-500/15 transition-all hover:scale-105 inline-flex items-center gap-2"
