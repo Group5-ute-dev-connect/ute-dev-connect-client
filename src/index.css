@@ -49,3 +49,27 @@ body {
 .animation-delay-4000 {
   animation-delay: 4s;
 }
+
+/* Fix: Remove background highlighting inside code blocks and formatting wrappers */
+.prose pre code,
+.prose [class*="language-"] code,
+.prose div[style*="background"] code,
+[class*="language-"] code,
+pre code {
+  background-color: transparent !important;
+  background: transparent !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  border: none !important;
+  font-weight: inherit !important;
+  color: inherit !important;
+  box-shadow: none !important;
+}
+
+/* Remove default backticks added by Tailwind Typography inside code blocks */
+.prose pre code::before,
+.prose pre code::after,
+.prose [class*="language-"] code::before,
+.prose [class*="language-"] code::after {
+  content: "" !important;
+}

@@ -37,7 +37,15 @@ const CodeBlock = ({ children, language, ...props }) => {
         {...props}
         style={vscDarkPlus}
         language={language}
-        PreTag="div"
+        PreTag="pre"
+        codeTagProps={{
+          style: {
+            backgroundColor: 'transparent',
+            padding: 0,
+            borderRadius: 0,
+            border: 'none',
+          }
+        }}
       >
         {children}
       </SyntaxHighlighter>
