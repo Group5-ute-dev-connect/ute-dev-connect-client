@@ -10,6 +10,7 @@ import { profileApi } from '../../services/api/profileApi';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axiosClient from '../../services/api/axiosClient';
 import Avatar from '../../components/common/Avatar';
+import { Users, X } from 'lucide-react';
 
 import Prism from 'prismjs';
 import 'prismjs/themes/prism-tomorrow.css';
@@ -86,6 +87,63 @@ const Chat = () => {
   const typingTimeoutRef = useRef(null);
   const activeConversationIdRef = useRef(activeConversationId);
   const processedMessagesRef = useRef(new Set());
+
+  // Trạng thái cho việc tạo nhóm chat
+  const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
+  const [availableUsers, setAvailableUsers] = useState([]);
+  const [selectedUserIds, setSelectedUserIds] = useState([]);
+
+  // Fetch danh sách user khi mở modal tạo nhóm
+  useEffect(() => {
+    if (isCreateGroupOpen && availableUsers.length === 0) {
+      const fetchUsers = async () => {
+        try {
+          const res = await axiosClient.get('/profile');
+          if (Array.isArray(res.data)) {
+            const others = res.data.map(p => p.user).filter(u => u && u._id !== currentUserId);
+            setAvailableUsers(others);
+          } else if (res.data && Array.isArray(res.data.profiles)) {
+            const others = res.data.profiles.map(p => p.user).filter(u => u && u._id !== currentUserId);
+            setAvailableUsers(others);
+          }
+        } catch (err) {
+          console.error("Lỗi khi fetch danh sách người dùng", err);
+        }
+      };
+      fetchUsers();
+    }
+  }, [isCreateGroupOpen, currentUserId]);
+
+  const handleCreateGroup = async () => {
+    if (!newGroupName.trim() || selectedUserIds.length < 2) {
+      toast.warning('Vui lòng nhập tên nhóm và chọn ít nhất 2 người.');
+      return;
+    }
+    try {
+      const response = await axiosClient.post('/chat/group', {
+        chatName: newGroupName,
+        userIds: selectedUserIds
+      });
+      // Gọi refresh list phòng chat hoặc xử lý trực tiếp
+      dispatch(getConversations());
+      setIsCreateGroupOpen(false);
+      setNewGroupName('');
+      setSelectedUserIds([]);
+      toast.success('Đã tạo nhóm thành công!');
+      dispatch(setActiveConversation(response.data._id));
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Lỗi khi tạo nhóm');
+    }
+  };
+
+  const toggleUserSelection = (userId) => {
+    if (selectedUserIds.includes(userId)) {
+      setSelectedUserIds(prev => prev.filter(id => id !== userId));
+    } else {
+      setSelectedUserIds(prev => [...prev, userId]);
+    }
+  };
 
   useEffect(() => {
     activeConversationIdRef.current = activeConversationId;
@@ -737,13 +795,32 @@ const Chat = () => {
     return participants.find(p => p && p._id !== currentUserId) || participants[0];
   };
 
+  const getConversationName = (conv) => {
+    if (!conv) return 'Người dùng ẩn danh';
+    if (conv.isGroup) return conv.chatName || 'Nhóm Chat';
+    const participant = getOtherParticipant(conv.participants);
+    return participant?.name || 'Người dùng ẩn danh';
+  };
+
+  const getConversationAvatar = (conv) => {
+    if (!conv) return null;
+    if (conv.isGroup) return 'https://cdn-icons-png.flaticon.com/512/615/615075.png'; // Avatar mặc định cho nhóm
+    const participant = getOtherParticipant(conv.participants);
+    return participant?.avatar;
+  };
+
   const activeConversation = conversations.find(c => c && c._id === activeConversationId);
-  const otherUser = activeConversation ? getOtherParticipant(activeConversation.participants) : null;
+  const otherUser = activeConversation && !activeConversation.isGroup ? getOtherParticipant(activeConversation.participants) : null;
+  const chatName = getConversationName(activeConversation);
+  const chatAvatar = getConversationAvatar(activeConversation);
+  
+  // Xác định những người online trong activeConversation (trừ mình)
+  const isOnlineActive = activeConversation && activeConversation.participants.some(p => p && p._id !== currentUserId && onlineUsers.includes(p._id));
 
   const filteredConversations = conversations.filter(conv => {
     if (!conv) return false;
-    const participant = getOtherParticipant(conv.participants);
-    return participant?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+    const name = getConversationName(conv);
+    return name.toLowerCase().includes(searchTerm.toLowerCase());
   });
 
   return (
@@ -761,7 +838,7 @@ const Chat = () => {
               />
               <span style={{ fontWeight: 700 }}>Tin nhắn</span>
             </div>
-            <MoreVertical size={20} color="#666" style={{cursor: 'pointer'}} />
+            <Users size={20} color="#666" style={{cursor: 'pointer'}} onClick={() => setIsCreateGroupOpen(true)} title="Tạo nhóm chat mới" />
           </div>
           <div className="chat-search-bar">
             <input 
@@ -775,10 +852,13 @@ const Chat = () => {
             {filteredConversations.length > 0 ? (
               filteredConversations.map((conv, idx) => {
                 if (!conv) return null;
-                const participant = getOtherParticipant(conv.participants);
                 const isActive = conv._id === activeConversationId;
-                const isOnline = participant && onlineUsers.includes(participant._id);
                 
+                // Xác định online/offline indicator (nếu có 1 người khác đang online thì coi nhóm là đang online)
+                const isConvOnline = conv.participants.some(p => p && p._id !== currentUserId && onlineUsers.includes(p._id));
+                const name = getConversationName(conv);
+                const avatar = getConversationAvatar(conv);
+
                 return (
                   <div 
                     className={`conversation-item ${isActive ? 'active' : ''}`} 
@@ -787,15 +867,15 @@ const Chat = () => {
                   >
                     <div className="avatar-container">
                       <Avatar 
-                        src={participant?.avatar} 
+                        src={avatar} 
                         alt="Avatar" 
                         className="avatar" 
                       />
-                      {isOnline && <span className="status-online-dot"></span>}
+                      {isConvOnline && <span className="status-online-dot"></span>}
                     </div>
                     <div className="conversation-info">
                       <div className="conversation-header">
-                        <span className="conversation-name">{participant?.name || 'Người dùng ẩn danh'}</span>
+                        <span className="conversation-name">{name}</span>
                       </div>
                       <div className="conversation-last-message">
                         {conv.lastMessage ? (conv.lastMessage.text || 'Tin nhắn đính kèm') : 'Chưa có tin nhắn...'}
@@ -814,7 +894,7 @@ const Chat = () => {
 
         {/* Main Chat Area */}
         <div className="chat-main">
-          {activeConversationId && otherUser ? (
+          {activeConversationId && activeConversation ? (
             <>
               <div className="chat-main-header">
                 <button 
@@ -827,21 +907,26 @@ const Chat = () => {
                 </button>
                 <div className="avatar-container">
                   <Avatar 
-                    src={otherUser.avatar} 
+                    src={chatAvatar} 
                     alt="Avatar" 
                     className="avatar" 
                   />
-                  {onlineUsers.includes(otherUser._id) && <span className="status-online-dot"></span>}
+                  {isOnlineActive && <span className="status-online-dot"></span>}
                 </div>
                 <div className="chat-main-info" style={{ flex: 1 }}>
-                  <div className="name">{otherUser.name || 'Người dùng'}</div>
-                  <div className={`status ${onlineUsers.includes(otherUser._id) ? 'status-online' : 'status-offline'}`}>
-                    {onlineUsers.includes(otherUser._id) ? 'Đang hoạt động' : 'Ngoại tuyến'}
+                  <div className="name">{chatName}</div>
+                  <div className={`status ${isOnlineActive ? 'status-online' : 'status-offline'}`}>
+                    {activeConversation.isGroup ? `${activeConversation.participants.length} thành viên` : (isOnlineActive ? 'Đang hoạt động' : 'Ngoại tuyến')}
                   </div>
                 </div>
                 <div className="chat-header-actions">
-                  <Phone size={24} style={{cursor: 'pointer'}} onClick={() => startCall('audio')} title="Gọi thoại" />
-                  <Video size={24} style={{cursor: 'pointer'}} onClick={() => startCall('video')} title="Gọi video" />
+                  {/* Chỉ hỗ trợ gọi trong chat 1-1 cho hiện tại (có otherUser) */}
+                  {!activeConversation.isGroup && (
+                    <>
+                      <Phone size={24} style={{cursor: 'pointer'}} onClick={() => startCall('audio')} title="Gọi thoại" />
+                      <Video size={24} style={{cursor: 'pointer'}} onClick={() => startCall('video')} title="Gọi video" />
+                    </>
+                  )}
                   <MoreVertical size={24} style={{cursor: 'pointer'}} color="#666" />
                 </div>
               </div>
@@ -869,13 +954,18 @@ const Chat = () => {
                         <div className={`message-row ${isMe ? 'row-sent' : 'row-received'}`}>
                           {!isMe && (
                             <Avatar 
-                              src={otherUser?.avatar} 
+                              src={msg.sender?.avatar} 
                               alt="Avatar" 
                               className="message-avatar-mini" 
                             />
                           )}
                           
                           <div className={`message-bubble-wrapper ${isMe ? 'msg-sent' : 'msg-received'}`}>
+                            {activeConversation.isGroup && !isMe && (
+                              <div className="message-sender-name" style={{fontSize: '0.75rem', color: '#666', marginBottom: '2px', marginLeft: '4px'}}>
+                                {msg.sender?.name}
+                              </div>
+                            )}
                             {msg.fileUrl && msg.fileType === 'image' && (
                               <div className="message-image-container animate-fade-in">
                                 <img 
@@ -1184,7 +1274,63 @@ const Chat = () => {
           )}
         </div>
       </div>
-    )}
+      )}
+      {/* --- GIAO DIỆN TẠO NHÓM CHAT --- */}
+      {isCreateGroupOpen && (
+        <div className="create-group-overlay" style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+          <div className="create-group-modal" style={{background: '#fff', padding: '24px', borderRadius: '12px', width: '90%', maxWidth: '400px'}}>
+            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px'}}>
+              <h3 style={{margin: 0, fontSize: '1.2rem', fontWeight: 600}}>Tạo nhóm chat mới</h3>
+              <X size={20} style={{cursor: 'pointer'}} onClick={() => setIsCreateGroupOpen(false)} />
+            </div>
+            
+            <div style={{marginBottom: '16px'}}>
+              <input 
+                type="text" 
+                placeholder="Tên nhóm..." 
+                value={newGroupName}
+                onChange={e => setNewGroupName(e.target.value)}
+                style={{width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #ddd', outline: 'none', boxSizing: 'border-box'}}
+              />
+            </div>
+
+            <p style={{margin: '0 0 8px 0', fontSize: '0.9rem', color: '#555', fontWeight: 500}}>Chọn thành viên ({selectedUserIds.length} đã chọn)</p>
+            <div style={{maxHeight: '300px', overflowY: 'auto', border: '1px solid #eee', borderRadius: '8px'}}>
+              {availableUsers.map(user => (
+                <div 
+                  key={user._id} 
+                  style={{display: 'flex', alignItems: 'center', padding: '10px 12px', borderBottom: '1px solid #f5f5f5', cursor: 'pointer', background: selectedUserIds.includes(user._id) ? '#f0f7ff' : '#fff'}}
+                  onClick={() => toggleUserSelection(user._id)}
+                >
+                  <input type="checkbox" checked={selectedUserIds.includes(user._id)} onChange={() => {}} style={{marginRight: '12px', cursor: 'pointer'}} />
+                  <Avatar src={user.avatar} style={{width: '32px', height: '32px', marginRight: '10px'}} />
+                  <span style={{fontSize: '0.9rem', flex: 1}}>{user.name}</span>
+                </div>
+              ))}
+              {availableUsers.length === 0 && (
+                <div style={{padding: '20px', textAlign: 'center', color: '#999', fontSize: '0.9rem'}}>Không có người dùng nào để hiển thị</div>
+              )}
+            </div>
+
+            <div style={{display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px'}}>
+              <button 
+                type="button" 
+                onClick={() => setIsCreateGroupOpen(false)}
+                style={{padding: '8px 16px', borderRadius: '6px', border: '1px solid #ddd', background: '#fff', cursor: 'pointer'}}
+              >
+                Hủy
+              </button>
+              <button 
+                type="button"
+                onClick={handleCreateGroup}
+                style={{padding: '8px 16px', borderRadius: '6px', border: 'none', background: '#3b82f6', color: '#fff', cursor: 'pointer', fontWeight: 500}}
+              >
+                Tạo nhóm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
   </div>
 );
 };

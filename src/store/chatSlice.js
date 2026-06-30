@@ -37,6 +37,18 @@ export const createOrGetConversation = createAsyncThunk(
   }
 );
 
+export const createGroup = createAsyncThunk(
+  "chat/createGroup",
+  async ({ chatName, userIds }, { rejectWithValue }) => {
+    try {
+      const response = await axiosClient.post('/chat/group', { chatName, userIds });
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || "Lỗi khi tạo phòng chat nhóm");
+    }
+  }
+);
+
 const chatSlice = createSlice({
   name: "chat",
   initialState: {
@@ -108,6 +120,10 @@ const chatSlice = createSlice({
         if (!exists) {
           state.conversations.unshift(action.payload);
         }
+        state.activeConversationId = action.payload._id;
+      })
+      .addCase(createGroup.fulfilled, (state, action) => {
+        state.conversations.unshift(action.payload);
         state.activeConversationId = action.payload._id;
       });
   }
