@@ -8,6 +8,7 @@ import Select from '../../components/common/Select';
 import Textarea from '../../components/common/Textarea';
 import { profileApi } from '../../services/api/profileApi';
 import { toast } from 'react-toastify';
+import Navbar from '../../components/layout/Navbar';
 
 const EditProfile = () => {
   const navigate = useNavigate();
@@ -214,6 +215,7 @@ const EditProfile = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-gray-900 relative overflow-hidden pb-12 font-sans">
+      <Navbar />
       {/* Background Decorations */}
       <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-br from-blue-600 via-indigo-700 to-purple-800 transform -skew-y-3 origin-top-left z-0 shadow-2xl"></div>
       

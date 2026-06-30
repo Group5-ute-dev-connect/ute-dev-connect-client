@@ -6,6 +6,7 @@ import Alert from '../../components/common/Alert';
 import { ArrowLeft, X } from 'lucide-react';
 import PostItem from '../../components/posts/PostItem';
 import PostInteractions from '../../components/interactions/PostInteractions';
+import Navbar from '../../components/layout/Navbar';
 
 const PostDetail = ({ isModal = false }) => {
   const { id } = useParams();
@@ -158,13 +159,16 @@ const PostDetail = ({ isModal = false }) => {
   }
 
   return (
-    <div className="max-w-3xl mx-auto mt-8 px-4 pb-12">
-      <button onClick={handleBack} className="inline-flex items-center mb-6 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors bg-transparent border-none cursor-pointer">
-        <ArrowLeft className="w-4 h-4 mr-1" /> Quay lại
-      </button>
-      
-      <PostItem post={post} isDetail={true} onPostUpdate={handlePostUpdate} />
-      <PostInteractions post={post} setPost={setPost} />
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col font-sans">
+      <Navbar />
+      <div className="flex-grow max-w-3xl mx-auto mt-8 px-4 pb-12 w-full">
+        <button onClick={handleBack} className="inline-flex items-center mb-6 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors bg-transparent border-none cursor-pointer">
+          <ArrowLeft className="w-4 h-4 mr-1" /> Quay lại
+        </button>
+        
+        <PostItem post={post} isDetail={true} onPostUpdate={handlePostUpdate} />
+        <PostInteractions post={post} setPost={setPost} />
+      </div>
     </div>
   );
 };

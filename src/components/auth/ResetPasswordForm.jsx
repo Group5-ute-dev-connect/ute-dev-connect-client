@@ -46,10 +46,11 @@ const ResetPasswordForm = () => {
     try {
       setIsLoading(true);
       await authApi.resetPassword(email, otp, newPassword);
-      setAlertInfo({ type: 'success', message: 'Đặt lại mật khẩu thành công! Tính năng login đang được xây dựng...' });
+      setAlertInfo({ type: 'success', message: 'Đặt lại mật khẩu thành công! Đang chuyển hướng về trang đăng nhập...' });
       
       setTimeout(() => {
         dispatch(resetAuth());
+        navigate('/login');
       }, 2000);
     } catch (err) {
       setAlertInfo({ type: 'error', message: err.response?.data?.message || 'Mã OTP không đúng hoặc đã hết hạn.' });

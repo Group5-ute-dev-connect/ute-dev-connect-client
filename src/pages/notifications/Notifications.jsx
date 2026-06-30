@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Bell, Heart, MessageCircle, UserPlus, CheckCircle2, User, Shield, AlertCircle } from 'lucide-react';
 import { getNotifications, markAsRead, markAllAsRead } from '../../store/notificationSlice';
 import Spinner from '../../components/common/Spinner';
+import Navbar from '../../components/layout/Navbar';
 
 const Notifications = () => {
   const dispatch = useDispatch();
@@ -107,8 +108,10 @@ const Notifications = () => {
     : notifications.filter(n => !n.isRead);
 
   return (
-    <div className="max-w-3xl mx-auto mt-8 px-4 pb-12">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col font-sans">
+      <Navbar />
+      <div className="max-w-3xl mx-auto mt-8 px-4 pb-12 w-full flex-grow">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
         {/* Header */}
         <div className="p-6 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -234,6 +237,7 @@ const Notifications = () => {
           
           <div ref={observerTarget} className="h-4 w-full"></div>
         </div>
+      </div>
       </div>
     </div>
   );
