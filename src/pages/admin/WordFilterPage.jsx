@@ -21,6 +21,7 @@ import {
   Download,
   UploadCloud
 } from 'lucide-react';
+import ConfirmDialog from '../../components/common/ConfirmDialog';
 
 const WordFilterPage = () => {
   const { token, role } = useSelector((state) => state.auth);
@@ -35,6 +36,15 @@ const WordFilterPage = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [newWord, setNewWord] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [dialogConfig, setDialogConfig] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    type: 'danger'
+  });
+
+  const closeDialog = () => setDialogConfig(prev => ({ ...prev, isOpen: false }));
 
   // Kịch bản bảo mật: Chuyển hướng người dùng không phải admin
   useEffect(() => {
@@ -227,23 +237,28 @@ const WordFilterPage = () => {
 
   // Khôi phục Prompt AI về mặc định
   const handleResetPrompt = async () => {
-    if (!window.confirm('Bạn có chắc chắn muốn khôi phục Prompt AI về cấu hình mặc định (chỉ chặn thông tin cá độ/cờ bạc)?')) {
-      return;
-    }
-
-    setIsResettingPrompt(true);
-    try {
-      const res = await filterApi.resetAiPrompt();
-      if (res.data?.success) {
-        setAiPrompt(res.data.data.aiPrompt || '');
-        toast.success('Đã khôi phục prompt bộ lọc AI mẫu thành công!');
+    setDialogConfig({
+      isOpen: true,
+      title: 'Khôi phục Prompt',
+      message: 'Bạn có chắc chắn muốn khôi phục Prompt AI về cấu hình mặc định (chỉ chặn thông tin cá độ/cờ bạc)?',
+      type: 'warning',
+      onConfirm: async () => {
+        closeDialog();
+        setIsResettingPrompt(true);
+        try {
+          const res = await filterApi.resetAiPrompt();
+          if (res.data?.success) {
+            setAiPrompt(res.data.data.aiPrompt || '');
+            toast.success('Đã khôi phục prompt bộ lọc AI mẫu thành công!');
+          }
+        } catch (err) {
+          console.error(err);
+          toast.error(err.response?.data?.message || 'Lỗi khi khôi phục prompt bộ lọc AI.');
+        } finally {
+          setIsResettingPrompt(false);
+        }
       }
-    } catch (err) {
-      console.error(err);
-      toast.error(err.response?.data?.message || 'Lỗi khi khôi phục prompt bộ lọc AI.');
-    } finally {
-      setIsResettingPrompt(false);
-    }
+    });
   };
 
   // Lọc danh sách từ cấm theo ô tìm kiếm
@@ -548,6 +563,14 @@ const WordFilterPage = () => {
           )}
         </div>
       </main>
+      <ConfirmDialog
+        isOpen={dialogConfig.isOpen}
+        title={dialogConfig.title}
+        message={dialogConfig.message}
+        type={dialogConfig.type}
+        onConfirm={dialogConfig.onConfirm}
+        onCancel={closeDialog}
+      />
     </div>
   );
 };

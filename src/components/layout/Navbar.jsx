@@ -8,14 +8,7 @@ import { profileApi } from '../../services/api/profileApi';
 import Avatar from '../common/Avatar';
 import ThemeToggle from '../common/ThemeToggle';
 
-// Helper to decode token
-const parseJwt = (token) => {
-  try {
-    return JSON.parse(atob(token.split('.')[1]));
-  } catch (e) {
-    return null;
-  }
-};
+import { getCurrentUserId } from '../../utils/jwt';
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -32,8 +25,7 @@ const Navbar = () => {
   const notificationRef = useRef(null);
   const userDropdownRef = useRef(null);
 
-  const userPayload = token ? parseJwt(token) : null;
-  const userId = userPayload ? userPayload.id : null;
+  const userId = getCurrentUserId(token);
 
   useEffect(() => {
     if (token) {

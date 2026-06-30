@@ -8,15 +8,9 @@ import {
   Users, Plus, Search, Loader2, Trash2, LogOut, 
   ArrowRight, Shield, User, FolderGit2, AlertCircle
 } from 'lucide-react';
+import ConfirmDialog from '../../components/common/ConfirmDialog';
 
-// Helper to decode token
-const parseJwt = (token) => {
-  try {
-    return JSON.parse(atob(token.split('.')[1]));
-  } catch {
-    return null;
-  }
-};
+import { getCurrentUserId } from '../../utils/jwt';
 
 const getEntityId = (entity) => {
   if (!entity) return '';
@@ -45,8 +39,7 @@ const Groups = () => {
   const navigate = useNavigate();
   const { token } = useSelector((state) => state.auth);
   
-  const userPayload = token ? parseJwt(token) : null;
-  const userId = userPayload ? userPayload.id : null;
+  const userId = getCurrentUserId(token);
 
   // States
   const [groups, setGroups] = useState([]);
@@ -68,6 +61,16 @@ const Groups = () => {
   const [description, setDescription] = useState('');
   const [creating, setCreating] = useState(false);
   const [formError, setFormError] = useState('');
+  
+  const [dialogConfig, setDialogConfig] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    type: 'danger'
+  });
+
+  const closeDialog = () => setDialogConfig(prev => ({ ...prev, isOpen: false }));
 
   // Fetch groups
   const fetchGroups = async (pageNum = 1, append = false) => {
@@ -205,36 +208,48 @@ const Groups = () => {
 
   // Handle Leave Group
   const handleLeave = async (id, groupName) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn rời khỏi nhóm "${groupName}" không?`)) {
-      return;
-    }
-    try {
-      const response = await groupApi.leaveGroup(id);
-      if (response.success || response.data) {
-        toast.success(`Đã rời khỏi nhóm "${groupName}".`);
-        fetchGroups();
+    setDialogConfig({
+      isOpen: true,
+      title: 'Rời nhóm',
+      message: `Bạn có chắc chắn muốn rời khỏi nhóm "${groupName}" không?`,
+      type: 'warning',
+      onConfirm: async () => {
+        closeDialog();
+        try {
+          const response = await groupApi.leaveGroup(id);
+          if (response.success || response.data) {
+            toast.success(`Đã rời khỏi nhóm "${groupName}".`);
+            fetchGroups();
+          }
+        } catch (err) {
+          console.error('Lỗi rời nhóm:', err);
+          toast.error(err.response?.data?.message || 'Không thể rời nhóm.');
+        }
       }
-    } catch (err) {
-      console.error('Lỗi rời nhóm:', err);
-      toast.error(err.response?.data?.message || 'Không thể rời nhóm.');
-    }
+    });
   };
 
   // Handle Delete Group
   const handleDelete = async (id, groupName) => {
-    if (!window.confirm(`Hành động này sẽ XÓA VĨNH VIỄN nhóm "${groupName}". Bạn có chắc chắn không?`)) {
-      return;
-    }
-    try {
-      const response = await groupApi.deleteGroup(id);
-      if (response.success || response.data) {
-        toast.success(`Đã xóa nhóm "${groupName}".`);
-        fetchGroups();
+    setDialogConfig({
+      isOpen: true,
+      title: 'Xóa nhóm',
+      message: `Hành động này sẽ XÓA VĨNH VIỄN nhóm "${groupName}". Bạn có chắc chắn không?`,
+      type: 'danger',
+      onConfirm: async () => {
+        closeDialog();
+        try {
+          const response = await groupApi.deleteGroup(id);
+          if (response.success || response.data) {
+            toast.success(`Đã xóa nhóm "${groupName}".`);
+            fetchGroups();
+          }
+        } catch (err) {
+          console.error('Lỗi xóa nhóm:', err);
+          toast.error(err.response?.data?.message || 'Không thể xóa nhóm.');
+        }
       }
-    } catch (err) {
-      console.error('Lỗi xóa nhóm:', err);
-      toast.error(err.response?.data?.message || 'Không thể xóa nhóm.');
-    }
+    });
   };
 
   // Helpers to check status
@@ -598,6 +613,15 @@ const Groups = () => {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={dialogConfig.isOpen}
+        title={dialogConfig.title}
+        message={dialogConfig.message}
+        type={dialogConfig.type}
+        onConfirm={dialogConfig.onConfirm}
+        onCancel={closeDialog}
+      />
     </div>
   );
 };

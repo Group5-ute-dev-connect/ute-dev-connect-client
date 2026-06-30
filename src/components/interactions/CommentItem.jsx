@@ -9,14 +9,9 @@ import CodeBlock from '../common/CodeBlock';
 import Avatar from '../common/Avatar';
 import ReputationBadge from '../common/ReputationBadge';
 import RankBadge from '../common/RankBadge';
+import ConfirmDialog from '../common/ConfirmDialog';
 
-const parseJwt = (token) => {
-  try {
-    return JSON.parse(atob(token.split('.')[1]));
-  } catch (e) {
-    return null;
-  }
-};
+import { getCurrentUserId } from '../../utils/jwt';
 
 const formatDate = (date) => {
   if (!date) {
@@ -38,7 +33,7 @@ const formatDate = (date) => {
 
 const CommentItem = ({ comment, post, onCommentsChange }) => {
   const { token } = useSelector((state) => state.auth);
-  const currentUserId = token ? parseJwt(token)?.user?.id || parseJwt(token)?.id : null;
+  const currentUserId = getCurrentUserId(token);
   const [isAccepting, setIsAccepting] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
   const [isDisapproving, setIsDisapproving] = useState(false);
@@ -47,6 +42,15 @@ const CommentItem = ({ comment, post, onCommentsChange }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const commentAuthorId = comment?.user?._id || comment?.user;
   const isCommentAuthor = currentUserId && commentAuthorId?.toString() === currentUserId?.toString();
+  const [dialogConfig, setDialogConfig] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    type: 'danger'
+  });
+
+  const closeDialog = () => setDialogConfig(prev => ({ ...prev, isOpen: false }));
 
   const name = comment?.name || comment?.user?.name || 'Người dùng ẩn danh';
   const avatar = comment?.avatar || comment?.user?.avatar || '';
@@ -163,19 +167,27 @@ const CommentItem = ({ comment, post, onCommentsChange }) => {
   };
 
   const handleDelete = async () => {
-    if (!window.confirm('Bạn có chắc muốn xóa bình luận này?')) return;
-    try {
-      setIsSubmitting(true);
-      const res = await postApi.deleteComment(post._id, comment._id);
-      if (res.data && res.data.data) {
-        onCommentsChange?.(res.data.data);
-        toast.success('Xóa bình luận thành công!');
+    setDialogConfig({
+      isOpen: true,
+      title: 'Xóa bình luận',
+      message: 'Bạn có chắc muốn xóa bình luận này?',
+      type: 'danger',
+      onConfirm: async () => {
+        closeDialog();
+        try {
+          setIsSubmitting(true);
+          const res = await postApi.deleteComment(post._id, comment._id);
+          if (res.data && res.data.data) {
+            onCommentsChange?.(res.data.data);
+            toast.success('Xóa bình luận thành công!');
+          }
+        } catch (err) {
+          toast.error('Không thể xóa bình luận');
+        } finally {
+          setIsSubmitting(false);
+        }
       }
-    } catch (err) {
-      toast.error('Không thể xóa bình luận');
-    } finally {
-      setIsSubmitting(false);
-    }
+    });
   };
 
   const postAuthorId = post?.user?._id || post?.user;
@@ -330,6 +342,14 @@ const CommentItem = ({ comment, post, onCommentsChange }) => {
           )}
         </div>
       </div>
+      <ConfirmDialog
+        isOpen={dialogConfig.isOpen}
+        title={dialogConfig.title}
+        message={dialogConfig.message}
+        type={dialogConfig.type}
+        onConfirm={dialogConfig.onConfirm}
+        onCancel={closeDialog}
+      />
     </div>
   );
 };

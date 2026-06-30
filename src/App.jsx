@@ -10,6 +10,7 @@ import EditProfile from "./pages/profile/EditProfile";
 import Profiles from "./pages/profile/Profiles";
 import Profile from "./pages/profile/Profile";
 import ProtectedRoute from "./routes/ProtectedRoute";
+import AdminRoute from "./routes/AdminRoute";
 import PostDetail from "./pages/posts/PostDetail";
 import Dashboard from "./pages/dashboard/Dashboard";
 import Chat from "./pages/chat/Chat";
@@ -22,6 +23,7 @@ import SearchPage from "./pages/search/SearchPage";
 import WordFilterPage from "./pages/admin/WordFilterPage";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import SystemLogsPage from "./pages/admin/SystemLogsPage";
+import NotFound from "./pages/NotFound";
 
 function App() {
   const location = useLocation();
@@ -54,13 +56,17 @@ function App() {
           <Route path="/saved-posts" element={<SavedPosts />} />
           <Route path="/hidden-posts" element={<HiddenPosts />} />
           <Route path="/notifications" element={<Notifications />} />
+        </Route>
+
+        {/* Các route yêu cầu quyền admin */}
+        <Route element={<AdminRoute />}>
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/filters" element={<WordFilterPage />} />
           <Route path="/admin/logs" element={<SystemLogsPage />} />
         </Route>
 
-        {/* Route mặc định: Điều hướng về trang chủ */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        {/* Route mặc định: 404 Not Found */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
 
       {/* Show the modal when a background location is set */}

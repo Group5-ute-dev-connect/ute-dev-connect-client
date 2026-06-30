@@ -10,6 +10,9 @@ import CodeBlock from '../common/CodeBlock';
 import Avatar from '../common/Avatar';
 import ReputationBadge from '../common/ReputationBadge';
 import RankBadge from '../common/RankBadge';
+import ConfirmDialog from '../common/ConfirmDialog';
+
+import { getCurrentUserId } from '../../utils/jwt';
 
 /**
  * PostItem - Component thẻ bài viết thu gọn
@@ -22,11 +25,9 @@ const PostItem = ({ post, isDetail = false, onPostUpdate }) => {
   const location = useLocation();
   const { token } = useSelector((state) => state.auth);
   
-  const parseJwt = (t) => { try { return JSON.parse(atob(t.split('.')[1])); } catch { return null; } };
-  
   const { _id, text, name, avatar, user, likes, comments, tags, date, isSaved, isQuestion, acceptedAnswer, visibility, isHidden, views, codeSnippet, codeLanguage } = post || {};
   
-  const currentUserId = token ? parseJwt(token)?.user?.id || parseJwt(token)?.id : null;
+  const currentUserId = getCurrentUserId(token);
   const isLiked = Array.isArray(likes) && currentUserId && likes.some(like => {
     const likeUserId = like?.user?._id || like?.user || like?._id || like;
     return likeUserId?.toString() === currentUserId?.toString();
@@ -40,6 +41,15 @@ const PostItem = ({ post, isDetail = false, onPostUpdate }) => {
   const [editIsQuestion, setEditIsQuestion] = useState(isQuestion || false);
   const [editVisibility, setEditVisibility] = useState(visibility || 'public');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [dialogConfig, setDialogConfig] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    type: 'danger'
+  });
+
+  const closeDialog = () => setDialogConfig(prev => ({ ...prev, isOpen: false }));
 
   const getVisibilityIcon = (vis) => {
     switch (vis) {
@@ -86,41 +96,48 @@ const PostItem = ({ post, isDetail = false, onPostUpdate }) => {
   const handleHideToggle = async (e) => {
     e.preventDefault();
     const actionWord = isHidden ? 'hiện lại' : 'ẩn';
-    const confirmed = window.confirm(`Bạn có chắc chắn muốn ${actionWord} bài viết này?`);
-    if (!confirmed) return;
-
-    try {
-      const resultAction = await dispatch(hidePost(_id));
-      if (hidePost.fulfilled.match(resultAction)) {
-        const nextIsHidden = resultAction.payload.isHidden;
-        
-        if (isDetail && nextIsHidden) {
-          navigate('/dashboard');
+    
+    setDialogConfig({
+      isOpen: true,
+      title: 'Xác nhận',
+      message: `Bạn có chắc chắn muốn ${actionWord} bài viết này?`,
+      type: 'warning',
+      onConfirm: async () => {
+        closeDialog();
+        try {
+          const resultAction = await dispatch(hidePost(_id));
+          if (hidePost.fulfilled.match(resultAction)) {
+            const nextIsHidden = resultAction.payload.isHidden;
+            
+            if (isDetail && nextIsHidden) {
+              navigate('/dashboard');
+            }
+            
+            const ToastWithUndo = ({ closeToast }) => (
+              <div className="flex items-center justify-between gap-2 w-full">
+                <span>{nextIsHidden ? 'Đã ẩn bài viết khỏi bảng tin.' : 'Đã hiện lại bài viết.'}</span>
+                <button 
+                  onClick={async (event) => {
+                    event.stopPropagation();
+                    await dispatch(hidePost(_id));
+                    closeToast();
+                    toast.success(nextIsHidden ? 'Đã hiện lại bài viết!' : 'Đã ẩn bài viết!');
+                  }}
+                  className="text-xs font-bold text-blue-600 hover:text-blue-800 underline bg-transparent border-none cursor-pointer pl-2 whitespace-nowrap"
+                >
+                  Hoàn tác
+                </button>
+              </div>
+            );
+            toast.info(<ToastWithUndo />, { autoClose: 5000 });
+          } else {
+            toast.error(resultAction.payload || `Không thể ${actionWord} bài viết`);
+          }
+        } catch (err) {
+          toast.error(`Lỗi khi ${actionWord} bài viết`);
         }
-        
-        const ToastWithUndo = ({ closeToast }) => (
-          <div className="flex items-center justify-between gap-2 w-full">
-            <span>{nextIsHidden ? 'Đã ẩn bài viết khỏi bảng tin.' : 'Đã hiện lại bài viết.'}</span>
-            <button 
-              onClick={async (event) => {
-                event.stopPropagation();
-                await dispatch(hidePost(_id));
-                closeToast();
-                toast.success(nextIsHidden ? 'Đã hiện lại bài viết!' : 'Đã ẩn bài viết!');
-              }}
-              className="text-xs font-bold text-blue-600 hover:text-blue-800 underline bg-transparent border-none cursor-pointer pl-2 whitespace-nowrap"
-            >
-              Hoàn tác
-            </button>
-          </div>
-        );
-        toast.info(<ToastWithUndo />, { autoClose: 5000 });
-      } else {
-        toast.error(resultAction.payload || `Không thể ${actionWord} bài viết`);
       }
-    } catch (err) {
-      toast.error(`Lỗi khi ${actionWord} bài viết`);
-    }
+    });
   };
 
   const handleSavePost = async (e) => {
@@ -128,35 +145,41 @@ const PostItem = ({ post, isDetail = false, onPostUpdate }) => {
     e.stopPropagation();
 
     if (isSaved) {
-      const confirmed = window.confirm('Bạn có chắc chắn muốn bỏ lưu bài viết này?');
-      if (!confirmed) return;
-
-      try {
-        const resultAction = await dispatch(savePost(_id));
-        if (savePost.fulfilled.match(resultAction)) {
-          const ToastWithRedo = ({ closeToast }) => (
-            <div className="flex items-center justify-between gap-2 w-full">
-              <span>Đã bỏ lưu bài viết.</span>
-              <button 
-                onClick={async (event) => {
-                  event.stopPropagation();
-                  await dispatch(savePost(_id));
-                  closeToast();
-                  toast.success('Đã lưu lại bài viết!');
-                }}
-                className="text-xs font-bold text-blue-600 hover:text-blue-800 underline bg-transparent border-none cursor-pointer pl-2 whitespace-nowrap"
-              >
-                Lưu lại
-              </button>
-            </div>
-          );
-          toast.info(<ToastWithRedo />, { autoClose: 5000 });
-        } else {
-          toast.error(resultAction.payload || 'Không thể bỏ lưu bài viết');
+      setDialogConfig({
+        isOpen: true,
+        title: 'Bỏ lưu bài viết',
+        message: 'Bạn có chắc chắn muốn bỏ lưu bài viết này?',
+        type: 'warning',
+        onConfirm: async () => {
+          closeDialog();
+          try {
+            const resultAction = await dispatch(savePost(_id));
+            if (savePost.fulfilled.match(resultAction)) {
+              const ToastWithRedo = ({ closeToast }) => (
+                <div className="flex items-center justify-between gap-2 w-full">
+                  <span>Đã bỏ lưu bài viết.</span>
+                  <button 
+                    onClick={async (event) => {
+                      event.stopPropagation();
+                      await dispatch(savePost(_id));
+                      closeToast();
+                      toast.success('Đã lưu lại bài viết!');
+                    }}
+                    className="text-xs font-bold text-blue-600 hover:text-blue-800 underline bg-transparent border-none cursor-pointer pl-2 whitespace-nowrap"
+                  >
+                    Lưu lại
+                  </button>
+                </div>
+              );
+              toast.info(<ToastWithRedo />, { autoClose: 5000 });
+            } else {
+              toast.error(resultAction.payload || 'Không thể bỏ lưu bài viết');
+            }
+          } catch (err) {
+            toast.error('Lỗi khi bỏ lưu bài viết');
+          }
         }
-      } catch (err) {
-        toast.error('Lỗi khi bỏ lưu bài viết');
-      }
+      });
     } else {
       try {
         const resultAction = await dispatch(savePost(_id));
@@ -193,21 +216,28 @@ const PostItem = ({ post, isDetail = false, onPostUpdate }) => {
 
   const handleDelete = async (e) => {
     e.preventDefault();
-    if (window.confirm('Bạn có chắc chắn muốn xóa bài viết này?')) {
-      try {
-        const resultAction = await dispatch(deletePost(_id));
-        if (deletePost.fulfilled.match(resultAction)) {
-          toast.success('Xóa bài viết thành công!');
-          if (isDetail) {
-            navigate('/dashboard');
+    setDialogConfig({
+      isOpen: true,
+      title: 'Xóa bài viết',
+      message: 'Bạn có chắc chắn muốn xóa bài viết này?',
+      type: 'danger',
+      onConfirm: async () => {
+        closeDialog();
+        try {
+          const resultAction = await dispatch(deletePost(_id));
+          if (deletePost.fulfilled.match(resultAction)) {
+            toast.success('Xóa bài viết thành công!');
+            if (isDetail) {
+              navigate('/dashboard');
+            }
+          } else {
+            toast.error(resultAction.payload || 'Không thể xóa bài viết');
           }
-        } else {
-          toast.error(resultAction.payload || 'Không thể xóa bài viết');
+        } catch (err) {
+          toast.error('Lỗi khi xóa bài viết');
         }
-      } catch (err) {
-        toast.error('Lỗi khi xóa bài viết');
       }
-    }
+    });
   };
 
   const handleShareClick = (e) => {
@@ -531,6 +561,15 @@ const PostItem = ({ post, isDetail = false, onPostUpdate }) => {
         </div>
       </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={dialogConfig.isOpen}
+        title={dialogConfig.title}
+        message={dialogConfig.message}
+        type={dialogConfig.type}
+        onConfirm={dialogConfig.onConfirm}
+        onCancel={closeDialog}
+      />
     </div>
   );
 };
