@@ -1151,8 +1151,8 @@ const Chat = () => {
 
       {/* --- GIAO DIỆN CUỘC GỌI OVERLAY --- */}
       {callState !== 'idle' && (
-      <div className={`call-overlay ${callState}`}>
-        <div className="call-glass-container">
+        <div className={`call-overlay ${callState}`}>
+          <div className="call-glass-container">
           {callState === 'ringing' && (
             <div className="call-ringing-panel animate-fade-in">
               <div className="call-avatar-pulsing">
